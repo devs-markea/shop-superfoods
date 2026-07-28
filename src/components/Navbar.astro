@@ -1,0 +1,51 @@
+---
+import { Image } from 'astro:assets';
+import logo from '../assets/logo-superfoods.png';
+import Icon from './Icon.astro';
+import MenuDrawer from './MenuDrawer.astro';
+
+// 5 elementos: hamburguesa (izq) - logo (centro) - 3 iconos (der).
+// La hamburguesa abre el offcanvas de Bootstrap via data API, sin JS propio.
+---
+
+<header class="navbar">
+  <div class="navbar__inner">
+    <div class="navbar__side navbar__side--start">
+      <button
+        class="navbar__action btn-plain"
+        type="button"
+        aria-label="Abrir menu"
+        data-bs-toggle="offcanvas"
+        data-bs-target="#menuDrawer"
+        aria-controls="menuDrawer"
+      >
+        <Icon name="menu" class="navbar__icon" />
+      </button>
+    </div>
+
+    <a class="navbar__brand" href="/">
+      <Image
+        class="navbar__logo"
+        src={logo}
+        width={120}
+        height={24}
+        alt="Superfoods"
+        loading="eager"
+      />
+    </a>
+
+    <div class="navbar__side navbar__side--end">
+      <button class="navbar__action btn-plain" type="button" aria-label="Horario de la tienda">
+        <Icon name="clock" class="navbar__icon" />
+      </button>
+      <button class="navbar__action btn-plain" type="button" aria-label="Cambiar ubicacion">
+        <Icon name="map-pin" class="navbar__icon" />
+      </button>
+      <button class="navbar__action btn-plain" type="button" aria-label="Compartir tienda">
+        <Icon name="share" class="navbar__icon" />
+      </button>
+    </div>
+  </div>
+</header>
+
+<MenuDrawer />

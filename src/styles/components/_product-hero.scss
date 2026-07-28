@@ -1,0 +1,51 @@
+// ---------------------------------------------------------------------------
+// Block: product-hero
+// ---------------------------------------------------------------------------
+// Spec: alto 240 - degradado 180deg #F5A623 -> #D5AA53
+// El degradado vive en el contenedor, asi que si la imagen no existe (o no
+// carga) queda como fondo, tal como pide la spec.
+// ---------------------------------------------------------------------------
+
+.product-hero {
+  position: relative;
+  height: 240px;
+  overflow: hidden;
+  background: var(--sf-gradient-hero);
+}
+
+.product-hero__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// Element: product-hero__back
+// Anadido fuera de la spec: sin el, la vista de detalle no tiene salida hacia
+// el listado. Se puede borrar sin tocar nada mas.
+.product-hero__back {
+  position: absolute;
+  top: var(--sf-space-4);
+  left: var(--sf-gutter-x);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background-color: var(--sf-white);
+  color: var(--sf-ink);
+  box-shadow: var(--sf-shadow-card);
+  transition: opacity var(--sf-transition);
+
+  &:hover {
+    opacity: 0.85;
+    color: var(--sf-ink);
+  }
+}
+
+// --- Desktop -------------------------------------------------------------
+@include media-breakpoint-up(md) {
+  .product-hero {
+    height: 360px;
+  }
+}

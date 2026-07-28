@@ -1,0 +1,22 @@
+---
+import CountrySelect from './CountrySelect.astro';
+import TextField from './TextField.astro';
+
+// Spec: contenedor gap 8 — selector de pais (75) + telefono (resto del ancho).
+---
+
+<div class="d-flex gap-2">
+  <CountrySelect />
+
+  <div class="flex-grow-1">
+    <TextField
+      name="phone"
+      label="Numero de telefono"
+      placeholder="Numero de telefono"
+      type="tel"
+      inputmode="tel"
+      autocomplete="tel-national"
+      required
+    />
+  </div>
+</div>

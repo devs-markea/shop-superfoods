@@ -1,0 +1,27 @@
+// ---------------------------------------------------------------------------
+// Block: option-group
+// ---------------------------------------------------------------------------
+// Bloque de opciones: encabezado (label + tag) y lista.
+// Spec: grupo gap 16 - lista gap 12 - label Inter 600 12/16 #6C757D
+// ---------------------------------------------------------------------------
+
+.option-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-4);
+}
+
+.option-group__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sf-space-3);
+}
+
+// La etiqueta usa el bloque .section-label, compartido con el resto de grupos.
+
+.option-group__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-3);
+}

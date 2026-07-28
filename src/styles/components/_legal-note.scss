@@ -1,0 +1,15 @@
+// ---------------------------------------------------------------------------
+// Block: legal-note
+// ---------------------------------------------------------------------------
+// Aviso legal antes de confirmar.
+// Spec: Inter 500 12/16 centrado #9CA3AF
+// ---------------------------------------------------------------------------
+
+.legal-note {
+  margin: 0;
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-placeholder);
+  text-align: center;
+}

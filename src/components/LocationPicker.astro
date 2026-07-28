@@ -1,0 +1,23 @@
+---
+import Icon from './Icon.astro';
+
+// Spec: gap 16 — etiqueta + boton dorado + pista.
+// El icono es el mismo componente que usa la navbar en gris: hereda el dorado
+// de .location__button por currentColor.
+---
+
+<div class="location">
+  <h2 class="section-label" id="location-label">Ubicacion</h2>
+
+  <button
+    class="location__button btn-plain"
+    type="button"
+    aria-describedby="location-label"
+    data-share-location
+  >
+    <Icon name="map-pin" />
+    <span>Compartir ubicacion (recomendado)</span>
+  </button>
+
+  <p class="location__hint">o ingresa manualmente</p>
+</div>

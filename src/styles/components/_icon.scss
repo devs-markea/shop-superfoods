@@ -1,0 +1,26 @@
+// ---------------------------------------------------------------------------
+// Block: icon
+// ---------------------------------------------------------------------------
+// SVG en linea que hereda el color del padre (currentColor), asi los estados
+// de los botones no necesitan reglas extra.
+//
+// viewBox 20x20, trazo 2 y remates redondos. Los tamanos escalan el trazo en
+// proporcion, por eso --sm no lo recalcula.
+// ---------------------------------------------------------------------------
+
+.icon {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+// Modifier: tamano 16x16 (metas y boton "+")
+.icon--sm {
+  width: 16px;
+  height: 16px;
+}

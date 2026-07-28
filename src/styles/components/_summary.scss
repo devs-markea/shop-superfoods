@@ -1,0 +1,81 @@
+// ---------------------------------------------------------------------------
+// Block: summary
+// ---------------------------------------------------------------------------
+// Desglose del importe. Spec: bloque gap 16 - lista gap 12
+//
+// Se marca como <dl>: son pares concepto/importe, no una lista de elementos
+// sueltos. Los margenes del <dl>/<dd> que trae el Reboot se anulan.
+// ---------------------------------------------------------------------------
+
+.summary {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-4);
+}
+
+.summary__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-3);
+  margin: 0;
+}
+
+// Element: fila concepto + importe
+.summary__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sf-space-3);
+}
+
+// Element: concepto — Inter 400 14/20 #6C757D
+.summary__term {
+  margin: 0;
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-regular);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-muted);
+}
+
+// Element: importe — Inter 500 14/20 #141821
+.summary__value {
+  margin: 0;
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-ink);
+  white-space: nowrap;
+}
+
+// Modifier: importe todavia sin calcular ("Por cotizar")
+.summary__value--pending {
+  font-weight: var(--sf-weight-regular);
+  color: var(--sf-placeholder);
+}
+
+// Element: divisora. Spec: 2px #EAECF0
+.summary__divider {
+  height: 0;
+  margin: 0;
+  border: 0;
+  border-top: 2px solid var(--sf-border);
+  opacity: 1;
+}
+
+// Element: fila del total — Inter 600 16/24
+.summary__total-term {
+  margin: 0;
+  font-size: var(--sf-font-size-lg);
+  font-weight: var(--sf-weight-semibold);
+  line-height: 24px;
+  color: var(--sf-ink);
+}
+
+.summary__total-value {
+  margin: 0;
+  font-size: var(--sf-font-size-lg);
+  font-weight: var(--sf-weight-semibold);
+  line-height: 24px;
+  color: var(--sf-gold);
+  white-space: nowrap;
+}

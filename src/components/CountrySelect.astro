@@ -1,0 +1,52 @@
+---
+import Flag from './Flag.astro';
+import { countries, defaultCountry } from '../data/countries.ts';
+
+interface Props {
+  name?: string;
+}
+
+const { name = 'country_code' } = Astro.props;
+
+// Dropdown de Bootstrap: aporta apertura, cierre al pulsar fuera, navegacion
+// con teclado y el aria-expanded. Sin la clase .dropdown-toggle a proposito,
+// porque su caret no cabe en los 75 de la spec.
+//
+// El valor viaja en un input oculto para que se envie con el formulario.
+---
+
+<div class="dropdown">
+  <button
+    class="country-select btn-plain"
+    type="button"
+    data-bs-toggle="dropdown"
+    aria-expanded="false"
+    aria-label="Codigo de pais"
+    data-country-toggle
+  >
+    <Flag country={defaultCountry.code} class="country-select__flag" decorative />
+    <span class="country-select__code" data-country-code>{defaultCountry.dialCode}</span>
+  </button>
+
+  <ul class="dropdown-menu country-select__menu">
+    {
+      countries.map((country) => (
+        <li>
+          <button
+            class="dropdown-item country-select__option"
+            type="button"
+            data-country-option
+            data-code={country.code}
+            data-dial-code={country.dialCode}
+          >
+            <Flag country={country.code} class="country-select__flag" decorative />
+            <span class="country-select__name">{country.name}</span>
+            <span class="country-select__dial">{country.dialCode}</span>
+          </button>
+        </li>
+      ))
+    }
+  </ul>
+
+  <input type="hidden" name={name} value={defaultCountry.dialCode} data-country-value />
+</div>

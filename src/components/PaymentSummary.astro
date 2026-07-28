@@ -1,0 +1,39 @@
+---
+import { formatPrice } from '../lib/price.ts';
+
+interface Props {
+  /** Importe de los productos, en MXN. */
+  products: number;
+  /** Propina preseleccionada, en MXN. */
+  tip: number;
+}
+
+const { products, tip } = Astro.props;
+
+// El total se calcula, nunca se escribe: la vista no puede contradecir a los
+// datos. El script lo recalcula al cambiar la propina.
+const total = products + tip;
+---
+
+<div class="summary">
+  <span class="section-label">Resumen</span>
+
+  <dl class="summary__rows">
+    <div class="summary__row">
+      <dt class="summary__term">Productos</dt>
+      <dd class="summary__value">{formatPrice(products)}</dd>
+    </div>
+
+    <div class="summary__row">
+      <dt class="summary__term">Costo de envio</dt>
+      <dd class="summary__value summary__value--pending">Por cotizar</dd>
+    </div>
+
+    <hr class="summary__divider" />
+
+    <div class="summary__row">
+      <dt class="summary__total-term">Total</dt>
+      <dd class="summary__total-value" data-summary-total>{formatPrice(total)}</dd>
+    </div>
+  </dl>
+</div>

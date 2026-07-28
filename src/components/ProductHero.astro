@@ -1,0 +1,27 @@
+---
+import Icon from './Icon.astro';
+import { photoUrl, type Product } from '../data/products.ts';
+
+interface Props {
+  product: Product;
+}
+
+const { product } = Astro.props;
+---
+
+<div class="product-hero">
+  <img
+    class="product-hero__image"
+    src={photoUrl(product.photoId, 1200, 720)}
+    width="1200"
+    height="720"
+    alt={product.alt}
+    loading="eager"
+    decoding="async"
+  />
+
+  <!-- Fuera de la spec: sin esto la vista de detalle no tiene salida. -->
+  <a class="product-hero__back" href="/" aria-label="Volver al menu">
+    <Icon name="chevron-left" />
+  </a>
+</div>

@@ -1,0 +1,34 @@
+---
+interface Props {
+  categories: readonly string[];
+  active?: string;
+}
+
+const { categories, active = 'Todos' } = Astro.props;
+
+const slug = (value: string) => `cat-${value.toLowerCase().replace(/\s+/g, '-')}`;
+
+// Como el switch: radios con .btn-check en lugar de <button> + JS.
+// El arrastre con raton lo anade src/scripts/category-nav.ts (data-carousel).
+---
+
+<div class="category-nav" role="group" aria-label="Categorias" data-carousel>
+  {
+    categories.map((category) => (
+      <>
+        <input
+          class="btn-check"
+          type="radio"
+          name="category"
+          id={slug(category)}
+          value={category}
+          checked={category === active}
+          autocomplete="off"
+        />
+        <label class="chip btn" for={slug(category)}>
+          {category}
+        </label>
+      </>
+    ))
+  }
+</div>

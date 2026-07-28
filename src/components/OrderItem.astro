@@ -1,0 +1,55 @@
+---
+import Icon from './Icon.astro';
+import QuantityStepper from './QuantityStepper.astro';
+import { formatPrice, photoUrl } from '../data/products.ts';
+import type { CartLineView } from '../data/cart.ts';
+
+interface Props {
+  line: CartLineView;
+}
+
+const { line } = Astro.props;
+const { product } = line;
+---
+
+<li class="order-item" data-line data-unit-price={line.unitPrice}>
+  <div class="order-item__media">
+    <img
+      class="order-item__image"
+      src={photoUrl(product.photoId, 140, 140)}
+      width="70"
+      height="70"
+      alt={product.alt}
+      loading="lazy"
+      decoding="async"
+    />
+  </div>
+
+  <div class="order-item__body">
+    <div class="order-item__head">
+      <div class="order-item__info">
+        <h2 class="order-item__title">
+          <a class="text-reset" href={`/producto/${product.slug}`}>{product.name}</a>
+        </h2>
+        <p class="order-item__custom">{line.customization}</p>
+      </div>
+
+      <span class="order-item__price" data-line-subtotal>
+        {formatPrice(line.subtotal)}
+      </span>
+    </div>
+
+    <div class="order-item__actions">
+      <button
+        class="order-item__remove btn-plain"
+        type="button"
+        aria-label={`Quitar ${product.name} del pedido`}
+        data-remove-line
+      >
+        <Icon name="trash" size="sm" />
+      </button>
+
+      <QuantityStepper quantity={line.quantity} productName={product.name} />
+    </div>
+  </div>
+</li>

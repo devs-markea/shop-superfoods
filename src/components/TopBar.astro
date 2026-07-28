@@ -1,0 +1,29 @@
+---
+import BackButton from './BackButton.astro';
+import { formatPrice } from '../lib/price.ts';
+
+interface Props {
+  title: string;
+  /** Total del pedido, a la derecha. */
+  total: number;
+  backHref?: string;
+}
+
+const { title, total, backHref = '/' } = Astro.props;
+
+// Barra de 48 de la vista de pedido: control de vuelta + titulo + total.
+// El titulo queda "centro entre los elementos, no del layout": lo colocan sus
+// vecinos, sin contrapeso.
+//
+// Para la cabecera de 124 con titulo centrado, usar ScreenHeader.
+---
+
+<header class="topbar">
+  <BackButton href={backHref} />
+
+  <h1 class="topbar__title">{title}</h1>
+
+  <span class="topbar__total" data-order-total>
+    Pedido {formatPrice(total)}
+  </span>
+</header>

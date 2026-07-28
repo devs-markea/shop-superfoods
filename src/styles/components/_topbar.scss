@@ -1,0 +1,93 @@
+// ---------------------------------------------------------------------------
+// Block: topbar
+// ---------------------------------------------------------------------------
+// Barra superior con control de vuelta y titulo. Dos variantes:
+//
+//  - Base (/mi-pedido): height 48, con total a la derecha. El titulo queda
+//    "centro entre los elementos, no del layout": space-between puro, sin
+//    compensar, asi que lo colocan sus vecinos.
+//  - --tall (/datos-de-entrega): height 124, sin total y con el titulo
+//    centrado en el ancho real de la barra.
+//
+// Spec de ambas: space-between - padding 12/20
+// ---------------------------------------------------------------------------
+
+// Sin background: la spec no define ninguno para este contenedor, a diferencia
+// de .navbar del listado o de .action-bar. Se ve el fondo de la pagina.
+//
+// Tampoco es sticky, y va unido a lo anterior: una barra sin fondo que se queda
+// fija dejaria pasar el contenido por debajo al hacer scroll. Si en algun
+// momento se quiere fija, necesita recuperar el fondo.
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sf-space-3);
+  min-height: 48px;
+  padding: var(--sf-space-3) var(--sf-gutter-x);
+}
+
+// Element: flecha de vuelta — caja de 24 con el icono de 20 del sistema
+.topbar__back {
+  display: inline-flex;
+  flex: 0 0 24px;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--sf-ink);
+  border-radius: var(--sf-radius-sm);
+  transition: opacity var(--sf-transition);
+
+  &:hover {
+    opacity: 0.7;
+    color: var(--sf-ink);
+  }
+
+  &:active {
+    opacity: 0.5;
+  }
+}
+
+// Modifier: barra alta. Mismo bloque porque comparte __back y __title; el icono
+// y el titulo siguen en la misma fila, centrados verticalmente por el
+// align-items del bloque.
+// Spec: height 124 - padding 12/20
+.topbar--tall {
+  min-height: 124px;
+}
+
+// Element: hueco simetrico al control de vuelta.
+// Con space-between, el elemento del medio solo queda centrado en el ancho de
+// la barra si el primero y el ultimo miden lo mismo. Este hueco de 24 replica
+// al .topbar__back para conseguirlo sin recurrir a posicionamiento absoluto.
+.topbar__spacer {
+  flex: 0 0 24px;
+  width: 24px;
+}
+
+// Element: titulo — Inter 600 16/24
+.topbar__title {
+  margin: 0;
+  font-size: var(--sf-font-size-lg);
+  font-weight: var(--sf-weight-semibold);
+  line-height: 24px;
+  color: var(--sf-ink);
+}
+
+// Modifier: titulo centrado en el ancho de la barra.
+// Ocupa el espacio entre el control de vuelta y el hueco simetrico, y centra su
+// texto: asi sigue centrado aunque el titulo sea largo o se parta en dos lineas.
+.topbar__title--centered {
+  flex: 1 1 auto;
+  text-align: center;
+}
+
+// Element: total — Inter 600 14/20, dorado
+.topbar__total {
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-gold);
+  white-space: nowrap;
+}

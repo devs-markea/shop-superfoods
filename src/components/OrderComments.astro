@@ -1,0 +1,17 @@
+---
+const id = 'order-comments';
+---
+
+<div class="order-comments">
+  <label class="section-label" for={id}>Comentarios generales</label>
+
+  <!-- .form-control aporta padding 16, radius 12, borde 1 y el placeholder.
+       data-auto-grow: el campo se expande al escribir, sin tirador. -->
+  <textarea
+    class="order-comments__field form-control"
+    id={id}
+    name="comments"
+    rows="3"
+    placeholder="Instrucciones adicionales, alergias..."
+    data-auto-grow></textarea>
+</div>

@@ -1,0 +1,64 @@
+---
+import TextField from './TextField.astro';
+
+// Spec: contenedor gap 12 — 4 campos de 44 y un textarea de 80.
+// El borde de 2px lo trae .field por defecto, comun a todos los campos.
+interface AddressField {
+  name: string;
+  label: string;
+  placeholder: string;
+  autocomplete?: string;
+  required: boolean;
+}
+
+const fields: AddressField[] = [
+  {
+    name: 'neighborhood',
+    label: 'Colonia',
+    placeholder: 'Colonia',
+    autocomplete: 'address-level3',
+    required: true,
+  },
+  {
+    name: 'street',
+    label: 'Calle',
+    placeholder: 'Calle',
+    autocomplete: 'address-line1',
+    required: true,
+  },
+  {
+    name: 'number',
+    label: 'Numero exterior',
+    placeholder: 'Numero exterior',
+    autocomplete: 'address-line2',
+    required: true,
+  },
+  {
+    name: 'cross_streets',
+    label: 'Entre calles',
+    placeholder: 'Entre calles (opcional)',
+    required: false,
+  },
+];
+---
+
+<div class="d-flex flex-column gap-3">
+  {
+    fields.map((field) => (
+      <TextField
+        name={field.name}
+        label={field.label}
+        placeholder={field.placeholder}
+        autocomplete={field.autocomplete}
+        required={field.required}
+      />
+    ))
+  }
+
+  <label class="visually-hidden" for="field-references">Referencias</label>
+  <textarea
+    class="field-note form-control"
+    id="field-references"
+    name="references"
+    placeholder="Referencias (opcional)"></textarea>
+</div>

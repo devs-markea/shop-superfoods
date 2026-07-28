@@ -1,0 +1,130 @@
+// ---------------------------------------------------------------------------
+// Block: product-card  (sobre .card de Bootstrap)
+// ---------------------------------------------------------------------------
+// Bootstrap aporta fondo, radius y sombra via $card-*. Aqui queda la
+// disposicion horizontal de la spec, que .card no trae de serie.
+//
+// Spec: height 128 - gap 12 - radius 16 - padding 16 - shadow 0 1px 2px #0000000D
+// 128 - 32 (padding) = 96 de alto util:
+// titulo 20 + 4 + descripcion 40 (2 lineas) + 4 + footer 28 = 96
+// ---------------------------------------------------------------------------
+
+.product-card {
+  display: flex;
+  flex-direction: row;
+  gap: var(--sf-space-3);
+  min-height: 128px;
+  height: 100%;
+  padding: var(--sf-space-4);
+  transition:
+    box-shadow var(--sf-transition),
+    transform var(--sf-transition);
+
+  &:hover {
+    box-shadow: var(--sf-shadow-card-hover);
+  }
+}
+
+// Element: media — imagen 80x80 anclada arriba
+.product-card__media {
+  flex: 0 0 80px;
+  width: 80px;
+  height: 80px;
+  overflow: hidden;
+  border-radius: var(--sf-radius-md);
+  background-color: var(--sf-border);
+}
+
+.product-card__image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+// Element: body — resto del espacio, 96 de alto
+.product-card__body {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
+  gap: var(--sf-space-1);
+  min-width: 0;
+  min-height: 96px;
+}
+
+.product-card__title {
+  margin: 0;
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-ink);
+}
+
+.product-card__description {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow: hidden;
+  margin: 0;
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-regular);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-muted);
+}
+
+// Element: footer — precio a la izquierda, "+" al fondo derecha
+.product-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sf-space-3);
+  margin-top: auto;
+  min-height: 28px;
+}
+
+.product-card__price {
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-gold);
+}
+
+.product-card__add {
+  display: inline-flex;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  background-color: var(--sf-gold);
+  color: var(--sf-on-gold);
+  transition:
+    background-color var(--sf-transition),
+    transform var(--sf-transition);
+
+  &:hover {
+    background-color: var(--sf-gold-hover);
+  }
+
+  &:active {
+    transform: scale(0.92);
+  }
+}
+
+// Modifier de feedback al agregar (lo aplica src/scripts/add-button.ts)
+.product-card__add--added {
+  animation: sf-pop 320ms ease;
+}
+
+@keyframes sf-pop {
+  0% {
+    transform: scale(1);
+  }
+  45% {
+    transform: scale(1.18);
+  }
+  100% {
+    transform: scale(1);
+  }
+}

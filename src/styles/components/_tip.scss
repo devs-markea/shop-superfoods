@@ -1,0 +1,68 @@
+// ---------------------------------------------------------------------------
+// Block: tip  (opciones sobre .btn-check de Bootstrap)
+// ---------------------------------------------------------------------------
+// Propina: etiqueta + cuatro importes excluyentes.
+// Como el switch y los chips, son radios: la seleccion unica la garantiza el
+// name compartido, sin JavaScript.
+//
+// Spec: componente 350 - gap 12 (etiqueta / fila)
+//       boton 81.5x40 - padding vertical 10 - radius 12
+//       inactivo: bg #FFFFFF - borde 1px #EAECF0 - label #6C757D
+//       activo:   bg dorado  - label #FFFFFF
+//
+// El gap de la fila no viene en la spec, pero se deduce: 350 - 4x81.5 = 24,
+// repartido en 3 huecos = 8. Los botones usan flex en lugar de un ancho fijo,
+// asi reparten el ancho disponible y a 350 miden exactamente 81.5.
+// ---------------------------------------------------------------------------
+
+.tip {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-3);
+}
+
+.tip__options {
+  display: flex;
+  gap: var(--sf-space-2);
+}
+
+.tip__option {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  height: 40px;
+  min-width: 0;
+  padding-block: 10px;
+  padding-inline: var(--sf-space-1);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-md);
+  background-color: var(--sf-surface);
+  color: var(--sf-muted);
+  white-space: nowrap;
+  user-select: none;
+  transition:
+    background-color var(--sf-transition),
+    border-color var(--sf-transition),
+    color var(--sf-transition);
+
+  &:hover {
+    border-color: var(--sf-gold);
+    color: var(--sf-ink);
+  }
+}
+
+// Estado: importe elegido
+.btn-check:checked + .tip__option {
+  &,
+  &:hover {
+    border-color: var(--sf-gold);
+    background-color: var(--sf-gold);
+    color: var(--sf-on-gold);
+  }
+}
+
+.btn-check:focus-visible + .tip__option {
+  outline: 2px solid var(--sf-gold);
+  outline-offset: 2px;
+}

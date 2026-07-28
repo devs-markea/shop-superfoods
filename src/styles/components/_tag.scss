@@ -1,0 +1,31 @@
+// ---------------------------------------------------------------------------
+// Block: tag  (sobre .badge de Bootstrap)
+// ---------------------------------------------------------------------------
+// Bootstrap aporta forma, padding y tipografia via $badge-*. Aqui solo quedan
+// el alto de la spec y los dos esquemas de color.
+//
+// Spec: alto 24 - radius 32 - padding 4/8 - label Inter 600 12/16
+// --required: bg #D5AA531A - color #4F46E5
+// --optional: bg #EAECF0   - color #616673
+// ---------------------------------------------------------------------------
+
+.tag {
+  display: inline-flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: var(--sf-space-2);
+  height: 24px;
+  white-space: nowrap;
+}
+
+// Modifier: obligatorio
+.tag--required {
+  background-color: var(--sf-gold-tint);
+  color: var(--sf-indigo);
+}
+
+// Modifier: opcional
+.tag--optional {
+  background-color: var(--sf-border);
+  color: var(--sf-ink-soft);
+}

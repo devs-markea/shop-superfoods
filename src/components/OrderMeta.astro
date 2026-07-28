@@ -1,0 +1,26 @@
+---
+import Icon, { type IconName } from './Icon.astro';
+
+interface Props {
+  time?: string;
+  shipping?: string;
+}
+
+const { time = '25-35 min', shipping = 'Envio gratis' } = Astro.props;
+
+const items: Array<{ icon: IconName; label: string }> = [
+  { icon: 'clock', label: time },
+  { icon: 'truck', label: shipping },
+];
+---
+
+<ul class="order-meta list-unstyled">
+  {
+    items.map((item) => (
+      <li class="order-meta__item">
+        <Icon name={item.icon} size="sm" class="order-meta__icon" />
+        <span class="order-meta__label">{item.label}</span>
+      </li>
+    ))
+  }
+</ul>

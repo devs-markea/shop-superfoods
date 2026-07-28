@@ -1,0 +1,74 @@
+// ---------------------------------------------------------------------------
+// Block: switch  (sobre .btn-check de Bootstrap)
+// ---------------------------------------------------------------------------
+// Dos opciones excluyentes: "A domicilio" / "Para recoger".
+//
+// La maqueta lo resolvia con <button> y JS que alternaba clases. Con .btn-check
+// son dos <input type="radio">: el estado lo lleva el DOM, funciona sin
+// JavaScript, es navegable con flechas y se envia con el formulario.
+//
+// La pista NO lleva .btn-group: sus reglas (0-3-0 y 0-4-0) cuadran las
+// esquinas internas de cada opcion (border-end-radius en la primera,
+// border-start-radius en la segunda), asi que la pastilla activa se veia
+// cortada por el lado interior. Ademas metia margin-left: -1px y
+// flex: 1 1 auto. Aqui la pista es un flex propio y cada opcion, una pastilla.
+//
+// Spec: pista 350x44 - radius 12 - padding 4 - bg #EAECF0
+//       opcion 171x36 - radius 8 - Inter 600 14/20
+// 350 - 8 (padding) = 342 -> 2 x 171, por eso flex: 1 1 0
+// ---------------------------------------------------------------------------
+
+.switch {
+  display: flex;
+  width: 100%;
+  max-width: var(--sf-switch-width);
+  height: 44px;
+  margin-inline: auto;
+  padding: var(--sf-space-1);
+  border-radius: var(--sf-radius-md);
+  background-color: var(--sf-track-bg);
+}
+
+.switch__option {
+  display: inline-flex;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  min-width: 0;
+  padding-block: 0;
+  padding-inline: var(--sf-space-2);
+  border-radius: var(--sf-radius-sm); // 12 de la pista - 4 de padding
+  background-color: transparent;
+  color: var(--sf-muted);
+  white-space: nowrap;
+  user-select: none;
+  transition:
+    background-color var(--sf-transition),
+    color var(--sf-transition);
+
+  &:hover {
+    color: var(--sf-ink);
+  }
+}
+
+// Estado: opcion activa. Sustituye al modifier --active de la maqueta.
+.btn-check:checked + .switch__option {
+  &,
+  &:hover {
+    background-color: var(--sf-gold);
+    color: var(--sf-on-gold);
+  }
+}
+
+.btn-check:focus-visible + .switch__option {
+  outline: 2px solid var(--sf-gold);
+  outline-offset: 2px;
+}
+
+// --- Desktop -------------------------------------------------------------
+@include media-breakpoint-up(md) {
+  .switch__option {
+    padding-inline: var(--sf-space-5);
+  }
+}

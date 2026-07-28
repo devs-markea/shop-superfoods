@@ -1,0 +1,49 @@
+// ---------------------------------------------------------------------------
+// Block: action-bar
+// ---------------------------------------------------------------------------
+// Barra fija inferior con la accion principal.
+// Spec: alto 84 - padding 20 - bg #FFFFFF - border-top 1px
+// 84 = 20 + 44 (boton) + 20
+// ---------------------------------------------------------------------------
+
+.action-bar {
+  position: sticky;
+  bottom: 0;
+  // Empuja la barra al fondo cuando el contenido no llena la pantalla. Con
+  // contenido largo manda el sticky y queda fija al hacer scroll.
+  margin-top: auto;
+  z-index: var(--sf-z-navbar);
+  min-height: 84px;
+  padding: var(--sf-space-5);
+  padding-bottom: calc(var(--sf-space-5) + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid var(--sf-border);
+  background-color: var(--sf-white);
+}
+
+// El boton de la spec mide 350 como maximo y va centrado.
+// El gap de 8 separa el icono del label cuando el boton lleva icono.
+.action-bar__button {
+  display: flex;
+  width: 100%;
+  max-width: var(--sf-switch-width);
+  height: 44px;
+  margin-inline: auto;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sf-space-2);
+}
+
+// Modifier: enviar por WhatsApp. Unica accion del sistema que no es dorada.
+// Se sobreescriben las custom properties de .btn en lugar del background, para
+// que hover y activo sigan la mecanica de Bootstrap.
+.action-bar__button--whatsapp {
+  --bs-btn-bg: var(--sf-whatsapp);
+  --bs-btn-border-color: var(--sf-whatsapp);
+  --bs-btn-hover-bg: var(--sf-whatsapp-hover);
+  --bs-btn-hover-border-color: var(--sf-whatsapp-hover);
+  --bs-btn-active-bg: var(--sf-whatsapp-hover);
+  --bs-btn-active-border-color: var(--sf-whatsapp-hover);
+  --bs-btn-color: var(--sf-white);
+  --bs-btn-hover-color: var(--sf-white);
+  --bs-btn-active-color: var(--sf-white);
+}

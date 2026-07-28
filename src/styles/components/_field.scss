@@ -1,0 +1,46 @@
+// ---------------------------------------------------------------------------
+// Block: field  (sobre .form-control de Bootstrap)
+// ---------------------------------------------------------------------------
+// Campo de una sola linea. Bootstrap aporta borde, radius, tipografia y el
+// color base del placeholder via $input-*; aqui va el alto de la spec y el
+// placeholder de los campos de texto, que es distinto al de los textarea.
+//
+// Spec: height 44 - radius 12 - borde 2px #EAECF0
+//       placeholder Inter 600 14/20 #616673
+//
+// El 2px es comun a todos los campos de una linea y al selector de pais; los
+// textarea se quedan en el 1px que trae .form-control.
+//
+// El padding lateral no viene en la spec: se usa 16, el mismo que el textarea
+// y que el resto del sistema. El vertical se anula porque el alto es fijo.
+// ---------------------------------------------------------------------------
+
+.field {
+  height: 44px;
+  min-width: 0; // permite encogerse dentro de un flex sin desbordar
+  padding-block: 0;
+  padding-inline: var(--sf-space-4);
+  border-width: 2px;
+  border-radius: var(--sf-radius-md);
+
+  &::placeholder {
+    font-weight: var(--sf-weight-semibold);
+    color: var(--sf-ink-soft);
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Block: field-note  (textarea de alto fijo)
+// ---------------------------------------------------------------------------
+// Spec: height 80 - padding 16 - radius 12 - borde 1
+//       placeholder Inter 400 14/20 #9CA3AF
+//
+// No expandible: sin tirador de redimensionado. A diferencia del textarea de
+// comentarios de /mi-pedido, este no crece con el contenido, asi que conserva
+// su scroll interno para no ocultar texto.
+// ---------------------------------------------------------------------------
+
+.field-note {
+  height: 80px;
+  resize: none;
+}

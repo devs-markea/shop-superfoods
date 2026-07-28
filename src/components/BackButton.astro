@@ -1,0 +1,21 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  href?: string;
+  /** Etiqueta accesible. Se cambia si el destino no es obvio. */
+  label?: string;
+}
+
+const { href = '/', label = 'Volver' } = Astro.props;
+
+// Element de .topbar, compartido por ScreenHeader y TopBar. Se extrae para que
+// el icono y la etiqueta accesible no se dupliquen ni se desincronicen.
+//
+// La spec da 24x24: es la caja tactil, con el icono de 20 del sistema dentro,
+// igual que .navbar__action en el listado.
+---
+
+<a class="topbar__back" href={href} aria-label={label}>
+  <Icon name="arrow-left" />
+</a>

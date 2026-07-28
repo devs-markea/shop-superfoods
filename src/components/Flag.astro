@@ -1,0 +1,71 @@
+---
+// Banderas de 20x14 para el selector de codigo de pais.
+//
+// No van en Icon.astro a proposito: aquel es un sistema de trazo de 20x20 con
+// currentColor, y estas son formas rellenas con colores propios.
+//
+// Version simplificada, sin escudos ni soles: a 20x14 esos emblemas no se
+// distinguen y pesarian mas que el resto de la pagina. Si en algun momento
+// hacen falta banderas fieles, aqui entraria un set de assets o flag-icons.
+
+export type CountryCode = 'mx' | 'us' | 'br' | 'pe' | 'ar' | 'co';
+
+interface Props {
+  country: CountryCode;
+  class?: string;
+  /** Decorativa: el nombre del pais ya aparece como texto al lado. */
+  decorative?: boolean;
+}
+
+const { country, class: className, decorative = false } = Astro.props;
+
+const flags: Record<CountryCode, { label: string; shapes: string }> = {
+  // Tres bandas verticales: verde, blanco, rojo
+  mx: {
+    label: 'Mexico',
+    shapes:
+      '<rect width="6.667" height="14" fill="#006847"/><rect x="6.667" width="6.666" height="14" fill="#fff"/><rect x="13.333" width="6.667" height="14" fill="#ce1126"/>',
+  },
+  // Siete franjas de 2px y canton azul
+  us: {
+    label: 'Estados Unidos',
+    shapes:
+      '<rect width="20" height="14" fill="#fff"/><g fill="#b22234"><rect width="20" height="2"/><rect y="4" width="20" height="2"/><rect y="8" width="20" height="2"/><rect y="12" width="20" height="2"/></g><rect width="9" height="8" fill="#3c3b6e"/>',
+  },
+  // Campo verde, rombo amarillo y circulo azul
+  br: {
+    label: 'Brasil',
+    shapes:
+      '<rect width="20" height="14" fill="#009c3b"/><path d="M10 1.4 18.6 7 10 12.6 1.4 7Z" fill="#ffdf00"/><circle cx="10" cy="7" r="2.8" fill="#002776"/>',
+  },
+  // Tres bandas verticales: rojo, blanco, rojo
+  pe: {
+    label: 'Peru',
+    shapes:
+      '<rect width="20" height="14" fill="#d91023"/><rect x="6.667" width="6.666" height="14" fill="#fff"/>',
+  },
+  // Tres bandas horizontales: celeste, blanco, celeste
+  ar: {
+    label: 'Argentina',
+    shapes:
+      '<rect width="20" height="14" fill="#74acdf"/><rect y="4.667" width="20" height="4.666" fill="#fff"/><circle cx="10" cy="7" r="1.4" fill="#f6b40e"/>',
+  },
+  // Amarillo a la mitad, azul y rojo a un cuarto cada uno
+  co: {
+    label: 'Colombia',
+    shapes:
+      '<rect width="20" height="14" fill="#fcd116"/><rect y="7" width="20" height="3.5" fill="#003893"/><rect y="10.5" width="20" height="3.5" fill="#ce1126"/>',
+  },
+};
+
+const flag = flags[country];
+---
+
+<svg
+  class={className}
+  viewBox="0 0 20 14"
+  role={decorative ? undefined : 'img'}
+  aria-hidden={decorative ? 'true' : undefined}
+  aria-label={decorative ? undefined : `Bandera de ${flag.label}`}
+  set:html={flag.shapes}
+/>

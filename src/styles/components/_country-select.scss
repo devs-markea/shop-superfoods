@@ -1,0 +1,67 @@
+// ---------------------------------------------------------------------------
+// Block: country-select  (sobre .dropdown de Bootstrap)
+// ---------------------------------------------------------------------------
+// Selector de codigo de pais del telefono. Control propio y no un <select>
+// nativo, porque tiene que mostrar la bandera junto al codigo.
+//
+// Spec: 75x44 - gap 4 - padding lateral 12 - radius 12 - borde 2px #EAECF0
+//       bandera 20x14 - codigo Inter 600 14/20 #141821
+//
+// Bootstrap aporta la mecanica del despliegue; no se usa .dropdown-toggle
+// porque su caret no cabe en los 75 de la spec.
+// ---------------------------------------------------------------------------
+
+.country-select {
+  display: inline-flex;
+  flex: 0 0 75px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sf-space-1);
+  width: 75px;
+  height: 44px;
+  padding-inline: var(--sf-space-3);
+  border: 2px solid var(--sf-border);
+  border-radius: var(--sf-radius-md);
+  transition: border-color var(--sf-transition);
+
+  &:hover,
+  &[aria-expanded='true'] {
+    border-color: var(--sf-gold);
+  }
+}
+
+.country-select__flag {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 14px;
+  border-radius: 2px;
+}
+
+.country-select__code {
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-ink);
+  white-space: nowrap;
+}
+
+// Element: lista desplegada
+.country-select__menu {
+  min-width: 220px;
+}
+
+// Element: opcion — bandera + nombre + codigo alineado a la derecha
+.country-select__option {
+  display: flex;
+  align-items: center;
+  gap: var(--sf-space-2);
+}
+
+.country-select__name {
+  flex: 1 1 auto;
+}
+
+.country-select__dial {
+  flex: 0 0 auto;
+  color: var(--sf-muted);
+}

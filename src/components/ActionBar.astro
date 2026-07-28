@@ -1,0 +1,58 @@
+---
+import BrandIcon, { type BrandName } from './BrandIcon.astro';
+import { formatPrice } from '../lib/price.ts';
+
+interface Props {
+  /**
+   * Texto del boton. Si contiene {total} y se pasa `total`, el marcado lleva
+   * la plantilla en data-total-template para que el script la recalcule.
+   */
+  label: string;
+  total?: number;
+  /** Si se pasa, el control es un enlace en lugar de un submit. */
+  href?: string;
+  /** Icono opcional a la izquierda del label, separado 8px. */
+  icon?: BrandName;
+  /**
+   * Color del boton. Dorado por defecto; `whatsapp` solo para enviar el pedido.
+   */
+  variant?: 'primary' | 'whatsapp';
+}
+
+const { label, total, href, icon, variant = 'primary' } = Astro.props;
+
+// La copia vive en el marcado, no en el script.
+const hasTotal = total !== undefined && label.includes('{total}');
+const text = hasTotal ? label.replace('{total}', formatPrice(total)) : label;
+
+const buttonClass = [
+  'action-bar__button',
+  'btn',
+  'btn-primary',
+  variant === 'whatsapp' && 'action-bar__button--whatsapp',
+]
+  .filter(Boolean)
+  .join(' ');
+---
+
+<div class="action-bar">
+  {
+    href ? (
+      <a class={buttonClass} href={href}>
+        {icon && <BrandIcon name={icon} />}
+        <span>{text}</span>
+      </a>
+    ) : (
+      <button class={buttonClass} type="submit">
+        {icon && <BrandIcon name={icon} />}
+        {hasTotal ? (
+          <span data-total data-total-template={label}>
+            {text}
+          </span>
+        ) : (
+          <span>{text}</span>
+        )}
+      </button>
+    )
+  }
+</div>

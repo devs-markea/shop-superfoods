@@ -1,0 +1,53 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ScreenHeader from '../components/ScreenHeader.astro';
+import TipSelector from '../components/TipSelector.astro';
+import PaymentMethods from '../components/PaymentMethods.astro';
+import PaymentSummary from '../components/PaymentSummary.astro';
+import ActionBar from '../components/ActionBar.astro';
+import { getCartTotal, getCartView } from '../data/cart.ts';
+
+// El importe de los productos sale del pedido, no de un valor fijo: la spec
+// muestra $300 de ejemplo, pero el carrito manda.
+const products = getCartTotal(getCartView());
+const defaultTip = 15;
+---
+
+<Layout
+  title="Resumen de pago — Shop Superfoods"
+  description="Revisa el importe y elige como pagar."
+>
+  <ScreenHeader title="Resumen de pago" backHref="/datos-de-entrega" />
+
+  <main class="d-flex flex-column flex-grow-1">
+    <form
+      class="d-flex flex-column flex-grow-1"
+      action="#"
+      method="post"
+      data-payment-form
+      data-products={products}
+    >
+      <div class="screen-body">
+        <TipSelector selected={defaultTip} />
+
+        <PaymentMethods />
+
+        <PaymentSummary products={products} tip={defaultTip} />
+
+        <p class="legal-note">
+          Al continuar aceptas nuestros terminos y condiciones de servicio.
+        </p>
+      </div>
+
+      <ActionBar
+        label="Enviar pedido por WhatsApp"
+        icon="whatsapp"
+        variant="whatsapp"
+      />
+    </form>
+  </main>
+</Layout>
+
+<script>
+  import '../scripts/payment-summary';
+</script>

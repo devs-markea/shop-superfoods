@@ -1,0 +1,25 @@
+// ---------------------------------------------------------------------------
+// Block: product-list
+// ---------------------------------------------------------------------------
+// Spec: gap 24 - padding 20
+// La rejilla la resuelve Bootstrap en el marcado (.row .row-cols-* .g-6), asi
+// que del bloque original solo queda el padding de la seccion.
+// ---------------------------------------------------------------------------
+
+.product-list {
+  padding: var(--sf-space-5) var(--sf-gutter-x);
+}
+
+// Limita el ancho del contenido. Envuelve al .row en lugar de aplicarse sobre
+// el, porque .row usa margenes negativos para sus gutters.
+.product-list__items {
+  width: 100%;
+  max-width: var(--sf-container-max);
+  margin-inline: auto;
+}
+
+@include media-breakpoint-up(md) {
+  .product-list {
+    padding-block: var(--sf-space-6);
+  }
+}

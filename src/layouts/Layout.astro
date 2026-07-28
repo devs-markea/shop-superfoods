@@ -1,0 +1,44 @@
+---
+import { Font } from 'astro:assets';
+import '../styles/main.scss';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'Shop Superfoods — pedido a domicilio o para recoger.' } =
+  Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site);
+---
+
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <!-- viewport-fit=cover: la action-bar usa env(safe-area-inset-bottom) -->
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" href="/favicon.ico" />
+    <link rel="canonical" href={canonical} />
+
+    <title>{title}</title>
+    <meta name="description" content={description} />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+
+    <Font cssVariable="--sf-font-inter" preload />
+
+    <meta name="generator" content={Astro.generator} />
+  </head>
+  <body class="page">
+    <slot />
+  </body>
+</html>

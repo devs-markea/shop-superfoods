@@ -1,0 +1,92 @@
+// ---------------------------------------------------------------------------
+// Capa de custom properties.
+//
+// Regenera las variables --sf-* que consumen los bloques BEM a partir de las
+// variables Sass de _variables.scss. Los valores no se repiten: se interpolan.
+// Se carga DESPUES de Bootstrap para poder convivir con las --bs-*.
+// ---------------------------------------------------------------------------
+
+:root {
+  // --- Color: marca ---
+  --sf-gold: #{$sf-gold};
+  --sf-gold-hover: #{$sf-gold-hover};
+  --sf-gold-tint: #{$sf-gold-tint};
+  --sf-gradient-hero: #{$sf-gradient-hero};
+
+  // --- Color: acentos ---
+  --sf-indigo: #{$sf-indigo};
+  --sf-whatsapp: #{$sf-whatsapp};
+  --sf-whatsapp-hover: #{$sf-whatsapp-hover};
+
+  // --- Color: neutros ---
+  --sf-ink: #{$sf-ink};
+  --sf-ink-soft: #{$sf-ink-soft};
+  --sf-muted: #{$sf-muted};
+  --sf-border: #{$sf-border};
+  --sf-white: #{$sf-white};
+  --sf-body-bg: #{$sf-body-bg};
+  --sf-placeholder: #{$sf-placeholder};
+
+  // --- Color: semanticos ---
+  --sf-surface: var(--sf-white);
+  --sf-track-bg: var(--sf-border);
+  --sf-on-gold: var(--sf-white);
+
+  // --- Tipografia ---
+  // --sf-font-inter la inyecta Astro desde la config `fonts`.
+  --sf-font-sans: #{$font-family-sans-serif};
+
+  --sf-font-size-sm: 12px;
+  --sf-font-size-base: 14px;
+  --sf-font-size-lg: 16px;
+  --sf-font-size-xl: 24px;
+
+  --sf-line-height-sm: 16px;
+  --sf-line-height-base: 20px;
+  --sf-line-height-xl: 32px;
+
+  --sf-weight-regular: 400;
+  --sf-weight-medium: 500;
+  --sf-weight-semibold: 600;
+  --sf-weight-bold: 700;
+
+  // --- Espaciado ---
+  --sf-space-1: #{$sf-space-1};
+  --sf-space-2: #{$sf-space-2};
+  --sf-space-3: #{$sf-space-3};
+  --sf-space-4: #{$sf-space-4};
+  --sf-space-5: #{$sf-space-5};
+  --sf-space-6: #{$sf-space-6};
+  --sf-space-8: #{$sf-space-8};
+
+  // --- Radios ---
+  --sf-radius-sm: #{$sf-radius-sm};
+  --sf-radius-md: #{$sf-radius-md};
+  --sf-radius-lg: #{$sf-radius-lg};
+  --sf-radius-pill: #{$sf-radius-pill};
+
+  // --- Elevacion ---
+  --sf-shadow-card: #{$sf-shadow-card};
+  --sf-shadow-card-hover: #{$sf-shadow-card-hover};
+
+  // --- Layout ---
+  --sf-gutter-x: #{$sf-gutter-x};
+  --sf-container-max: #{$sf-container-max};
+  --sf-navbar-height: #{$sf-navbar-height};
+  --sf-switch-width: #{$sf-switch-width};
+
+  // --- Motion ---
+  --sf-transition: #{$sf-transition};
+
+  // --- Capas ---
+  --sf-z-navbar: #{$zindex-sticky};
+}
+
+// Desktop: se agrandan gutters y alto de la barra superior.
+// Los componentes leen los tokens, no hace falta tocarlos.
+@include media-breakpoint-up(md) {
+  :root {
+    --sf-gutter-x: #{$sf-gutter-x-desktop};
+    --sf-navbar-height: #{$sf-navbar-height-desktop};
+  }
+}

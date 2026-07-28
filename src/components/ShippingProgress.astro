@@ -1,0 +1,37 @@
+---
+import { formatPrice } from '../data/products.ts';
+
+interface Props {
+  remaining: number;
+  progress: number;
+}
+
+const { remaining, progress } = Astro.props;
+
+// Al alcanzar el umbral cambia el texto, no el color: el dorado de este label
+// esta especificado en la spec y no depende del estado.
+const label =
+  remaining === 0
+    ? '¡Ya tienes envio gratis! 🎉'
+    : `Estas a ${formatPrice(remaining)} de obtener envio gratis 🎉`;
+---
+
+<section class="shipping-progress" aria-label="Progreso hacia el envio gratis">
+  <p class="shipping-progress__label" data-shipping-label>{label}</p>
+
+  <!--
+    .progress es la pista y .progress-bar el relleno: Bootstrap ya trae el alto
+    de 6, el radius de 3 y los dos colores desde $progress-*.
+  -->
+  <div
+    class="progress"
+    role="progressbar"
+    aria-label="Avance del pedido hacia el envio gratis"
+    aria-valuenow={progress}
+    aria-valuemin="0"
+    aria-valuemax="100"
+    data-shipping-progress
+  >
+    <div class="progress-bar" style={`width: ${progress}%`}></div>
+  </div>
+</section>

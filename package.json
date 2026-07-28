@@ -1,0 +1,28 @@
+{
+  "name": "shop-superfoods",
+  "type": "module",
+  "version": "0.0.1",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "check": "astro check",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/vercel": "^11.0.3",
+    "@popperjs/core": "^2.11.8",
+    "astro": "^7.1.3",
+    "bootstrap": "^5.3.8"
+  },
+  "devDependencies": {
+    "@astrojs/check": "^0.9.9",
+    "@types/bootstrap": "^5.2.11",
+    "@types/node": "^24.13.3",
+    "sass": "^1.102.0",
+    "typescript": "^6.0.3"
+  }
+}

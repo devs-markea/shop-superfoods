@@ -1,0 +1,33 @@
+// ---------------------------------------------------------------------------
+// Block: order-meta
+// ---------------------------------------------------------------------------
+// Dos pares icono + etiqueta (tiempo de entrega y envio), al ras del gutter.
+// Spec: contenedor 178x16 - gap 16 - icono 16 dorado - label Inter 500 12/16
+// ---------------------------------------------------------------------------
+
+.order-meta {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: var(--sf-space-4);
+  height: 16px;
+  margin: 0;
+}
+
+.order-meta__item {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sf-space-1);
+}
+
+.order-meta__icon {
+  color: var(--sf-gold);
+}
+
+.order-meta__label {
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-ink);
+  white-space: nowrap;
+}

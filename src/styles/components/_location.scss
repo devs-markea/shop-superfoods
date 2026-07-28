@@ -1,0 +1,53 @@
+// ---------------------------------------------------------------------------
+// Block: location
+// ---------------------------------------------------------------------------
+// Bloque de ubicacion: etiqueta, boton de compartir y pista de alternativa.
+// Spec: gap 16
+// ---------------------------------------------------------------------------
+
+.location {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-4);
+}
+
+// La etiqueta usa el bloque .section-label, compartido con el resto de grupos.
+
+// Element: boton de compartir ubicacion
+// Spec: 350x44 - gap 8 - padding vertical 12 - radius 12 - borde 1 #D5AA53
+//       label Inter 600 14/20 #D5AA53
+//
+// El `color` dorado lo hereda el icono por currentColor: el mismo componente
+// Icon sale gris en la navbar y dorado aqui, sin duplicar el trazado.
+.location__button {
+  display: flex;
+  width: 100%;
+  max-width: 350px;
+  height: 44px;
+  margin-inline: auto;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sf-space-2);
+  padding-block: var(--sf-space-3);
+  border: 1px solid var(--sf-gold);
+  border-radius: var(--sf-radius-md);
+  color: var(--sf-gold);
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  transition: background-color var(--sf-transition);
+
+  &:hover {
+    background-color: var(--sf-gold-tint);
+  }
+}
+
+// Element: pista — Inter 500 12/16 centrado #9CA3AF
+.location__hint {
+  margin: 0;
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-placeholder);
+  text-align: center;
+}

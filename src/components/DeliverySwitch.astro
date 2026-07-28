@@ -1,0 +1,32 @@
+---
+// Block: switch — "A domicilio" / "Para recoger".
+// Dos radios con .btn-check: seleccion unica sin JavaScript, navegable con
+// flechas y serializable en un formulario.
+const options = [
+  { id: 'delivery-home', value: 'domicilio', label: 'A domicilio' },
+  { id: 'delivery-pickup', value: 'recoger', label: 'Para recoger' },
+];
+
+const checked = 'domicilio';
+---
+
+<div class="switch" role="group" aria-label="Modo de entrega">
+  {
+    options.map((option) => (
+      <>
+        <input
+          class="btn-check"
+          type="radio"
+          name="delivery"
+          id={option.id}
+          value={option.value}
+          checked={option.value === checked}
+          autocomplete="off"
+        />
+        <label class="switch__option btn" for={option.id}>
+          {option.label}
+        </label>
+      </>
+    ))
+  }
+</div>

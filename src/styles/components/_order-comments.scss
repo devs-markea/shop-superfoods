@@ -1,0 +1,24 @@
+// ---------------------------------------------------------------------------
+// Block: order-comments
+// ---------------------------------------------------------------------------
+// Comentarios generales del pedido. Spec: gap 8.
+// El textarea (padding 16, radius 12, borde 1 #EAECF0 y color de placeholder)
+// lo resuelve .form-control con las $input-* de _variables.scss.
+// ---------------------------------------------------------------------------
+
+.order-comments {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-2);
+}
+
+// La etiqueta usa el bloque .section-label, compartido con el resto de grupos.
+
+// 100 de alto por defecto. Sin tirador de redimensionado ni barra de scroll:
+// el campo crece solo con el texto (src/scripts/auto-grow.ts), asi que nada
+// delata que sea un <textarea>.
+.order-comments__field {
+  min-height: 100px;
+  resize: none;
+  overflow-y: hidden;
+}

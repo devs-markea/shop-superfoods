@@ -1,0 +1,33 @@
+---
+import PaymentOption from './PaymentOption.astro';
+
+// Spec: etiqueta + dos opciones, gap 12 en los dos contenedores.
+---
+
+<div class="d-flex flex-column gap-3">
+  <span class="section-label" id="payment-label">Metodo de pago</span>
+
+  <div class="d-flex flex-column gap-3" role="group" aria-labelledby="payment-label">
+    <PaymentOption
+      id="payment-transfer"
+      value="transferencia"
+      title="Transferencia bancaria"
+      icon="phone"
+      note="Transferencia bancaria"
+      checked
+    />
+
+    {/*
+      Icono provisional: el de Mercado Pago es un logo propio y llegara como
+      asset. Cuando este, se anade a BrandIcon.astro y se cambia aqui.
+    */}
+    <PaymentOption
+      id="payment-mercadopago"
+      value="mercadopago"
+      title="Mercado Pago"
+      icon="credit-card"
+      tag="Proximamente"
+      disabled
+    />
+  </div>
+</div>

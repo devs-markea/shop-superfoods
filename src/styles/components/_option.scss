@@ -1,0 +1,49 @@
+// ---------------------------------------------------------------------------
+// Block: option  (sobre .form-check de Bootstrap)
+// ---------------------------------------------------------------------------
+// La maqueta ocultaba el control nativo y dibujaba la marca con un <span>.
+// Con Bootstrap se usa el .form-check-input real: mismo aspecto, pero el
+// control es visible para el navegador y las herramientas de accesibilidad.
+//
+// Spec: control 20x20 - borde 2px
+//       activo   #D5AA53 + label Inter 500 14/20 #141821
+//       inactivo #EAECF0 + label Inter 500 14/20 #6C757D
+//
+// El tamano, el borde y el color marcado vienen de $form-check-* en
+// _variables.scss; aqui solo el layout en fila y el estado del label.
+// ---------------------------------------------------------------------------
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--sf-space-3);
+  margin: 0;
+  cursor: pointer;
+}
+
+.option__input {
+  flex: 0 0 20px;
+  height: 20px;
+  margin: 0;
+  float: none; // .form-check-input flota cuando vive en un .form-check
+  cursor: pointer;
+  transition: border-color var(--sf-transition);
+}
+
+.option__label {
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-muted);
+  cursor: pointer;
+  transition: color var(--sf-transition);
+}
+
+// --- Estados -------------------------------------------------------------
+.option__input:checked ~ .option__label {
+  color: var(--sf-ink);
+}
+
+.option:hover .option__label {
+  color: var(--sf-ink);
+}

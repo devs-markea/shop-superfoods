@@ -1,0 +1,106 @@
+// ---------------------------------------------------------------------------
+// Block: payment-option  (sobre .btn-check de Bootstrap)
+// ---------------------------------------------------------------------------
+// Tarjeta de metodo de pago: icono a la izquierda, textos a la derecha.
+// Contenedor reutilizable: sirve para cualquier metodo, el icono y los textos
+// llegan por props.
+//
+// Spec: 72 de alto - gap 16 - padding 16 - radius 16
+//       caja del icono 40x40 - radius 8
+//       activo:   borde 2px #D5AA53 - bg #FFFFFF - caja del icono #D5AA531A
+//       inactivo: borde     #EAECF0 - bg #FFFFFF - caja del icono #F8F9FB
+//
+// El borde se mantiene en 2px en los dos estados. La spec da 1px para el
+// inactivo, pero cambiar de grosor al seleccionar desplazaria el contenido un
+// pixel; el 2px es ademas el que declara el contenedor base y el que usan los
+// campos del resto del proyecto.
+// ---------------------------------------------------------------------------
+
+.payment-option {
+  display: flex;
+  align-items: center;
+  gap: var(--sf-space-4);
+  min-height: 72px;
+  padding: var(--sf-space-4);
+  border: 2px solid var(--sf-border);
+  border-radius: var(--sf-radius-lg);
+  background-color: var(--sf-surface);
+  cursor: pointer;
+  transition:
+    border-color var(--sf-transition),
+    background-color var(--sf-transition);
+
+  &:hover {
+    border-color: var(--sf-gold);
+  }
+}
+
+// Element: caja del icono
+.payment-option__media {
+  display: inline-flex;
+  flex: 0 0 40px;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--sf-radius-sm);
+  background-color: var(--sf-body-bg);
+  color: var(--sf-gold);
+  transition: background-color var(--sf-transition);
+}
+
+// Element: textos
+.payment-option__body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.payment-option__title {
+  margin: 0;
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-ink);
+}
+
+.payment-option__note {
+  margin: 0;
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-muted);
+}
+
+// Modifier: metodo no disponible todavia
+.payment-option--disabled {
+  cursor: not-allowed;
+
+  &:hover {
+    border-color: var(--sf-border);
+  }
+}
+
+// --- Estados -------------------------------------------------------------
+.btn-check:checked + .payment-option {
+  border-color: var(--sf-gold);
+
+  .payment-option__media {
+    background-color: var(--sf-gold-tint);
+  }
+}
+
+.btn-check:focus-visible + .payment-option {
+  outline: 2px solid var(--sf-gold);
+  outline-offset: 2px;
+}
+
+.btn-check:disabled + .payment-option {
+  cursor: not-allowed;
+  opacity: 0.7;
+
+  &:hover {
+    border-color: var(--sf-border);
+  }
+}

@@ -1,0 +1,33 @@
+// ---------------------------------------------------------------------------
+// Block: shipping-progress  (barra sobre .progress de Bootstrap)
+// ---------------------------------------------------------------------------
+// Aviso de cuanto falta para el envio gratis.
+// Spec: height 70 - gap 12 - padding 16 - radius 16
+//       background #D5AA531A (el dorado al 10%, = --sf-gold-tint)
+// 16 + 20 (label) + 12 (gap) + 6 (barra) + 16 = 70
+//
+// La pista y el relleno los aporta .progress / .progress-bar via $progress-*.
+// ---------------------------------------------------------------------------
+
+.shipping-progress {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-3);
+  min-height: 70px;
+  padding: var(--sf-space-4);
+  border-radius: var(--sf-radius-lg);
+  background-color: var(--sf-gold-tint);
+}
+
+// Element: aviso — Inter 600 14/20, #D5AA53
+// Este label es dorado siempre, tambien cuando ya se alcanzo el envio gratis:
+// solo cambia el texto. El color esta especificado por label, no por estado.
+.shipping-progress__label {
+  // Sin esto el Reboot de Bootstrap le pone margin-bottom: 1rem a los <p>, que
+  // se suma al gap de 12 del contenedor y lo estira de 70 a 86.
+  margin: 0;
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-gold);
+}

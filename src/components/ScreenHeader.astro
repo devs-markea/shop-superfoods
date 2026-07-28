@@ -1,0 +1,30 @@
+---
+import BackButton from './BackButton.astro';
+
+interface Props {
+  title: string;
+  backHref?: string;
+}
+
+const { title, backHref = '/' } = Astro.props;
+
+// Cabecera de pantalla: control de vuelta + titulo centrado, 124 de alto.
+// Es la forma reutilizable para cualquier pantalla interior (datos de entrega,
+// pago, direcciones guardadas...).
+//
+// Para la barra de 48 con total a la derecha, usar TopBar: comparte el bloque
+// .topbar y sus elements, pero reparte distinto.
+---
+
+<header class="topbar topbar--tall">
+  <BackButton href={backHref} />
+
+  <h1 class="topbar__title topbar__title--centered">{title}</h1>
+
+  {/*
+    Contrapeso del control de vuelta. Con space-between, el elemento del medio
+    solo queda centrado en el ancho real si el primero y el ultimo miden lo
+    mismo, asi que este hueco de 24 replica al BackButton.
+  */}
+  <span class="topbar__spacer" aria-hidden="true"></span>
+</header>

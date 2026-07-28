@@ -1,0 +1,19 @@
+// ---------------------------------------------------------------------------
+// Block: section-label
+// ---------------------------------------------------------------------------
+// Etiqueta de grupo. Spec repetida en todo el diseno: Inter 600 12/16 #6C757D.
+// "Elige el tamano", "Comentarios generales", "Ubicacion", "Propina",
+// "Metodo de pago", "Resumen".
+//
+// Es un bloque propio y no un element de cada uno, porque son seis bloques
+// distintos con la misma etiqueta: repetir las cuatro declaraciones en cada
+// uno era la unica alternativa.
+// ---------------------------------------------------------------------------
+
+.section-label {
+  margin: 0;
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-muted);
+}

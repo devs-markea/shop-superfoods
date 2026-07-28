@@ -1,0 +1,58 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopBar from '../components/TopBar.astro';
+import ShippingProgress from '../components/ShippingProgress.astro';
+import OrderItem from '../components/OrderItem.astro';
+import OrderComments from '../components/OrderComments.astro';
+import ActionBar from '../components/ActionBar.astro';
+import {
+  FREE_SHIPPING_THRESHOLD,
+  getCartTotal,
+  getCartView,
+  getRemainingForFreeShipping,
+  getShippingProgress,
+} from '../data/cart.ts';
+
+const lines = getCartView();
+const total = getCartTotal(lines);
+const remaining = getRemainingForFreeShipping(total);
+const progress = getShippingProgress(total);
+---
+
+<Layout title="Mi pedido — Shop Superfoods" description="Revisa tu pedido antes de pagar.">
+  <TopBar title="Mi pedido" total={total} />
+
+  <!-- La cadena flex (page > main > form) deja la barra de accion al fondo de
+       la pantalla aunque el pedido tenga pocas lineas. -->
+  <main class="d-flex flex-column flex-grow-1">
+    <!-- El formulario envuelve tambien la barra de accion: "Continuar" envia
+         el pedido junto con los comentarios. -->
+    <form class="d-flex flex-column flex-grow-1" action="#" method="post">
+      <!-- data-threshold: el script recalcula el progreso al cambiar
+           cantidades. La configuracion viaja en el marcado, no importada, para
+           no meter el catalogo en el bundle de cliente. -->
+      <div class="screen-body" data-order-summary data-threshold={FREE_SHIPPING_THRESHOLD}>
+        <ShippingProgress remaining={remaining} progress={progress} />
+
+        <ul class="order-list list-unstyled" data-order-list>
+          {lines.map((line) => <OrderItem line={line} />)}
+        </ul>
+
+        <p class="text-secondary text-center m-0 d-none" data-empty>
+          Tu pedido esta vacio.
+        </p>
+
+        <hr class="screen-body__divider" />
+
+        <OrderComments />
+      </div>
+
+      <ActionBar label="Continuar" href="/datos-de-entrega" />
+    </form>
+  </main>
+</Layout>
+
+<script>
+  import '../scripts/order-summary';
+  import '../scripts/auto-grow';
+</script>

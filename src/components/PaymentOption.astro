@@ -1,0 +1,64 @@
+---
+import Icon, { type IconName } from './Icon.astro';
+
+interface Props {
+  id: string;
+  value: string;
+  title: string;
+  icon: IconName;
+  /** Texto secundario bajo el titulo. */
+  note?: string;
+  /** Etiqueta gris en lugar del texto secundario. */
+  tag?: string;
+  checked?: boolean;
+  disabled?: boolean;
+}
+
+const {
+  id,
+  value,
+  title,
+  icon,
+  note,
+  tag,
+  checked = false,
+  disabled = false,
+} = Astro.props;
+
+// Contenedor reutilizable: el icono y los textos llegan por props, asi sirve
+// para cualquier metodo de pago. El estado activo lo lleva el radio.
+---
+
+<input
+  class="btn-check"
+  type="radio"
+  name="payment_method"
+  id={id}
+  value={value}
+  checked={checked}
+  disabled={disabled}
+  autocomplete="off"
+/>
+
+<label
+  class:list={['payment-option', { 'payment-option--disabled': disabled }]}
+  for={id}
+>
+  <span class="payment-option__media">
+    <Icon name={icon} />
+  </span>
+
+  <span class="payment-option__body">
+    <span class="payment-option__title">{title}</span>
+
+    {note && <span class="payment-option__note">{note}</span>}
+
+    {
+      tag && (
+        <span>
+          <span class="tag tag--optional badge">{tag}</span>
+        </span>
+      )
+    }
+  </span>
+</label>

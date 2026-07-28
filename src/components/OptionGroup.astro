@@ -1,0 +1,60 @@
+---
+import { formatPrice, type OptionGroup } from '../data/products.ts';
+
+interface Props {
+  group: OptionGroup;
+}
+
+const { group } = Astro.props;
+const labelId = `${group.id}-label`;
+
+// En los radios el precio es el total de esa opcion; en los checkbox es un
+// sobrecoste. Se muestran distinto, igual que en la maqueta.
+const choiceLabel = (label: string, price: number, isRadio: boolean, index: number) =>
+  isRadio && index === 0
+    ? `${label} — ${formatPrice(price)}`
+    : isRadio
+      ? `${label} + ${formatPrice(price - group.choices[0].price)}`
+      : `${label} + ${formatPrice(price)}`;
+---
+
+<div class="option-group" role="group" aria-labelledby={labelId}>
+  <div class="option-group__header">
+    <span class="section-label" id={labelId}>{group.label}</span>
+    <span
+      class:list={[
+        'tag',
+        'badge',
+        group.required ? 'tag--required' : 'tag--optional',
+      ]}
+    >
+      {group.required ? 'Obligatorio' : 'Opcional'}
+    </span>
+  </div>
+
+  <div class="option-group__list">
+    {
+      group.choices.map((choice, index) => {
+        const id = `${group.id}-${choice.value}`;
+        const isRadio = group.type === 'radio';
+        return (
+          <label class="option" for={id}>
+            <input
+              class="option__input form-check-input"
+              type={group.type}
+              name={group.name}
+              id={id}
+              value={choice.value}
+              data-price={isRadio ? choice.price : choice.price}
+              checked={isRadio && index === 0}
+              required={group.required && isRadio && index === 0}
+            />
+            <span class="option__label">
+              {choiceLabel(choice.label, choice.price, isRadio, index)}
+            </span>
+          </label>
+        );
+      })
+    }
+  </div>
+</div>

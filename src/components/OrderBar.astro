@@ -1,0 +1,19 @@
+---
+import DeliverySwitch from './DeliverySwitch.astro';
+import OrderMeta from './OrderMeta.astro';
+import CategoryNav from './CategoryNav.astro';
+
+interface Props {
+  categories: readonly string[];
+}
+
+const { categories } = Astro.props;
+---
+
+<section class="order-bar" aria-label="Opciones de entrega">
+  <div class="order-bar__inner">
+    <DeliverySwitch />
+    <OrderMeta />
+    <CategoryNav categories={categories} />
+  </div>
+</section>

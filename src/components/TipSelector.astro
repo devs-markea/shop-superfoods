@@ -1,0 +1,57 @@
+---
+interface Props {
+  /** Importe preseleccionado, en MXN. */
+  selected?: number;
+}
+
+const { selected = 15 } = Astro.props;
+
+// La spec los rotula sin decimales ("$0", no "$0.00"), a diferencia del resto
+// de importes del proyecto: son botones estrechos y son cantidades redondas.
+const amountLabel = (amount: number) => `$${amount}`;
+
+// Importes fijos + "Otro". Como el switch y los chips, son radios: la seleccion
+// unica la garantiza el name compartido, sin JavaScript.
+const amounts = [0, 15, 30];
+---
+
+<div class="tip">
+  <span class="section-label" id="tip-label">Propina</span>
+
+  <div class="tip__options" role="group" aria-labelledby="tip-label">
+    {
+      amounts.map((amount) => (
+        <>
+          <input
+            class="btn-check"
+            type="radio"
+            name="tip"
+            id={`tip-${amount}`}
+            value={amount}
+            checked={amount === selected}
+            autocomplete="off"
+            data-tip
+          />
+          <label class="tip__option" for={`tip-${amount}`}>
+            {amountLabel(amount)}
+          </label>
+        </>
+      ))
+    }
+
+    {/*
+      "Otro" queda seleccionable pero todavia sin importe: el campo para
+      escribirlo no viene en la spec, asi que suma 0 hasta que se defina.
+    */}
+    <input
+      class="btn-check"
+      type="radio"
+      name="tip"
+      id="tip-custom"
+      value="0"
+      autocomplete="off"
+      data-tip
+    />
+    <label class="tip__option" for="tip-custom">Otro</label>
+  </div>
+</div>

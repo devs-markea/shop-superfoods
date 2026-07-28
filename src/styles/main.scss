@@ -1,0 +1,122 @@
+// ---------------------------------------------------------------------------
+// Punto de entrada de estilos.
+//
+// Orden segun shared/README.md: Bootstrap primero, la capa propia despues.
+// Bootstrap se importa por partes para no enviar CSS que no se usa; para
+// activar un componente, descomenta su linea.
+//
+// El orden de los bloques es obligatorio: no reordenar.
+// ---------------------------------------------------------------------------
+
+// 1. Funciones de Bootstrap (necesarias para resolver las variables)
+@import 'bootstrap/scss/functions';
+
+// 2. Tokens de diseno -> variables de Bootstrap (antes de sus variables)
+@import 'variables';
+
+// 3. Variables, mapas y mixins de Bootstrap
+@import 'bootstrap/scss/variables';
+@import 'bootstrap/scss/variables-dark';
+@import 'bootstrap/scss/maps';
+@import 'bootstrap/scss/mixins';
+@import 'bootstrap/scss/utilities';
+
+// 4. Base
+@import 'bootstrap/scss/root';
+@import 'bootstrap/scss/reboot';
+@import 'bootstrap/scss/type';
+@import 'bootstrap/scss/images';
+@import 'bootstrap/scss/containers';
+@import 'bootstrap/scss/grid';
+@import 'bootstrap/scss/transitions';
+
+// 5. Componentes en uso
+@import 'bootstrap/scss/buttons'; // .btn — base de chip, switch y action-bar
+@import 'bootstrap/scss/forms/labels';
+@import 'bootstrap/scss/forms/form-check'; // .form-check-input y .btn-check
+@import 'bootstrap/scss/forms/form-control'; // textarea de comentarios
+@import 'bootstrap/scss/progress'; // barra de envio gratis
+@import 'bootstrap/scss/dropdown'; // lista del selector de pais
+@import 'bootstrap/scss/card'; // .card — tarjeta de producto
+@import 'bootstrap/scss/badge'; // .badge — base del bloque .tag
+@import 'bootstrap/scss/navbar';
+@import 'bootstrap/scss/offcanvas'; // cajon del menu
+@import 'bootstrap/scss/close'; // boton de cierre del offcanvas
+
+// 6. Helpers concretos (en vez de la carpeta entera)
+@import 'bootstrap/scss/helpers/visually-hidden';
+@import 'bootstrap/scss/helpers/stretched-link';
+@import 'bootstrap/scss/helpers/text-truncation';
+
+// 7. Componentes sin usar todavia. Si activas alguno, importa tambien su JS
+//    en src/scripts/bootstrap.ts cuando lo necesite.
+// @import 'bootstrap/scss/tables';
+// @import 'bootstrap/scss/button-group'; // el switch no lo usa: cuadra las esquinas internas
+// @import 'bootstrap/scss/forms/input-group';
+// @import 'bootstrap/scss/nav';
+// @import 'bootstrap/scss/accordion';
+// @import 'bootstrap/scss/breadcrumb';
+// @import 'bootstrap/scss/pagination';
+// @import 'bootstrap/scss/alert';
+// @import 'bootstrap/scss/list-group';
+// @import 'bootstrap/scss/toasts';
+// @import 'bootstrap/scss/modal';
+// @import 'bootstrap/scss/tooltip';
+// @import 'bootstrap/scss/popover';
+// @import 'bootstrap/scss/carousel';
+// @import 'bootstrap/scss/spinners';
+// @import 'bootstrap/scss/placeholders';
+
+// 8. API de utilidades: SIEMPRE al final, genera las clases utilitarias
+@import 'bootstrap/scss/utilities/api';
+
+// ---------------------------------------------------------------------------
+// Capa propia (BEM). Va despues para poder ajustar lo que trae Bootstrap.
+// Un bloque, un archivo; el nombre del archivo es el nombre del bloque.
+// ---------------------------------------------------------------------------
+
+@import 'tokens'; // custom properties --sf-*
+
+@import 'components/base';
+@import 'components/icon';
+@import 'components/tag';
+@import 'components/section-label'; // etiqueta de grupo, compartida
+
+// Vista de listado
+@import 'components/navbar';
+@import 'components/order-bar';
+@import 'components/switch';
+@import 'components/order-meta';
+@import 'components/category-nav';
+@import 'components/chip';
+@import 'components/product-list';
+@import 'components/product-card';
+
+// Vista de detalle
+@import 'components/product-hero';
+@import 'components/product-detail';
+@import 'components/option-group';
+@import 'components/option';
+@import 'components/action-bar';
+
+// Compartido por las pantallas con barra superior
+@import 'components/topbar';
+@import 'components/screen-body';
+@import 'components/field';
+
+// Vista de pedido
+@import 'components/shipping-progress';
+@import 'components/order-list';
+@import 'components/order-item';
+@import 'components/stepper';
+@import 'components/order-comments';
+
+// Vista de datos de entrega
+@import 'components/country-select';
+@import 'components/location';
+
+// Vista de resumen de pago
+@import 'components/tip';
+@import 'components/payment-option';
+@import 'components/summary';
+@import 'components/legal-note';

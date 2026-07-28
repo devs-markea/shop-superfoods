@@ -1,0 +1,36 @@
+---
+interface Props {
+  name: string;
+  /** Etiqueta accesible. El placeholder no sirve como label. */
+  label: string;
+  placeholder: string;
+  type?: 'text' | 'tel' | 'email';
+  autocomplete?: string;
+  required?: boolean;
+  inputmode?: 'text' | 'tel' | 'numeric';
+}
+
+const {
+  name,
+  label,
+  placeholder,
+  type = 'text',
+  autocomplete,
+  required = false,
+  inputmode,
+} = Astro.props;
+
+const id = `field-${name}`;
+---
+
+<label class="visually-hidden" for={id}>{label}</label>
+<input
+  class="field form-control"
+  id={id}
+  name={name}
+  type={type}
+  placeholder={placeholder}
+  autocomplete={autocomplete}
+  inputmode={inputmode}
+  required={required}
+/>

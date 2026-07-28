@@ -1,0 +1,51 @@
+---
+import Icon from './Icon.astro';
+import { formatPrice, photoUrl, type Product } from '../data/products.ts';
+
+interface Props {
+  product: Product;
+  /** La primera tarjeta no se carga en diferido: entra en el primer viewport. */
+  eager?: boolean;
+}
+
+const { product, eager = false } = Astro.props;
+const href = `/producto/${product.slug}`;
+---
+
+<article class="product-card card">
+  <div class="product-card__media">
+    <img
+      class="product-card__image"
+      src={photoUrl(product.photoId, 200, 200)}
+      width="80"
+      height="80"
+      alt={product.alt}
+      loading={eager ? 'eager' : 'lazy'}
+      decoding="async"
+    />
+  </div>
+
+  <div class="product-card__body">
+    <h3 class="product-card__title">
+      <!-- stretched-link: toda la tarjeta es clicable, sin anidar el boton -->
+      <a class="stretched-link text-reset" href={href}>{product.name}</a>
+    </h3>
+
+    <p class="product-card__description">{product.description}</p>
+
+    <div class="product-card__footer">
+      <span class="product-card__price">{formatPrice(product.price)}</span>
+
+      <!-- position-relative saca el boton por encima del stretched-link -->
+      <button
+        class="product-card__add btn-plain position-relative"
+        type="button"
+        aria-label={`Agregar ${product.name} al carrito`}
+        data-add
+        data-slug={product.slug}
+      >
+        <Icon name="plus" size="sm" />
+      </button>
+    </div>
+  </div>
+</article>
