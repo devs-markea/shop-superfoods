@@ -17,9 +17,11 @@ interface Props {
    * Color del boton. Dorado por defecto; `whatsapp` solo para enviar el pedido.
    */
   variant?: 'primary' | 'whatsapp';
+  /** Aviso corto bajo el boton, centrado. */
+  note?: string;
 }
 
-const { label, total, href, icon, variant = 'primary' } = Astro.props;
+const { label, total, href, icon, variant = 'primary', note } = Astro.props;
 
 // La copia vive en el marcado, no en el script.
 const hasTotal = total !== undefined && label.includes('{total}');
@@ -55,4 +57,6 @@ const buttonClass = [
       </button>
     )
   }
+
+  {note && <p class="action-bar__note">{note}</p>}
 </div>

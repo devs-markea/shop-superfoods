@@ -1,0 +1,56 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BackHeader from '../components/BackHeader.astro';
+import OrderStatus from '../components/OrderStatus.astro';
+import TransferSteps from '../components/TransferSteps.astro';
+import ClabeCard from '../components/ClabeCard.astro';
+import ActionBar from '../components/ActionBar.astro';
+
+// Estatica a proposito: es la unica pantalla del cierre que no rotula importes
+// ni lineas. Solo explica como enviar el comprobante, asi que no hay carrito que
+// leer ni nada que dependa de la sesion.
+---
+
+<Layout
+  title="Pedido recibido — Shop Superfoods"
+  description="Envia tu comprobante de transferencia para confirmar el pedido."
+>
+  {/*
+    Vuelve al menu y no a la pantalla de pago: el pedido ya esta hecho, y volver
+    atras invitaria a confirmarlo otra vez.
+  */}
+  <BackHeader backHref="/" />
+
+  <!-- La cadena flex (page > main) deja la barra de accion al fondo de la
+       pantalla aunque el contenido no llegue a llenarla. -->
+  <main class="d-flex flex-column flex-grow-1">
+    <div class="screen-body screen-body--confirmation">
+      <OrderStatus
+        state="pending"
+        title="Pedido recibido"
+        note="Envia tu comprobante por WhatsApp para que podamos confirmar tu pedido."
+      />
+
+      <TransferSteps />
+
+      <ClabeCard />
+    </div>
+
+    {/*
+      Pendiente: el enlace real a wa.me. Falta el telefono de la tienda y el
+      mensaje que se prerellena, asi que el control queda inerte —un submit
+      fuera de un formulario no navega ni recarga— en lugar de apuntar a un
+      numero inventado.
+    */}
+    <ActionBar
+      label="Abrir WhatsApp"
+      icon="whatsapp"
+      variant="whatsapp"
+      note="Tu pedido quedara pendiente hasta confirmar el pago"
+    />
+  </main>
+</Layout>
+
+<script>
+  import '../scripts/copy-button';
+</script>

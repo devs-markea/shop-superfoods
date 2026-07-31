@@ -1,0 +1,34 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  /** Texto que va al portapapeles, tal cual. */
+  value: string;
+  /** Etiqueta accesible: describe QUE se copia ("Copiar la CLABE"). */
+  label: string;
+  /** Caja de 36 en lugar de 32. */
+  size?: 'md' | 'lg';
+}
+
+const { value, label, size = 'md' } = Astro.props;
+
+// Boton de copiar al portapapeles. El comportamiento lo pone
+// src/scripts/copy-button.ts, que delega en document: la pagina que use este
+// componente tiene que importarlo.
+//
+// Los dos iconos van en el marcado y el script solo alterna el modifier, asi no
+// hace falta conocer los trazados desde JavaScript.
+---
+
+<button
+  class:list={['copy-button', 'btn-plain', { 'copy-button--lg': size === 'lg' }]}
+  type="button"
+  aria-label={label}
+  data-copy={value}
+>
+  <Icon name="copy" size="sm" class="copy-button__icon" />
+  <Icon name="check" size="sm" class="copy-button__done" />
+</button>
+
+{/* Confirmacion para lectores de pantalla: el cambio de icono no se anuncia. */}
+<p class="visually-hidden" role="status" data-copy-status></p>

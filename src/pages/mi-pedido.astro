@@ -7,16 +7,35 @@ import OrderComments from '../components/OrderComments.astro';
 import ActionBar from '../components/ActionBar.astro';
 import {
   FREE_SHIPPING_THRESHOLD,
-  getCartTotal,
-  getCartView,
-  getRemainingForFreeShipping,
-  getShippingProgress,
-} from '../data/cart.ts';
+  getCart,
+  remainingForFreeShipping,
+  shippingProgress,
+  type Cart,
+} from '../lib/cart.ts';
+import { resolveCartToken } from '../lib/cart-session.ts';
+import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
 
-const lines = getCartView();
-const total = getCartTotal(lines);
-const remaining = getRemainingForFreeShipping(total);
-const progress = getShippingProgress(total);
+// El carrito es de esta sesion: no hay nada que prerenderizar.
+export const prerender = false;
+
+let cart: Cart | null = null;
+let unreachable = false;
+
+try {
+  // resolveCartToken emite la cookie si es la primera visita, asi que llegar
+  // aqui directo (sin pasar por una ficha) tambien deja sesion abierta.
+  cart = await getCart(resolveCartToken(Astro.cookies));
+} catch (error) {
+  console.error('[pedido] fallo GET /api/cart', error);
+  unreachable = true;
+}
+
+const items = cart?.items ?? [];
+const total = cart?.total ?? 0;
+
+// Los comentarios ya escritos: se guardan en el borrador del pedido, asi que
+// volver aqui desde el pago no los pierde.
+const { comments } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 ---
 
 <Layout title="Mi pedido — Shop Superfoods" description="Revisa tu pedido antes de pagar.">
@@ -28,26 +47,39 @@ const progress = getShippingProgress(total);
     <!-- El formulario envuelve tambien la barra de accion: "Continuar" envia
          el pedido junto con los comentarios. -->
     <form class="d-flex flex-column flex-grow-1" action="#" method="post">
-      <!-- data-threshold: el script recalcula el progreso al cambiar
-           cantidades. La configuracion viaja en el marcado, no importada, para
-           no meter el catalogo en el bundle de cliente. -->
+      <!-- data-threshold: el umbral de envio gratis es de este front, la API no
+           tiene regla de envio todavia. El script recalcula el progreso con el
+           total que devuelve cada operacion de carrito. -->
       <div class="screen-body" data-order-summary data-threshold={FREE_SHIPPING_THRESHOLD}>
-        <ShippingProgress remaining={remaining} progress={progress} />
+        <ShippingProgress
+          remaining={remainingForFreeShipping(total)}
+          progress={shippingProgress(total)}
+        />
 
-        <ul class="order-list list-unstyled" data-order-list>
-          {lines.map((line) => <OrderItem line={line} />)}
+        <ul class:list={['order-list', 'list-unstyled', items.length === 0 && 'd-none']} data-order-list>
+          {items.map((item) => <OrderItem item={item} />)}
         </ul>
 
-        <p class="text-secondary text-center m-0 d-none" data-empty>
-          Tu pedido esta vacio.
+        <p class:list={['text-secondary', 'text-center', 'm-0', items.length > 0 && 'd-none']} data-empty>
+          {unreachable ? 'No pudimos cargar tu pedido. Intentalo de nuevo.' : 'Tu pedido esta vacio.'}
         </p>
+
+        <!-- Lo rellena el script cuando la API rechaza un cambio. -->
+        <p class="order-list__error" role="alert" hidden data-cart-error></p>
 
         <hr class="screen-body__divider" />
 
-        <OrderComments />
+        <OrderComments value={comments} />
       </div>
 
-      <ActionBar label="Continuar" href="/datos-de-entrega" />
+      <!-- Sin lineas no hay nada que continuar. -->
+      {
+        items.length > 0 ? (
+          <ActionBar label="Continuar" href="/datos-de-entrega" />
+        ) : (
+          <ActionBar label="Ver el menu" href="/" />
+        )
+      }
     </form>
   </main>
 </Layout>

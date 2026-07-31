@@ -11,12 +11,14 @@
   --sf-gold: #{$sf-gold};
   --sf-gold-hover: #{$sf-gold-hover};
   --sf-gold-tint: #{$sf-gold-tint};
+  --sf-gold-edge: #{$sf-gold-edge};
   --sf-gradient-hero: #{$sf-gradient-hero};
 
   // --- Color: acentos ---
   --sf-indigo: #{$sf-indigo};
   --sf-whatsapp: #{$sf-whatsapp};
   --sf-whatsapp-hover: #{$sf-whatsapp-hover};
+  --sf-success: #{$sf-success};
 
   // --- Color: neutros ---
   --sf-ink: #{$sf-ink};
@@ -49,6 +51,9 @@
   --sf-weight-medium: 500;
   --sf-weight-semibold: 600;
   --sf-weight-bold: 700;
+  // Solo el folio de /pedido-confirmado. Se descarga como el resto de pesos,
+  // declarado en la config de Astro: sin el, el navegador cae al 700.
+  --sf-weight-extrabold: 800;
 
   // --- Espaciado ---
   --sf-space-1: #{$sf-space-1};
@@ -63,6 +68,7 @@
   --sf-radius-sm: #{$sf-radius-sm};
   --sf-radius-md: #{$sf-radius-md};
   --sf-radius-lg: #{$sf-radius-lg};
+  --sf-radius-xl: #{$sf-radius-xl};
   --sf-radius-pill: #{$sf-radius-pill};
 
   // --- Elevacion ---

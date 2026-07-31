@@ -1,0 +1,100 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BackHeader from '../components/BackHeader.astro';
+import OrderStatus from '../components/OrderStatus.astro';
+import OrderReceipt from '../components/OrderReceipt.astro';
+import ActionBar from '../components/ActionBar.astro';
+import { getCart } from '../lib/cart.ts';
+import { getOrder } from '../lib/orders.ts';
+import { resolveCartToken } from '../lib/cart-session.ts';
+import { DRAFT_COOKIE, ORDER_COOKIE, parseDraft, parseOrderPointer } from '../lib/checkout-draft.ts';
+import type { OrderLine, PaymentMethod, StoreOrder } from '../lib/checkout.ts';
+
+// Depende de la sesion: el pedido se relee en cada visita.
+export const prerender = false;
+
+const token = resolveCartToken(Astro.cookies);
+
+// El pedido no se guarda en la cookie, solo se apunta: su estado cambia sin que
+// el comprador toque nada, y el folio de una transferencia aparece cuando la
+// tienda da el pago por bueno.
+const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
+
+let order: StoreOrder | null = null;
+
+if (pointer) {
+  try {
+    order = await getOrder(pointer.id, token);
+  } catch (error) {
+    console.error('[confirmado] fallo GET /api/orders', error);
+  }
+}
+
+// Con pedido, todo sale de el: el checkout vacia el carrito, asi que leerlo aqui
+// devolveria una lista vacia.
+let items: OrderLine[] = order?.items ?? [];
+let total = order?.total ?? 0;
+
+// Sin pedido —se entro directo, sin pasar por el pago— se pinta el carrito, para
+// que la pantalla siga siendo revisable.
+if (!order) {
+  const { tip } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+
+  try {
+    const cart = await getCart(token);
+    items = cart.items;
+    total = cart.total + tip;
+  } catch (error) {
+    console.error('[confirmado] fallo GET /api/cart', error);
+  }
+}
+
+// Folio del pedido: el `id`, que es la numeracion que ya lleva el backend (1, 2,
+// 3...). Es un rotulo, no una llave: sirve para que el comprador diga "mi pedido
+// 91" por telefono.
+//
+// No se usa `orderNumber` a proposito: hoy es un ULID de 26 caracteres, que no se
+// puede leer en voz alta ni cabe en los 40px del diseno. Lo que si dice es si el
+// pago quedo validado —llega null hasta entonces—, y de eso se encargara la
+// pantalla de estado del pedido.
+//
+// Sin pedido —se entro directo— se rotula el del mockup para poder revisar el
+// diseno. Es lo unico escrito a mano que queda en el flujo.
+const MOCK_FOLIO = '91';
+const folio = order?.id ?? MOCK_FOLIO;
+
+// El pedido no devuelve el metodo, asi que lo rotula el que se guardo al cerrar.
+const method: PaymentMethod = pointer?.method ?? 'mercado_pago';
+---
+
+<Layout
+  title="Pedido confirmado — Shop Superfoods"
+  description="Tu pedido quedo confirmado."
+>
+  {/*
+    Vuelve al menu y no al resumen de pago: el pedido ya esta confirmado, y
+    volver atras invitaria a pagarlo otra vez.
+  */}
+  <BackHeader backHref="/" />
+
+  <!-- La cadena flex (page > main) deja la barra de accion al fondo de la
+       pantalla aunque el contenido no llegue a llenarla. Sin formulario: aqui no
+       se envia nada. -->
+  <main class="d-flex flex-column flex-grow-1">
+    <div class="screen-body screen-body--confirmation">
+      <OrderStatus
+        folio={folio}
+        title="Pedido confirmado"
+        note="Te avisaremos por WhatsApp cuando tu pedido este listo."
+      />
+
+      <OrderReceipt items={items} total={total} method={method} />
+    </div>
+
+    {/*
+      Pendiente: la pantalla de estado del pedido. Cuando exista, su enlace sale
+      de `pointer.id` — GET /api/orders/{id} ya devuelve estado y etiqueta.
+    */}
+    <ActionBar label="Ver estado del pedido" href="/" />
+  </main>
+</Layout>

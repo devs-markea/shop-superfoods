@@ -1,0 +1,64 @@
+// ---------------------------------------------------------------------------
+// Block: order-detail
+// ---------------------------------------------------------------------------
+// Recordatorio de lo pedido en la pantalla de pago.
+// Spec: gap 12 - padding 16 - radius 16 - borde 1px #EAECF0 - bg #FFFFFF
+//       lineas gap 8, Inter 500 12/16 #6C757D
+//       total Inter 600 14/20, concepto #141821 e importe #D5AA53
+//
+// Es la unica tarjeta blanca del proyecto que se apoya en un borde en lugar de
+// en la sombra: aqui el bloque no es una superficie interactiva, solo agrupa.
+// ---------------------------------------------------------------------------
+
+.order-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-3);
+  padding: var(--sf-space-4);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-lg);
+  background-color: var(--sf-surface);
+}
+
+.order-detail__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-2);
+  margin: 0;
+}
+
+// Element: una linea de texto del detalle ("1× Tacos de Pastor"). Tambien
+// rotula el pedido vacio, que es la misma linea sin lineas que listar.
+.order-detail__item {
+  margin: 0;
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-muted);
+}
+
+// La divisora discontinua es .dashed-divider: la comparte con el resumen de
+// /pedido-confirmado.
+
+// Element: fila del total
+.order-detail__total {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sf-space-3);
+}
+
+.order-detail__total-term {
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-ink);
+}
+
+.order-detail__total-value {
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-gold);
+  white-space: nowrap;
+}

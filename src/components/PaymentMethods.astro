@@ -1,7 +1,20 @@
 ---
 import PaymentOption from './PaymentOption.astro';
+import type { PaymentMethod } from '../lib/checkout.ts';
+
+interface Props {
+  /** Metodo ya elegido, para cuando se vuelve atras desde el pago. */
+  selected?: PaymentMethod | null;
+}
+
+// Transferencia por defecto: es el metodo que hoy se cobra de verdad.
+const { selected = 'bank_transfer' } = Astro.props;
 
 // Spec: etiqueta + dos opciones, gap 12 en los dos contenedores.
+//
+// Los `value` son los del diseno, no los del contrato: los traduce
+// toPaymentMethod() al cerrar el pedido. Cambiarlos aqui obligaria a tocar
+// tambien el CSS de los estados y las etiquetas de los labels.
 ---
 
 <div class="d-flex flex-column gap-3">
@@ -14,20 +27,23 @@ import PaymentOption from './PaymentOption.astro';
       title="Transferencia bancaria"
       icon="phone"
       note="Transferencia bancaria"
-      checked
+      checked={selected !== 'mercado_pago'}
     />
 
     {/*
       Icono provisional: el de Mercado Pago es un logo propio y llegara como
       asset. Cuando este, se anade a BrandIcon.astro y se cambia aqui.
+
+      Seleccionable: cierra el pedido en /pedido-confirmado, sin pasar por los
+      datos de la cuenta. Lo que falta es el cobro real —la pasarela no forma
+      parte de las cuatro APIs—, no la pantalla.
     */}
     <PaymentOption
       id="payment-mercadopago"
       value="mercadopago"
       title="Mercado Pago"
       icon="credit-card"
-      tag="Proximamente"
-      disabled
+      checked={selected === 'mercado_pago'}
     />
   </div>
 </div>

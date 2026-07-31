@@ -1,0 +1,40 @@
+---
+// Pasos a seguir tras confirmar un pago por transferencia.
+//
+// La copia es fija: no depende del pedido ni del carrito, describe el
+// procedimiento de la tienda. Si algun dia cambia por sucursal, se pasa a props.
+//
+// Spec: tarjeta gap 20 - padding 24 - radius 20 - bg #FFFFFF
+//       franja izquierda de 4 en dorado translucido
+//       lista gap 16 - numero 28 redondo dorado con el digito en 14/700 blanco
+//       texto 14/20 500 #141821
+const steps = [
+  'Realiza tu transferencia bancaria',
+  'Envia el comprobante por WhatsApp',
+  'Recibe confirmacion de tu pedido',
+];
+---
+
+<div class="steps">
+  <span class="section-label">Pasos a seguir</span>
+
+  {/* Lista ordenada: el orden es la informacion. */}
+  <ol class="steps__list list-unstyled">
+    {
+      steps.map((step, index) => (
+        <li class="steps__item">
+          {/*
+            El numero se pinta, no se hereda del marcador de la lista: la spec
+            le da caja, fondo y color propios. aria-hidden para que no se lea
+            dos veces, porque el <ol> ya numera.
+          */}
+          <span class="steps__number" aria-hidden="true">
+            {index + 1}
+          </span>
+
+          <span class="steps__text">{step}</span>
+        </li>
+      ))
+    }
+  </ol>
+</div>

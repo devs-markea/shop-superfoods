@@ -112,6 +112,22 @@
   }
 }
 
+// Modifier: publicado pero no comprable ahora (available: false del catalogo).
+// Sigue visible y clicable —el detalle existe— pero atenuado y sin boton: en
+// su lugar la tarjeta pinta un .tag con el motivo.
+.product-card--unavailable {
+  .product-card__media,
+  .product-card__title,
+  .product-card__description,
+  .product-card__price {
+    opacity: 0.55;
+  }
+
+  &:hover {
+    box-shadow: var(--sf-shadow-card);
+  }
+}
+
 // Modifier de feedback al agregar (lo aplica src/scripts/add-button.ts)
 .product-card__add--added {
   animation: sf-pop 320ms ease;

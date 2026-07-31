@@ -3,7 +3,28 @@ import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
 import OrderBar from '../components/OrderBar.astro';
 import ProductCard from '../components/ProductCard.astro';
-import { categories, products } from '../data/products.ts';
+import { getCategories, getProducts, type ProductListItem } from '../lib/catalog.ts';
+
+// On-demand, no prerenderizado: `available` depende del horario de la
+// categoria resuelto en America/Cancun, asi que una pagina generada en el
+// build serviria la disponibilidad congelada del momento del deploy y
+// mostraria como comprable un platillo que ya cerro.
+export const prerender = false;
+
+let products: ProductListItem[] = [];
+let unreachable = false;
+
+try {
+  products = await getProducts();
+} catch (error) {
+  // Sin catalogo la pagina sigue en pie —cabecera y barra de pedido— con un
+  // aviso en lugar de la rejilla. Una portada en blanco es peor que una
+  // portada que explica que paso.
+  console.error('[catalogo] fallo GET /api/products', error);
+  unreachable = true;
+}
+
+const categories = getCategories(products);
 ---
 
 <Layout title="Shop Superfoods">
@@ -14,17 +35,30 @@ import { categories, products } from '../data/products.ts';
 
     <section class="product-list" aria-label="Productos">
       <div class="product-list__items">
-        <!-- m-0: .row solo resetea los margenes laterales y el superior, asi
-             que el margin-bottom que el Reboot pone a <ul> sobreviviria. -->
-        <ul class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-6 list-unstyled m-0">
-          {
-            products.map((product, index) => (
-              <li class="col">
-                <ProductCard product={product} eager={index === 0} />
-              </li>
-            ))
-          }
-        </ul>
+        {
+          products.length > 0 ? (
+            // m-0: .row solo resetea los margenes laterales y el superior, asi
+            // que el margin-bottom que el Reboot pone a <ul> sobreviviria.
+            <ul
+              class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-6 list-unstyled m-0"
+              data-product-list
+            >
+              {products.map((product, index) => (
+                // data-category en la celda, no en la tarjeta: es la celda lo
+                // que oculta el filtro.
+                <li class="col" data-category={product.category}>
+                  <ProductCard product={product} eager={index === 0} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p class="product-list__notice">
+              {unreachable
+                ? 'No pudimos cargar el menu en este momento. Vuelve a intentarlo en unos minutos.'
+                : 'Todavia no hay platillos publicados.'}
+            </p>
+          )
+        }
       </div>
     </section>
   </main>
@@ -33,5 +67,6 @@ import { categories, products } from '../data/products.ts';
 <script>
   import '../scripts/bootstrap';
   import '../scripts/category-nav';
+  import '../scripts/category-filter';
   import '../scripts/add-button';
 </script>

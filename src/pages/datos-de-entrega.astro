@@ -40,6 +40,11 @@ import ActionBar from '../components/ActionBar.astro';
 
         <!-- 4. Direccion (gap 12) -->
         <AddressFields />
+
+        <!-- Lo que falta para poder continuar. Lo rellena el script al intentar
+             avanzar: los globos del navegador se cierran al primer toque y hay
+             que dejar el aviso escrito en la pantalla. -->
+        <p class="form-error" role="alert" hidden data-delivery-error></p>
       </div>
 
       <ActionBar label="Continuar" />

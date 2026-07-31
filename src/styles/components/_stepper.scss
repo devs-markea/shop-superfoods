@@ -34,9 +34,13 @@
     transform: scale(0.92);
   }
 
+  // El tope de unidades por opcion se ve: atenuado y sin respuesta al hover.
+  // Es la diferencia deliberada con el checkbox, que al llegar a su maximo de
+  // opciones ignora el clic sin ninguna senal.
   &:disabled {
     opacity: 0.4;
     transform: none;
+    cursor: not-allowed;
   }
 }
 

@@ -1,0 +1,46 @@
+---
+import Icon, { type IconName } from './Icon.astro';
+
+interface Props {
+  title: string;
+  /** Que pasa a continuacion, en una linea. */
+  note: string;
+  /** Folio del pedido, sin el "#". Solo lo lleva el pedido ya confirmado. */
+  folio?: number | string;
+  /**
+   * Sello: `success` es el circulo verde con el visto (pedido confirmado);
+   * `pending` el dorado con el reloj (pedido a la espera del comprobante).
+   */
+  state?: 'success' | 'pending';
+}
+
+const { title, note, folio, state = 'success' } = Astro.props;
+
+// Cierre de una pantalla de resultado: sello, titular y aviso, todo centrado.
+// Lo comparten /pedido-confirmado y /pedido-recibido, que solo se diferencian en
+// el sello, la copia y el folio.
+//
+// Spec: bloque gap 24 - circulo 80 con radius 40 - labels gap 8
+//       titulo 24/32 600 #141821 - folio 40 800 dorado - aviso 14/20 400 #6C757D
+
+const icons: Record<'success' | 'pending', IconName> = {
+  success: 'check',
+  pending: 'clock',
+};
+---
+
+<div class="order-status">
+  <span
+    class:list={['order-status__seal', { 'order-status__seal--pending': state === 'pending' }]}
+  >
+    <Icon name={icons[state]} size="lg" />
+  </span>
+
+  <div class="order-status__titles">
+    <h1 class="order-status__title">{title}</h1>
+
+    {folio !== undefined && <p class="order-status__folio">#{folio}</p>}
+
+    <p class="order-status__note">{note}</p>
+  </div>
+</div>

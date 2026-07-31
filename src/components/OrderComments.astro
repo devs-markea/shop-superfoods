@@ -1,4 +1,11 @@
 ---
+interface Props {
+  /** Lo ya escrito, si se vuelve al pedido desde el checkout. */
+  value?: string;
+}
+
+const { value = '' } = Astro.props;
+
 const id = 'order-comments';
 ---
 
@@ -13,5 +20,5 @@ const id = 'order-comments';
     name="comments"
     rows="3"
     placeholder="Instrucciones adicionales, alergias..."
-    data-auto-grow></textarea>
+    data-auto-grow>{value}</textarea>
 </div>

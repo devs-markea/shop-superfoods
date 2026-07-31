@@ -1,0 +1,33 @@
+// ---------------------------------------------------------------------------
+// Block: info-note
+// ---------------------------------------------------------------------------
+// Aviso sobre fondo de marca: icono + texto, los dos en dorado.
+// Spec: gap 12 - padding 16 - radius 16 - bg #D5AA531A - color #D5AA53
+//
+// Misma caja que .shipping-progress (gold-tint, padding 16, radius 16), pero
+// aquel es una barra de progreso con su label: no hay nada que reutilizar mas
+// alla del token.
+//
+// La spec no da tipografia para el texto. Se usa la de las notas del proyecto
+// (Inter 500 12/16, como .legal-note): es letra pequena explicativa, y el
+// dorado ya le da todo el peso que necesita. El icono va en 16 para que su caja
+// coincida con la primera linea del texto.
+// ---------------------------------------------------------------------------
+
+.info-note {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sf-space-3);
+  padding: var(--sf-space-4);
+  border-radius: var(--sf-radius-lg);
+  background-color: var(--sf-gold-tint);
+  color: var(--sf-gold);
+}
+
+.info-note__text {
+  // Sin esto el Reboot le pone margin-bottom: 1rem al <p> y estira la caja.
+  margin: 0;
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-sm);
+}

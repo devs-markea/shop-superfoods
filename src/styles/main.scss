@@ -81,6 +81,9 @@
 @import 'components/icon';
 @import 'components/tag';
 @import 'components/section-label'; // etiqueta de grupo, compartida
+@import 'components/dashed-divider'; // divisora 4/2, compartida
+@import 'components/copy-button'; // copiar al portapapeles, compartido
+@import 'components/form-error'; // aviso de campo que falta, compartido
 
 // Vista de listado
 @import 'components/navbar';
@@ -120,3 +123,14 @@
 @import 'components/payment-option';
 @import 'components/summary';
 @import 'components/legal-note';
+
+// Vista de pago por transferencia
+@import 'components/bank-account';
+@import 'components/info-note';
+@import 'components/order-detail';
+
+// Cierre del pedido: confirmado (Mercado Pago) y recibido (transferencia)
+@import 'components/order-status';
+@import 'components/order-receipt';
+@import 'components/steps';
+@import 'components/clabe-card';

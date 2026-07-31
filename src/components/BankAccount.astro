@@ -1,0 +1,40 @@
+---
+import CopyButton from './CopyButton.astro';
+import { bankAccount, formatClabe } from '../data/bank-account.ts';
+
+// Tarjeta con los datos de la cuenta de destino.
+//
+// La cuenta es una sola para toda la tienda, asi que se importa aqui en lugar
+// de recorrer la pagina como prop; el dia que la devuelva el checkout se pasa a
+// props sin tocar el marcado.
+//
+// Spec: tarjeta gap 20 - padding 20 - radius 20 - sombra de tarjeta
+//       filas gap 6 - etiqueta 12/16 #9CA3AF - dato 14/20 #141821
+//       la CLABE comparte su fila con un boton de copiar de 32 - radius 8
+---
+
+<div class="bank-account">
+  <div class="bank-account__field">
+    <span class="section-label section-label--soft">Titular</span>
+    <span class="bank-account__value">{bankAccount.holder}</span>
+  </div>
+
+  <div class="bank-account__field">
+    <span class="section-label section-label--soft">Banco</span>
+    <span class="bank-account__value">{bankAccount.bank}</span>
+  </div>
+
+  <div class="bank-account__field">
+    <span class="section-label section-label--soft">CLABE</span>
+
+    <div class="bank-account__row">
+      <span class="bank-account__value">{formatClabe(bankAccount.clabe)}</span>
+
+      {/*
+        Se copia la CLABE en crudo (18 digitos seguidos), no el texto agrupado
+        de al lado: es lo que se pega en la banca en linea.
+      */}
+      <CopyButton value={bankAccount.clabe} label="Copiar la CLABE" />
+    </div>
+  </div>
+</div>

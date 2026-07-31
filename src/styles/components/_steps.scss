@@ -1,0 +1,66 @@
+// ---------------------------------------------------------------------------
+// Block: steps
+// ---------------------------------------------------------------------------
+// Tarjeta con el procedimiento a seguir, numerado.
+// Spec: gap 20 - padding 24 - radius 20 - bg #FFFFFF
+//       borde izquierdo de 4 en dorado al 25%
+//       lista gap 16 - numero 28 radius 14 dorado, digito 14/100% 700 #FFFFFF
+//       texto 14/20 500 #141821
+//
+// Los 342x200 de la spec son la caja del artboard movil: no se declaran, el
+// bloque ocupa el ancho de la columna y crece con su contenido.
+// ---------------------------------------------------------------------------
+
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-5);
+  padding: var(--sf-space-6);
+  border-left: 4px solid var(--sf-gold-edge);
+  border-radius: var(--sf-radius-xl);
+  background-color: var(--sf-surface);
+}
+
+.steps__list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-4);
+  margin: 0;
+}
+
+// Element: paso. El numero se alinea con la primera linea, no con el centro del
+// bloque de texto: asi sigue leyendose como marcador cuando el texto parte en
+// dos lineas.
+.steps__item {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sf-space-3);
+}
+
+// Element: numero — circulo dorado de 28 con el digito en blanco.
+// line-height 1 y no 20: el digito se centra por el flex de la caja.
+.steps__number {
+  display: inline-flex;
+  flex: 0 0 28px;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background-color: var(--sf-gold);
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-bold);
+  line-height: 1;
+  color: var(--sf-on-gold);
+}
+
+// Element: texto — Inter 500 14/20.
+// El padding superior centra la primera linea contra el numero de 28:
+// (28 - 20) / 2 = 4.
+.steps__text {
+  padding-top: 4px;
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-ink);
+}

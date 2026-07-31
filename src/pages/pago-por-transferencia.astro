@@ -1,0 +1,78 @@
+---
+import Layout from '../layouts/Layout.astro';
+import ScreenHeader from '../components/ScreenHeader.astro';
+import Icon from '../components/Icon.astro';
+import BankAccount from '../components/BankAccount.astro';
+import OrderDetail from '../components/OrderDetail.astro';
+import ActionBar from '../components/ActionBar.astro';
+import { getCart } from '../lib/cart.ts';
+import { resolveCartToken } from '../lib/cart-session.ts';
+import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
+import type { OrderLine } from '../lib/checkout.ts';
+
+// El carrito de la sesion manda sobre cualquier valor de ejemplo.
+export const prerender = false;
+
+// El pedido todavia no existe: se crea al confirmar. Asi que lo que se lista es
+// el carrito, que sigue en pie.
+let items: OrderLine[] = [];
+let products = 0;
+
+try {
+  const cart = await getCart(resolveCartToken(Astro.cookies));
+  items = cart.items;
+  products = cart.total;
+} catch (error) {
+  console.error('[transferencia] fallo GET /api/cart', error);
+}
+
+// La propina viene del borrador, no de la URL: la cookie la lee tambien el
+// servidor, asi que el total se pinta ya completo y no baila al arrancar el JS.
+const { tip } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+
+// El envio sigue sin cotizar (el backend lo congela en 0), y por eso el aviso
+// dorado advierte de que el importe todavia puede subir.
+const total = products + tip;
+---
+
+<Layout
+  title="Pago por transferencia — Shop Superfoods"
+  description="Datos bancarios para completar tu pedido."
+>
+  <ScreenHeader title="Pago por transferencia" backHref="/resumen-de-pago" />
+
+  <!-- La cadena flex (page > main > form) deja la barra de accion al fondo de
+       la pantalla aunque el contenido no llegue a llenarla. -->
+  <main class="d-flex flex-column flex-grow-1">
+    <form
+      class="d-flex flex-column flex-grow-1"
+      action="#"
+      method="post"
+      data-transfer-form
+    >
+      <div class="screen-body">
+        <BankAccount />
+
+        <div class="info-note">
+          <Icon name="info" size="sm" />
+          <p class="info-note__text">
+            Al finalizar tu pedido se te indicara el costo de envio exacto. Por favor
+            realiza la transferencia una vez confirmado.
+          </p>
+        </div>
+
+        <OrderDetail items={items} total={total} />
+
+        {/* Lo rellena el script si el checkout rechaza el pedido. */}
+        <p class="form-error" role="alert" hidden data-checkout-error></p>
+      </div>
+
+      <ActionBar label="Confirmar pedido" />
+    </form>
+  </main>
+</Layout>
+
+<script>
+  import '../scripts/copy-button';
+  import '../scripts/transfer-payment';
+</script>
