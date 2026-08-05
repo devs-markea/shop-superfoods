@@ -20,6 +20,15 @@
   padding: var(--sf-space-5);
 }
 
+// Modifier: pantalla de confirmacion. Respira mas que el resto porque no tiene
+// barra de titulo que la separe de arriba.
+// Spec: gap 32 - padding 40 arriba y 24 a los lados, sin padding inferior (lo
+// aporta la barra de accion). El 40 esta fuera de la escala de 4 del proyecto.
+.screen-body--confirmation {
+  gap: var(--sf-space-8);
+  padding: 40px var(--sf-space-6) 0;
+}
+
 // Element: linea divisora. Spec: 350 de ancho (= 390 - 2x20 de padding), 1px.
 .screen-body__divider {
   width: 100%;

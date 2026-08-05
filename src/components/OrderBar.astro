@@ -5,15 +5,19 @@ import CategoryNav from './CategoryNav.astro';
 
 interface Props {
   categories: readonly string[];
+  /** Estimado de entrega configurado. */
+  estimate?: string;
+  /** Rotulo de envio ya resuelto por la pagina. */
+  shipping?: string;
 }
 
-const { categories } = Astro.props;
+const { categories, estimate, shipping } = Astro.props;
 ---
 
 <section class="order-bar" aria-label="Opciones de entrega">
   <div class="order-bar__inner">
     <DeliverySwitch />
-    <OrderMeta />
+    <OrderMeta time={estimate} shipping={shipping} />
     <CategoryNav categories={categories} />
   </div>
 </section>

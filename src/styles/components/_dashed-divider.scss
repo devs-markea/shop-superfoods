@@ -1,0 +1,25 @@
+// ---------------------------------------------------------------------------
+// Block: dashed-divider
+// ---------------------------------------------------------------------------
+// Divisora discontinua. Spec: 1px, trazos de 4 y huecos de 2, #EAECF0.
+// Separa el total del detalle en /pago-por-transferencia y en /pedido-confirmado.
+//
+// Es un bloque propio y no un element de cada uno por el mismo motivo que
+// .section-label: son dos bloques distintos con la misma divisora, y la tecnica
+// no es una sola declaracion.
+//
+// No usa `border-style: dashed`: ahi el largo de los trazos lo decide el
+// navegador. Con un degradado repetido salen los 4/2 exactos de la spec.
+// ---------------------------------------------------------------------------
+
+.dashed-divider {
+  height: 1px;
+  margin: 0;
+  border: 0;
+  opacity: 1;
+  background-image: repeating-linear-gradient(
+    to right,
+    var(--sf-border) 0 4px,
+    transparent 4px 6px
+  );
+}

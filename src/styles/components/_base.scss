@@ -32,6 +32,20 @@
   }
 }
 
+// El atributo `hidden`, por encima de las utilidades de display.
+//
+// Reboot ya lo declara, pero pierde: `[hidden]` y `.d-flex` tienen la misma
+// especificidad (una es atributo, la otra clase) y las dos llevan `!important`
+// —las utilidades lo ponen por `$enable-important-utilities`—, asi que decide el
+// orden y las utilidades se importan despues. Resultado: un
+// `<div class="d-flex" hidden>` se seguia viendo.
+//
+// Repetirlo aqui, en la capa propia, lo devuelve al final del archivo y con ello a
+// donde tiene que estar: ocultar algo es mas fuerte que como se coloca.
+[hidden] {
+  display: none !important;
+}
+
 // Foco visible solo para navegacion por teclado
 :focus-visible {
   outline: 2px solid var(--sf-gold);

@@ -1,0 +1,71 @@
+// ---------------------------------------------------------------------------
+// Block: pickup-location
+// ---------------------------------------------------------------------------
+// Tarjeta con el local donde se recoge el pedido. Es la contraparte de
+// .bank-account en el flujo de efectivo, y comparte sus medidas: ocupa el mismo
+// sitio de la pantalla y se lee igual.
+//
+// Sin spec de Figma. Tarjeta: gap 16 - padding 20 - radius 20 - bg #FFFFFF -
+// sombra de tarjeta. Boton: el de compartir ubicacion (44 de alto, borde dorado),
+// porque tambien abre un mapa y no es la accion principal de la pantalla.
+//
+// No es .bank-account con un modifier: aquella son filas de datos que se copian y
+// esta una direccion con una salida al mapa. Solo coinciden en la caja.
+// ---------------------------------------------------------------------------
+
+.pickup-location {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-4);
+  padding: var(--sf-space-5);
+  border-radius: var(--sf-radius-xl);
+  background-color: var(--sf-surface);
+  box-shadow: var(--sf-shadow-card);
+}
+
+// Element: etiqueta + dato. El rotulo es .section-label--soft, el mismo de las
+// filas de la cuenta bancaria.
+.pickup-location__field {
+  display: flex;
+  flex-direction: column;
+  // Fuera de la escala de 4 del proyecto: el mismo 6 de .bank-account__field.
+  gap: 6px;
+}
+
+// Element: la direccion — Inter 600 14/20 #141821
+.pickup-location__value {
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-ink);
+}
+
+// Element: pista cuando la tienda no tiene direccion configurada
+.pickup-location__hint {
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-muted);
+}
+
+// Element: salida a Google Maps. Mismo tratamiento que .location__button: el
+// icono hereda el dorado por currentColor.
+.pickup-location__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sf-space-2);
+  height: 44px;
+  border: 1px solid var(--sf-gold);
+  border-radius: var(--sf-radius-md);
+  color: var(--sf-gold);
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  transition: background-color var(--sf-transition);
+
+  &:hover {
+    background-color: var(--sf-gold-tint);
+    color: var(--sf-gold);
+  }
+}

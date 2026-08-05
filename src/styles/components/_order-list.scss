@@ -10,3 +10,14 @@
   gap: var(--sf-space-5);
   margin: 0;
 }
+
+// Element: error — la API rechazo un cambio de cantidad o un borrado.
+// Oculto por defecto con el atributo hidden.
+.order-list__error {
+  margin: 0;
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-indigo);
+  text-align: center;
+}

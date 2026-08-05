@@ -1,0 +1,19 @@
+// ---------------------------------------------------------------------------
+// Block: store-closed
+// ---------------------------------------------------------------------------
+// Envoltorio del aviso de tienda cerrada en la portada. Solo aporta los gutters y
+// el ancho maximo de la pagina: el aviso en si es .info-note, que ya existe.
+//
+// Va pegado a la barra de pedido, sin separacion arriba, para que se lea como
+// parte de la cabecera y no como una tarjeta suelta del catalogo.
+// ---------------------------------------------------------------------------
+
+.store-closed {
+  padding: var(--sf-space-4) var(--sf-gutter-x) 0;
+}
+
+.store-closed__inner {
+  width: 100%;
+  max-width: var(--sf-container-max);
+  margin-inline: auto;
+}

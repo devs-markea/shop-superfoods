@@ -19,6 +19,9 @@
 $sf-gold: #d5aa53;
 $sf-gold-hover: #c49a45;
 $sf-gold-tint: rgba(213, 170, 83, 0.1);
+// Filo dorado, mas presente que el tinte: la franja de 4 que marca la tarjeta de
+// pasos en /pedido-recibido. Se deriva de $sf-gold para no repetir el hex.
+$sf-gold-edge: rgba($sf-gold, 0.25);
 $sf-gradient-hero: linear-gradient(180deg, #f5a623 0%, #d5aa53 100%);
 
 // --- Color: acentos ---
@@ -28,6 +31,10 @@ $sf-indigo: #4f46e5;
 // acciones del sistema son doradas.
 $sf-whatsapp: #25d366;
 $sf-whatsapp-hover: #1fb855;
+
+// Verde de confirmacion (sello de /pedido-confirmado). No es el de WhatsApp:
+// aquel identifica un canal, este dice que algo salio bien.
+$sf-success: #3aa678;
 
 // --- Color: neutros ---
 $sf-ink: #141821;
@@ -51,6 +58,10 @@ $sf-space-8: 32px;
 $sf-radius-sm: 8px;
 $sf-radius-md: 12px;
 $sf-radius-lg: 16px;
+// Solo la tarjeta de la cuenta bancaria: es la unica superficie de 20 del
+// diseno. No se mapea a $border-radius-xl de Bootstrap, que sigue en 16 como el
+// resto de tarjetas.
+$sf-radius-xl: 20px;
 $sf-radius-pill: 100px;
 
 // --- Elevacion ---

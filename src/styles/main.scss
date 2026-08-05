@@ -81,9 +81,16 @@
 @import 'components/icon';
 @import 'components/tag';
 @import 'components/section-label'; // etiqueta de grupo, compartida
+@import 'components/dashed-divider'; // divisora 4/2, compartida
+@import 'components/copy-button'; // copiar al portapapeles, compartido
+@import 'components/form-error'; // aviso de campo que falta, compartido
 
 // Vista de listado
 @import 'components/navbar';
+@import 'components/sheet'; // hojas modales de la barra superior
+@import 'components/schedule';
+@import 'components/location-sheet';
+@import 'components/store-closed';
 @import 'components/order-bar';
 @import 'components/switch';
 @import 'components/order-meta';
@@ -120,3 +127,15 @@
 @import 'components/payment-option';
 @import 'components/summary';
 @import 'components/legal-note';
+
+// Pantallas de confirmacion: transferencia (cuenta) y efectivo (donde recoger)
+@import 'components/bank-account';
+@import 'components/pickup-location';
+@import 'components/info-note';
+@import 'components/order-detail';
+
+// Cierre del pedido: confirmado (Mercado Pago) y recibido (transferencia y efectivo)
+@import 'components/order-status';
+@import 'components/order-receipt';
+@import 'components/steps';
+@import 'components/clabe-card';

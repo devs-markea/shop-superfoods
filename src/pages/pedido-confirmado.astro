@@ -1,0 +1,210 @@
+---
+import Layout from '../layouts/Layout.astro';
+import BackHeader from '../components/BackHeader.astro';
+import OrderStatus from '../components/OrderStatus.astro';
+import OrderReceipt from '../components/OrderReceipt.astro';
+import ActionBar from '../components/ActionBar.astro';
+import { getCart } from '../lib/cart.ts';
+import { getOrder } from '../lib/orders.ts';
+import { resolveCartToken } from '../lib/cart-session.ts';
+import { DRAFT_COOKIE, ORDER_COOKIE, parseDraft, parseOrderPointer } from '../lib/checkout-draft.ts';
+import { PAYMENT_LABEL, type OrderLine, type PaymentMethod, type StoreOrder } from '../lib/checkout.ts';
+import {
+  confirmationWithoutOrder,
+  inferMethod,
+  resolveConfirmation,
+  type ConfirmationView,
+} from '../lib/confirmation.ts';
+import { fillMessage, whatsAppUrl } from '../lib/whatsapp.ts';
+import { formatPrice } from '../lib/price.ts';
+import { getStoreConfig } from '../lib/store-config.ts';
+
+// Depende de la sesion: el pedido se relee en cada visita.
+export const prerender = false;
+
+const token = resolveCartToken(Astro.cookies);
+
+// El pedido no se guarda en la cookie, solo se apunta: su estado cambia sin que
+// el comprador toque nada —el webhook de Mercado Pago lo mueve sin que nadie
+// pulse nada—, y el folio de una transferencia aparece cuando la tienda da el
+// pago por bueno.
+const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
+
+// Mercado Pago devuelve al comprador a /pedido-confirmado?order={id}. Ese id vale
+// como respaldo si la cookie se perdio —leerlo no abre nada ajeno: la API acota
+// los pedidos a la sesion y responde 404 si es de otra—, pero NADA MAS de la URL
+// se usa: los parametros los pone el cliente y no son de fiar. El estado del pago
+// se lee releyendo el pedido, que es lo unico que dice la verdad.
+const hintedId = Astro.url.searchParams.get('order');
+const orderId = pointer?.id ?? hintedId;
+
+let order: StoreOrder | null = null;
+
+if (orderId) {
+  try {
+    order = await getOrder(orderId, token);
+  } catch (error) {
+    console.error('[confirmado] fallo GET /api/orders', error);
+  }
+}
+
+// El pedido no devuelve el metodo, asi que lo rotula el que se guardo al cerrar.
+const method: PaymentMethod = pointer?.method ?? inferMethod(order);
+
+// Toda la pantalla —titular, aviso, sello, folio y accion— sale de aqui. Ver
+// src/lib/confirmation.ts: con Mercado Pago hay media docena de situaciones
+// distintas y cada una necesita otra cosa.
+const view: ConfirmationView = order
+  ? resolveConfirmation(method, order, pointer?.chargeStarted)
+  : confirmationWithoutOrder();
+
+// Con pedido, todo sale de el: el checkout vacia el carrito, asi que leerlo aqui
+// devolveria una lista vacia.
+let items: OrderLine[] = order?.items ?? [];
+let total = order?.total ?? 0;
+
+// Sin pedido —se entro directo, sin pasar por el pago— se pinta el carrito, para
+// que la pantalla siga siendo revisable.
+if (!order) {
+  const { tip } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+
+  try {
+    const cart = await getCart(token);
+    items = cart.items;
+    total = cart.total + tip;
+  } catch (error) {
+    console.error('[confirmado] fallo GET /api/cart', error);
+  }
+}
+
+// Folio del pedido: el `id`, que es la numeracion que ya lleva el backend (1, 2,
+// 3...). Es un rotulo, no una llave: sirve para que el comprador diga "mi pedido
+// 91" por telefono.
+//
+// No se usa `orderNumber` a proposito. Ademas de ser un ULID de 26 caracteres que
+// no se puede leer en voz alta ni cabe en los 40px del diseno, NO dice si el pago
+// esta validado: en efectivo y en Mercado Pago llega desde el primer momento y con
+// el pedido sin cobrar. Lo que dice la verdad es `status`, y de eso vive esta
+// pantalla.
+//
+// Sin pedido —se entro directo— se rotula el del mockup para poder revisar el
+// diseno. Es lo unico escrito a mano que queda en el flujo.
+const MOCK_FOLIO = '91';
+const folio = order?.id ?? MOCK_FOLIO;
+
+// El chat de la tienda, con el pedido ya identificado. Aqui el mensaje no es un
+// comprobante —el pago no pasa por el comprador— sino el pedido recien hecho, asi
+// que usa la otra plantilla.
+const store = await getStoreConfig();
+const phone = store.whatsapp?.phone ?? '';
+
+const whatsapp =
+  phone && order
+    ? whatsAppUrl(
+        phone,
+        fillMessage(store.whatsapp?.templates?.orderPlaced ?? '', {
+          folio: order.id,
+          total: formatPrice(order.total),
+          nombre: order.customer?.name,
+          estado: order.statusLabel,
+          metodo: PAYMENT_LABEL[method],
+        }),
+      )
+    : null;
+
+// "Actualizar" recarga esta misma pantalla, que relee el pedido en el servidor. Se
+// conserva el `order` de la URL para que siga funcionando si la cookie no esta.
+const selfUrl = hintedId ? `${Astro.url.pathname}?order=${encodeURIComponent(hintedId)}` : Astro.url.pathname;
+---
+
+<Layout title={`${view.title} — Shop Superfoods`} description={view.note}>
+  {/*
+    Vuelve al menu y no al resumen de pago: el pedido ya existe, y volver atras
+    invitaria a hacerlo otra vez. Reintentar el cobro no se hace ahi, sino con el
+    boton de esta pantalla, que cobra sobre el mismo pedido.
+  */}
+  <BackHeader backHref="/" />
+
+  <!-- La cadena flex (page > main) deja la barra de accion al fondo de la
+       pantalla aunque el contenido no llegue a llenarla. -->
+  <main class="d-flex flex-column flex-grow-1">
+    {/*
+      El formulario solo envuelve el contenido cuando la accion es cobrar: es un
+      submit, como el resto de los envios del proyecto, y su aviso de error tiene
+      que quedar dentro. En los demas estados no hay nada que enviar.
+    */}
+    {
+      view.action.kind === 'pay' ? (
+        <form
+          class="d-flex flex-column flex-grow-1"
+          action="#"
+          method="post"
+          data-retry-form
+          data-order={order?.id}
+        >
+          <div class="screen-body screen-body--confirmation">
+            <OrderStatus
+              state={view.state}
+              folio={view.showFolio ? folio : undefined}
+              title={view.title}
+              note={view.note}
+            />
+
+            <OrderReceipt items={items} total={total} method={method} />
+
+            {/* Lo rellena el script si la pasarela o la API rechazan el cobro. */}
+            <p class="form-error" role="alert" hidden data-checkout-error />
+          </div>
+
+          <ActionBar label={view.action.label} note={view.actionNote} />
+        </form>
+      ) : (
+        <>
+          {/*
+            data-awaiting-payment: el script recarga la pantalla unas pocas veces
+            mientras el webhook llega, para que el estado se resuelva sin pedirle al
+            comprador que pulse nada.
+          */}
+          <div
+            class="screen-body screen-body--confirmation"
+            data-awaiting-payment={view.action.kind === 'refresh' ? '' : undefined}
+          >
+            <OrderStatus
+              state={view.state}
+              folio={view.showFolio ? folio : undefined}
+              title={view.title}
+              note={view.note}
+            />
+
+            <OrderReceipt items={items} total={total} method={method} />
+          </div>
+
+          {/*
+            WhatsApp es el canal por donde sigue la conversacion, y por eso es la
+            accion de los estados en los que no hay nada que pagar. Sin telefono
+            configurado el control queda inerte —un submit fuera de un formulario
+            no navega ni recarga— en lugar de abrir un chat vacio.
+
+            "Actualizar" es un enlace a esta misma pantalla: lo que hace falta es
+            releer el pedido, y eso ya lo hace el servidor en cada visita.
+          */}
+          {view.action.kind === 'refresh' ? (
+            <ActionBar label="Actualizar" href={selfUrl} note={view.actionNote} />
+          ) : (
+            <ActionBar
+              label="Abrir WhatsApp"
+              icon="whatsapp"
+              variant="whatsapp"
+              href={whatsapp ?? undefined}
+              note={view.actionNote}
+            />
+          )}
+        </>
+      )
+    }
+  </main>
+</Layout>
+
+<script>
+  import '../scripts/confirmation';
+</script>

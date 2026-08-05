@@ -39,6 +39,31 @@
   transition: color var(--sf-transition);
 }
 
+// Modifier: control de cantidad. No hay casilla que marcar, asi que la fila
+// es etiqueta a la izquierda y stepper a la derecha. Es la fila mas alta de
+// las tres: el stepper mide 28 frente a los 20 del radio y del checkbox.
+.option--quantity {
+  justify-content: space-between;
+  cursor: default;
+
+  .option__label {
+    cursor: default;
+  }
+}
+
+// Element: importe — cantidad x precio de la opcion. Solo lo dibuja el control
+// de cantidad, que es el unico donde el precio se multiplica por algo distinto
+// de 0 o 1. El margen automatico lo pega al stepper.
+.option__amount {
+  margin-inline-start: auto;
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
 // --- Estados -------------------------------------------------------------
 .option__input:checked ~ .option__label {
   color: var(--sf-ink);
@@ -46,4 +71,30 @@
 
 .option:hover .option__label {
   color: var(--sf-ink);
+}
+
+// Una opcion con unidades pedidas se lee como elegida, igual que una marcada.
+.option--quantity[data-selected] .option__label {
+  color: var(--sf-ink);
+}
+
+// El tope de opciones distintas alcanzado: las que quedan sin marcar no se
+// pueden marcar. Bootstrap ya atenua el .form-check-input deshabilitado.
+.option__input:disabled ~ .option__label {
+  color: var(--sf-placeholder);
+  cursor: not-allowed;
+}
+
+// Tope de opciones distintas alcanzado en un control de cantidad: esta opcion
+// esta en 0 y ya no se puede abrir. Mismo tratamiento que el checkbox
+// deshabilitado porque significa lo mismo. Ojo: no se atenua una opcion que
+// llego a su tope de UNIDADES —esa si esta elegida.
+.option--quantity[data-blocked] .option__label {
+  color: var(--sf-placeholder);
+}
+
+// Grupo con max: 0 — no admite ninguna opcion, asi que se lee pero no se toca.
+.option-group[data-inert] .option {
+  cursor: default;
+  opacity: 0.6;
 }

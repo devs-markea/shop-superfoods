@@ -2,25 +2,32 @@
 import Icon, { type IconName } from './Icon.astro';
 
 interface Props {
+  /** Estimado de entrega. Sin el, no se promete un tiempo. */
   time?: string;
+  /** Rotulo de envio. Sin el, no se promete un envio gratis que no existe. */
   shipping?: string;
 }
 
-const { time = '25-35 min', shipping = 'Envio gratis' } = Astro.props;
+const { time, shipping } = Astro.props;
 
-const items: Array<{ icon: IconName; label: string }> = [
-  { icon: 'clock', label: time },
-  { icon: 'truck', label: shipping },
-];
+// Las dos metas son opcionales: cada una aparece solo si el negocio la configuro.
+// Prometer "25-35 min" o "Envio gratis" por defecto es justo lo que no debe hacer
+// una portada — son promesas, y una promesa por descuido se incumple igual.
+const items: Array<{ icon: IconName; label: string }> = [];
+
+if (time) items.push({ icon: 'clock', label: time });
+if (shipping) items.push({ icon: 'truck', label: shipping });
 ---
 
-<ul class="order-meta list-unstyled">
-  {
-    items.map((item) => (
-      <li class="order-meta__item">
-        <Icon name={item.icon} size="sm" class="order-meta__icon" />
-        <span class="order-meta__label">{item.label}</span>
-      </li>
-    ))
-  }
-</ul>
+{
+  items.length > 0 && (
+    <ul class="order-meta list-unstyled">
+      {items.map((item) => (
+        <li class="order-meta__item">
+          <Icon name={item.icon} size="sm" class="order-meta__icon" />
+          <span class="order-meta__label">{item.label}</span>
+        </li>
+      ))}
+    </ul>
+  )
+}

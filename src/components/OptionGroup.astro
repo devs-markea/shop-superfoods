@@ -1,60 +1,152 @@
 ---
-import { formatPrice, type OptionGroup } from '../data/products.ts';
+import QuantityStepper from './QuantityStepper.astro';
+import { formatPrice } from '../lib/price.ts';
+import { VARIANT_FALLBACK_LABEL, type OptionGroupView } from '../lib/catalog.ts';
+import {
+  OPTIONAL_LABEL,
+  isInert,
+  isUnfulfillable,
+  ruleLabel,
+  unfulfillableMessage,
+  unitCap,
+  type OptionRule,
+} from '../lib/options.ts';
 
 interface Props {
-  group: OptionGroup;
+  group: OptionGroupView;
 }
 
 const { group } = Astro.props;
 const labelId = `${group.id}-label`;
+const errorId = `${group.id}-error`;
 
-// En los radios el precio es el total de esa opcion; en los checkbox es un
-// sobrecoste. Se muestran distinto, igual que en la maqueta.
-const choiceLabel = (label: string, price: number, isRadio: boolean, index: number) =>
-  isRadio && index === 0
-    ? `${label} — ${formatPrice(price)}`
-    : isRadio
-      ? `${label} + ${formatPrice(price - group.choices[0].price)}`
-      : `${label} + ${formatPrice(price)}`;
+// Los tres controles comparten la misma estructura: lo unico que cambia son los
+// valores, y de ellos sale todo lo demas. min y max cuentan opciones distintas
+// en los tres; maxPerOption cuenta unidades y solo existe en `quantity`, donde
+// convive con los otros dos.
+const rule: OptionRule = {
+  control: group.control,
+  min: group.min,
+  max: group.max,
+  maxPerOption: group.maxPerOption,
+};
+
+// max: 0 significa grupo que no admite ninguna opcion. Se dibuja, pero en solo
+// lectura: cualquier cosa que se enviara de el la rechaza el carrito.
+const inert = isInert(rule);
+
+// min mayor que el numero de opciones no lo impide el panel y deja el grupo
+// imposible de completar. Se dice desde el primer render en vez de esperar al
+// 422; el boton de agregar queda bloqueado solo, porque el minimo nunca se
+// alcanza.
+const unfulfillable = isUnfulfillable(rule, group.choices.length);
+
+// Variante: el precio ES el precio del platillo, sustituye a las otras, se
+// escribe sin signo y se muestra aunque valga 0.
+// Opcion: el precio es un sobrecoste que se suma, lleva `+` y con 0 no se
+// dibuja nada. La asimetria es deliberada, no un olvido.
+function choiceLabel(label: string, price: number): string {
+  if (group.kind === 'variant') {
+    return `${label || VARIANT_FALLBACK_LABEL} — ${formatPrice(price)}`;
+  }
+  return price > 0 ? `${label} + ${formatPrice(price)}` : label;
+}
+
+// El tag del encabezado ya dice "Opcional": no se repite debajo.
+const hint = ruleLabel(rule);
+const showHint = hint !== OPTIONAL_LABEL;
+
+// El control `quantity` no es un <input>, se dibuja con steppers. Los otros dos
+// coinciden con el type del input.
+const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
 ---
 
-<div class="option-group" role="group" aria-labelledby={labelId}>
+<div
+  class="option-group"
+  role="group"
+  aria-labelledby={labelId}
+  data-option-group
+  data-group-id={group.id}
+  data-kind={group.kind}
+  data-control={group.control}
+  data-label={group.label}
+  data-min={group.min}
+  data-max={group.max ?? ''}
+  data-max-per-option={group.maxPerOption ?? ''}
+  data-inert={inert ? '' : undefined}
+>
   <div class="option-group__header">
     <span class="section-label" id={labelId}>{group.label}</span>
-    <span
-      class:list={[
-        'tag',
-        'badge',
-        group.required ? 'tag--required' : 'tag--optional',
-      ]}
-    >
+    <span class:list={['tag', 'badge', group.required ? 'tag--required' : 'tag--optional']}>
       {group.required ? 'Obligatorio' : 'Opcional'}
     </span>
   </div>
 
+  {showHint && <p class="option-group__hint">{hint}</p>}
+
   <div class="option-group__list">
     {
-      group.choices.map((choice, index) => {
-        const id = `${group.id}-${choice.value}`;
-        const isRadio = group.type === 'radio';
-        return (
-          <label class="option" for={id}>
-            <input
-              class="option__input form-check-input"
-              type={group.type}
-              name={group.name}
-              id={id}
-              value={choice.value}
-              data-price={isRadio ? choice.price : choice.price}
-              checked={isRadio && index === 0}
-              required={group.required && isRadio && index === 0}
-            />
-            <span class="option__label">
-              {choiceLabel(choice.label, choice.price, isRadio, index)}
-            </span>
-          </label>
-        );
-      })
+      group.control === 'quantity'
+        ? group.choices.map((choice) => (
+            // El techo del CONTADOR lo pone maxPerOption —unidades de esta
+            // opcion—; sin el, queda el tope de forma de la API: 99. El otro
+            // tope del grupo, max, no acota este contador sino cuantas opciones
+            // llevan unidades, y lo aplica el script deshabilitando el `+` de
+            // las que estan en 0.
+            <div
+              class="option option--quantity"
+              data-choice
+              data-option-id={choice.id}
+              data-price={choice.price}
+            >
+              <span class="option__label">{choiceLabel(choice.label, choice.price)}</span>
+
+              {/* Lo rellena el script en cuanto hay mas de una unidad: es el
+                  unico control donde el precio se multiplica. */}
+              <span class="option__amount" data-option-amount hidden />
+
+              <QuantityStepper
+                quantity={0}
+                itemName={choice.label}
+                min={0}
+                max={unitCap(rule)}
+                disabled={inert}
+              />
+            </div>
+          ))
+        : group.choices.map((choice) => {
+            const id = `${group.id}-${choice.id}`;
+            return (
+              <label class="option" for={id}>
+                <input
+                  class="option__input form-check-input"
+                  type={inputType}
+                  name={group.name}
+                  id={id}
+                  value={choice.id}
+                  checked={choice.checked}
+                  disabled={inert}
+                  data-choice
+                  data-option-id={choice.id}
+                  data-price={choice.price}
+                />
+                <span class="option__label">{choiceLabel(choice.label, choice.price)}</span>
+              </label>
+            );
+          })
     }
   </div>
+
+  <!-- Lo rellena src/scripts/order-form.ts: primero con los minimos que faltan
+       y despues con lo que devuelva el 422, que la API nombra por grupo en
+       `options.{personalizationId}`. El servidor revalida igualmente. -->
+  <p
+    class="option-group__error"
+    id={errorId}
+    role="alert"
+    hidden={!unfulfillable}
+    data-group-error
+  >
+    {unfulfillable && unfulfillableMessage(rule, group.choices.length)}
+  </p>
 </div>

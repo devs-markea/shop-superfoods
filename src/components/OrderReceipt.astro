@@ -1,0 +1,70 @@
+---
+import Icon, { type IconName } from './Icon.astro';
+import { formatPrice } from '../lib/price.ts';
+import { PAYMENT_LABEL, type OrderLine, type PaymentMethod } from '../lib/checkout.ts';
+
+interface Props {
+  /**
+   * Lineas del pedido. Sirven tanto las del carrito como las del pedido ya
+   * creado: aqui solo se leen cantidad y nombre.
+   */
+  items: OrderLine[];
+  /** Importe pagado, en MXN. */
+  total: number;
+  method: PaymentMethod;
+}
+
+const { items, total, method } = Astro.props;
+
+// Resumen de lo pedido, ya sin acciones: aqui no se edita nada.
+//
+// El rotulo del metodo sale de PAYMENT_LABEL, que es el corto: el mismo metodo se
+// rotula "Transferencia bancaria" en /resumen-de-pago (ver PaymentMethods.astro),
+// donde la tarjeta tiene sitio para el nombre largo.
+//
+// El icono de Mercado Pago es provisional —falta su logo— y el de efectivo se
+// apoya en el mismo, porque ese metodo no esta en el diseno todavia.
+const icons: Record<PaymentMethod, IconName> = {
+  bank_transfer: 'phone',
+  mercado_pago: 'credit-card',
+  efectivo: 'credit-card',
+};
+
+// Spec: tarjeta gap 16 - padding 20 - radius 20 - bg #FFFFFF
+//       lineas gap 12, 14/20 400 (cantidad #6C757D, nombre #141821)
+//       pie: metodo a la izquierda e importe 20/700 a la derecha
+---
+
+<div class="order-receipt">
+  <span class="section-label section-label--soft">Resumen de tu pedido</span>
+
+  {/* Sin lineas no se pinta la lista: un <ul> vacio dejaria el gap de 16 a los
+      dos lados de nada. */}
+  {
+    items.length > 0 && (
+      <ul class="order-receipt__items list-unstyled">
+        {items.map((item) => (
+          <li class="order-receipt__item">
+            <span class="order-receipt__quantity">×{item.quantity}</span>
+            <span class="order-receipt__name">{item.name}</span>
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  <hr class="dashed-divider" />
+
+  <div class="order-receipt__payment">
+    <div class="order-receipt__method">
+      <span class="section-label section-label--soft">Metodo de pago</span>
+
+      <span class="order-receipt__method-name">
+        <Icon name={icons[method]} class="order-receipt__method-icon" />
+        <span>{PAYMENT_LABEL[method]}</span>
+      </span>
+    </div>
+
+    <span class="order-receipt__total">{formatPrice(total)}</span>
+  </div>
+</div>

@@ -1,0 +1,48 @@
+// ---------------------------------------------------------------------------
+// Block: clabe-card
+// ---------------------------------------------------------------------------
+// La CLABE con su boton de copiar, suelta.
+// Spec: gap 12 - padding 16 - radius 16 - borde 1px #EAECF0 - bg #FFFFFF
+//       etiqueta 12/16 500 #9CA3AF - dato 14/20 600 #141821 - hueco de 2
+//
+// No es .bank-account con un modifier: aquella es la ficha completa de la cuenta
+// (tres filas, sombra, huecos de 20) y esta una sola fila con borde. Solo
+// comparten el boton, que es .copy-button.
+//
+// La etiqueta tampoco es .section-label--soft: coincide en tamano y color, pero
+// la spec la pide en 500, no en 600.
+// ---------------------------------------------------------------------------
+
+.clabe-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sf-space-3);
+  padding: var(--sf-space-4);
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-lg);
+  background-color: var(--sf-surface);
+}
+
+.clabe-card__field {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+// Element: etiqueta — Inter 500 12/16 #9CA3AF
+.clabe-card__label {
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-placeholder);
+}
+
+// Element: dato — Inter 600 14/20 #141821
+.clabe-card__value {
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-ink);
+}

@@ -1,0 +1,29 @@
+---
+interface Props {
+  /** De `legal.termsUrl`. Sin ella, la frase se rotula sin enlazar. */
+  termsUrl?: string;
+}
+
+const { termsUrl } = Astro.props;
+
+// Aviso legal antes de confirmar.
+//
+// "Terminos y condiciones" es un enlace solo si hay URL configurada. Sin ella se
+// rotula como texto: un enlace que no lleva a ninguna parte es peor que ninguno,
+// y aqui ademas se afirma que el comprador los acepta.
+const label = 'Terminos y condiciones';
+---
+
+<p class="legal-note">
+  Al continuar aceptas nuestros{' '}
+  {
+    termsUrl ? (
+      <a class="legal-note__link" href={termsUrl} target="_blank" rel="noopener">
+        {label}
+      </a>
+    ) : (
+      label
+    )
+  }{' '}
+  de servicio.
+</p>

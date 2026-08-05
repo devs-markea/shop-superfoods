@@ -1,0 +1,52 @@
+// ---------------------------------------------------------------------------
+// Block: bank-account
+// ---------------------------------------------------------------------------
+// Tarjeta con la cuenta de destino de la transferencia.
+// Spec: gap 20 - padding 20 - radius 20 - bg #FFFFFF - sombra 0 1px 2px #0000000D
+//       fila gap 6 - etiqueta 12/16 #9CA3AF - dato 14/20 #141821
+//       boton de copiar 32x32 - radius 8 - bg #D5AA531A
+//
+// Los 42 de alto que da la spec para cada fila no se declaran: son 16 + 6 + 20,
+// justo lo que mide el contenido. La fila de la CLABE se va a 54 porque un
+// boton de 32 no cabe en una linea de 20; fijar el alto solo lo recortaria.
+// ---------------------------------------------------------------------------
+
+.bank-account {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-5);
+  padding: var(--sf-space-5);
+  border-radius: var(--sf-radius-xl);
+  background-color: var(--sf-surface);
+  box-shadow: var(--sf-shadow-card);
+}
+
+// Element: etiqueta + dato
+.bank-account__field {
+  display: flex;
+  flex-direction: column;
+  // Fuera de la escala de 4 del proyecto: la spec fija 6 en las tres filas.
+  gap: 6px;
+}
+
+// El rotulo de cada fila (Inter 600 12/16 #9CA3AF) es .section-label--soft: la
+// misma etiqueta que el resto del proyecto, un tono mas clara.
+
+// Element: dato — Inter 600 14/20 #141821
+.bank-account__value {
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-ink);
+}
+
+// Element: fila del dato que comparte ancho con una accion (la CLABE)
+.bank-account__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sf-space-3);
+}
+
+// El boton de copiar es .copy-button: lo comparte con la tarjeta de la CLABE de
+// /pedido-recibido.

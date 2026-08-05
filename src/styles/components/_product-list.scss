@@ -18,6 +18,17 @@
   margin-inline: auto;
 }
 
+// Element: notice — ocupa el sitio de la rejilla cuando no hay nada que
+// pintar: catalogo vacio (200 con lista vacia) o API inalcanzable.
+.product-list__notice {
+  margin: 0;
+  padding-block: var(--sf-space-8);
+  font-size: var(--sf-font-size-base);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-muted);
+  text-align: center;
+}
+
 @include media-breakpoint-up(md) {
   .product-list {
     padding-block: var(--sf-space-6);

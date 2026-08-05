@@ -57,6 +57,23 @@
   min-height: 124px;
 }
 
+// Modifier: barra sin titulo (/pedido-confirmado), donde el titular es el
+// contenido y la barra solo lleva el control de vuelta.
+// Spec: height 64 - padding 12/20 - control de 40. Los 64 son exactos:
+// 12 + 40 + 12.
+//
+// La caja tactil crece de 24 a 40 sin tocar el icono, que sigue siendo el de 20
+// del sistema: la misma pieza con mas superficie de toque.
+.topbar--compact {
+  min-height: 64px;
+
+  .topbar__back {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+  }
+}
+
 // Element: hueco simetrico al control de vuelta.
 // Con space-between, el elemento del medio solo queda centrado en el ancho de
 // la barra si el primero y el ultimo miden lo mismo. Este hueco de 24 replica

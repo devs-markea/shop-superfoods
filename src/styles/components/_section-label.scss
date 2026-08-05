@@ -17,3 +17,11 @@
   line-height: var(--sf-line-height-sm);
   color: var(--sf-muted);
 }
+
+// Modifier: la misma etiqueta un tono mas clara, #9CA3AF. Es la que rotula los
+// datos dentro de una tarjeta blanca ("Titular", "Banco", "CLABE", "Resumen de
+// tu pedido", "Metodo de pago"), donde el gris de la etiqueta base competiria
+// con el dato que acompana.
+.section-label--soft {
+  color: var(--sf-placeholder);
+}

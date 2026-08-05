@@ -1,13 +1,28 @@
 ---
+import type { DeliveryType } from '../lib/checkout.ts';
+
+interface Props {
+  /**
+   * Modo ya elegido, para cuando se vuelve atras desde el pago. Sin el manda "a
+   * domicilio", que es como llega quien entra por primera vez.
+   */
+  selected?: DeliveryType;
+}
+
+const { selected = 'delivery' } = Astro.props;
+
 // Block: switch — "A domicilio" / "Para recoger".
 // Dos radios con .btn-check: seleccion unica sin JavaScript, navegable con
 // flechas y serializable en un formulario.
+//
+// Los `value` son los del diseno, no los del contrato: los traduce el script de
+// /datos-de-entrega al guardar el borrador.
 const options = [
   { id: 'delivery-home', value: 'domicilio', label: 'A domicilio' },
   { id: 'delivery-pickup', value: 'recoger', label: 'Para recoger' },
 ];
 
-const checked = 'domicilio';
+const checked = selected === 'pickup' ? 'recoger' : 'domicilio';
 ---
 
 <div class="switch" role="group" aria-label="Modo de entrega">

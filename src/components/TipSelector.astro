@@ -2,17 +2,21 @@
 interface Props {
   /** Importe preseleccionado, en MXN. */
   selected?: number;
+  /**
+   * Importes configurados por el negocio, ya ordenados por la API. Sin ninguno no
+   * hay selector: quien decide si se pide propina es el panel, no esta pantalla.
+   */
+  amounts: number[];
 }
 
-const { selected = 15 } = Astro.props;
+const { selected = 0, amounts } = Astro.props;
 
 // La spec los rotula sin decimales ("$0", no "$0.00"), a diferencia del resto
 // de importes del proyecto: son botones estrechos y son cantidades redondas.
 const amountLabel = (amount: number) => `$${amount}`;
 
-// Importes fijos + "Otro". Como el switch y los chips, son radios: la seleccion
-// unica la garantiza el name compartido, sin JavaScript.
-const amounts = [0, 15, 30];
+// Como el switch y los chips, son radios: la seleccion unica la garantiza el name
+// compartido, sin JavaScript.
 ---
 
 <div class="tip">

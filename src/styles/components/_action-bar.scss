@@ -4,6 +4,9 @@
 // Barra fija inferior con la accion principal.
 // Spec: alto 84 - padding 20 - bg #FFFFFF - border-top 1px
 // 84 = 20 + 44 (boton) + 20
+//
+// Con aviso (/pedido-recibido) la barra crece lo que ocupe: min-height y no
+// height, asi el 84 sigue siendo el minimo de las demas pantallas.
 // ---------------------------------------------------------------------------
 
 .action-bar {
@@ -31,6 +34,34 @@
   align-items: center;
   justify-content: center;
   gap: var(--sf-space-2);
+}
+
+// Selección incompleta: el boton se ve apagado pero SIGUE siendo pulsable a
+// proposito. Un `disabled` real no emite click, y entonces no habria forma de
+// contar que falta; con aria-disabled el envio lo intercepta el script, que
+// revela el minimo incumplido de cada grupo.
+.action-bar__button[aria-disabled='true'] {
+  --bs-btn-hover-bg: var(--bs-btn-bg);
+  --bs-btn-hover-border-color: var(--bs-btn-border-color);
+  --bs-btn-hover-color: var(--bs-btn-color);
+
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+// Element: aviso bajo el boton — Inter 500 12/16 centrado #9CA3AF.
+// Misma tipografia que .legal-note, pero aquel vive en el cuerpo de la pantalla
+// y este dentro de la barra: se queda como element para no atar los dos bloques.
+// El hueco de 12 no viene en la spec; es el que separa label y control en el
+// resto del proyecto.
+.action-bar__note {
+  max-width: var(--sf-switch-width);
+  margin: var(--sf-space-3) auto 0;
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-placeholder);
+  text-align: center;
 }
 
 // Modifier: enviar por WhatsApp. Unica accion del sistema que no es dorada.

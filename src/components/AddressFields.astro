@@ -3,6 +3,20 @@ import TextField from './TextField.astro';
 
 // Spec: contenedor gap 12 — 4 campos de 44 y un textarea de 80.
 // El borde de 2px lo trae .field por defecto, comun a todos los campos.
+interface Props {
+  /**
+   * Si la direccion se pide. A domicilio si —colonia, calle y numero—; al recoger
+   * no se pide ninguno, y el bloque entero se oculta.
+   *
+   * Lo declara ya el servidor, con el modo que trae el borrador, para que un envio
+   * antes de que arranque el script no reclame campos que no se ven. Despues lo
+   * sincroniza el switch.
+   */
+  required?: boolean;
+}
+
+const { required = true } = Astro.props;
+
 interface AddressField {
   name: string;
   label: string;
@@ -50,7 +64,7 @@ const fields: AddressField[] = [
         label={field.label}
         placeholder={field.placeholder}
         autocomplete={field.autocomplete}
-        required={field.required}
+        required={field.required && required}
       />
     ))
   }

@@ -1,25 +1,31 @@
 ---
 import Icon from './Icon.astro';
 import QuantityStepper from './QuantityStepper.astro';
-import { formatPrice, photoUrl } from '../data/products.ts';
-import type { CartLineView } from '../data/cart.ts';
+import { formatPrice } from '../lib/price.ts';
+import { productHref } from '../lib/catalog.ts';
+import { cartItemImageSrc, describeSelection, type CartItem } from '../lib/cart.ts';
 
 interface Props {
-  line: CartLineView;
+  item: CartItem;
 }
 
-const { line } = Astro.props;
-const { product } = line;
+const { item } = Astro.props;
+const selection = describeSelection(item);
 ---
 
-<li class="order-item" data-line data-unit-price={line.unitPrice}>
+<!-- data-line-id es cart_items.id, el que viaja en PATCH y DELETE.
+     No se guarda el precio unitario en el marcado: los importes los recalcula
+     la API en cada cambio de cantidad (las promociones de "compra y lleva"
+     dependen de las unidades), asi que multiplicar aqui daria un total que
+     contradice al servidor. -->
+<li class="order-item" data-line data-line-id={item.id}>
   <div class="order-item__media">
     <img
       class="order-item__image"
-      src={photoUrl(product.photoId, 140, 140)}
+      src={cartItemImageSrc(item)}
       width="70"
       height="70"
-      alt={product.alt}
+      alt={item.image.alt}
       loading="lazy"
       decoding="async"
     />
@@ -29,13 +35,14 @@ const { product } = line;
     <div class="order-item__head">
       <div class="order-item__info">
         <h2 class="order-item__title">
-          <a class="text-reset" href={`/producto/${product.slug}`}>{product.name}</a>
+          <a class="text-reset" href={productHref({ id: item.productId })}>{item.name}</a>
         </h2>
-        <p class="order-item__custom">{line.customization}</p>
+        {selection && <p class="order-item__custom">{selection}</p>}
+        {item.promotion && <p class="order-item__promo">{item.promotion.name}</p>}
       </div>
 
       <span class="order-item__price" data-line-subtotal>
-        {formatPrice(line.subtotal)}
+        {formatPrice(item.lineTotal)}
       </span>
     </div>
 
@@ -43,13 +50,13 @@ const { product } = line;
       <button
         class="order-item__remove btn-plain"
         type="button"
-        aria-label={`Quitar ${product.name} del pedido`}
+        aria-label={`Quitar ${item.name} del pedido`}
         data-remove-line
       >
         <Icon name="trash" size="sm" />
       </button>
 
-      <QuantityStepper quantity={line.quantity} productName={product.name} />
+      <QuantityStepper quantity={item.quantity} itemName={item.name} />
     </div>
   </div>
 </li>
