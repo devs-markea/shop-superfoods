@@ -106,16 +106,17 @@ export interface Customization {
   control: OptionControl;
   required: boolean;
   /**
-   * Opciones DISTINTAS minimas y maximas, no unidades. En el control
-   * `quantity` la API manda siempre `max: null` por esa misma razon: el tope
-   * del panel acota cuantas opciones se eligen, no cuantas de cada una.
+   * Opciones DISTINTAS minimas y maximas, no unidades. Significan lo mismo en
+   * los tres controles, `quantity` incluido: alli una opcion cuenta como
+   * elegida cuando su contador es >= 1.
    */
   min: number;
   max: number | null;
   /**
-   * UNIDADES maximas de una misma opcion, 1..99. Es el campo espejo de `max`:
-   * solo tiene valor en el control `quantity` y solo cuando el panel lo
-   * configuro; null significa sin tope de negocio.
+   * UNIDADES maximas de una misma opcion, 1..99. Solo tiene valor en el control
+   * `quantity`, el unico donde una opcion puede valer mas de 1; null significa
+   * sin tope de negocio. Es la OTRA magnitud, no el espejo de `max`: en un
+   * grupo de cantidad los dos pueden venir con valor y se aplican los dos.
    */
   maxPerOption: number | null;
   defaultOptionId: string | null;

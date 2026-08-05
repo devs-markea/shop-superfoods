@@ -1,18 +1,21 @@
 ---
-// Pasos a seguir tras confirmar un pago por transferencia.
+interface Props {
+  /** Los pasos, en orden. */
+  steps: string[];
+}
+
+const { steps } = Astro.props;
+
+// Pasos a seguir tras confirmar el pedido.
 //
-// La copia es fija: no depende del pedido ni del carrito, describe el
-// procedimiento de la tienda. Si algun dia cambia por sucursal, se pasa a props.
+// La copia llega por props porque cada cierre tiene los suyos: la transferencia
+// pide un comprobante y el efectivo, pasar por el local. Los decide la pantalla,
+// que es donde ya se ramifica el metodo; esto solo los numera.
 //
 // Spec: tarjeta gap 20 - padding 24 - radius 20 - bg #FFFFFF
 //       franja izquierda de 4 en dorado translucido
 //       lista gap 16 - numero 28 redondo dorado con el digito en 14/700 blanco
 //       texto 14/20 500 #141821
-const steps = [
-  'Realiza tu transferencia bancaria',
-  'Envia el comprobante por WhatsApp',
-  'Recibe confirmacion de tu pedido',
-];
 ---
 
 <div class="steps">

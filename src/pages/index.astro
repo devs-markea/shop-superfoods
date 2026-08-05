@@ -4,6 +4,10 @@ import Navbar from '../components/Navbar.astro';
 import OrderBar from '../components/OrderBar.astro';
 import ProductCard from '../components/ProductCard.astro';
 import { getCategories, getProducts, type ProductListItem } from '../lib/catalog.ts';
+import StoreClosedNotice from '../components/StoreClosedNotice.astro';
+import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
+import { scheduleLabel } from '../lib/schedule.ts';
+import { formatPrice } from '../lib/price.ts';
 
 // On-demand, no prerenderizado: `available` depende del horario de la
 // categoria resuelto en America/Cancun, asi que una pagina generada en el
@@ -25,13 +29,42 @@ try {
 }
 
 const categories = getCategories(products);
+
+// Configuracion y horario van en paralelo con lo que ya se pidio: son dos
+// peticiones publicas y cacheadas, y encadenarlas retrasaria la portada por nada.
+// Ninguna de las dos lanza: sin ellas la cabecera se queda sin sus iconos, pero el
+// catalogo se sirve igual.
+const [store, schedule] = await Promise.all([getStoreConfig(), getStoreSchedule()]);
+
+// El rotulo de envio lo compone la tienda a partir del modo, porque es un rotulo y
+// los rotulos son suyos. Con `none` no se pinta: prometer un envio gratis que el
+// negocio apago es peor que no decir nada.
+const freeShipping = store.delivery?.freeShipping;
+
+const shippingLabel =
+  freeShipping?.mode === 'always'
+    ? 'Envio gratis'
+    : freeShipping?.mode === 'threshold' && freeShipping.threshold
+      ? `Envio gratis desde ${formatPrice(freeShipping.threshold)}`
+      : undefined;
+
+// El aviso solo aparece con la tienda cerrada de verdad. Con `null` —sin horario, o
+// con uno sin turnos— no se afirma nada: seria anunciar "cerrado" por un descuido
+// del panel en plena hora de venta.
+const closedLabel = schedule?.isOpen === false ? scheduleLabel(schedule) : null;
 ---
 
 <Layout title="Shop Superfoods">
-  <Navbar />
+  <Navbar store={store} schedule={schedule} />
 
   <main>
-    <OrderBar categories={categories} />
+    {closedLabel && <StoreClosedNotice label={closedLabel} />}
+
+    <OrderBar
+      categories={categories}
+      estimate={store.delivery?.estimate}
+      shipping={shippingLabel}
+    />
 
     <section class="product-list" aria-label="Productos">
       <div class="product-list__items">
@@ -69,4 +102,5 @@ const categories = getCategories(products);
   import '../scripts/category-nav';
   import '../scripts/category-filter';
   import '../scripts/add-button';
+  import '../scripts/sheet';
 </script>

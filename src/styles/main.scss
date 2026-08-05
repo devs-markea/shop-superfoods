@@ -87,6 +87,10 @@
 
 // Vista de listado
 @import 'components/navbar';
+@import 'components/sheet'; // hojas modales de la barra superior
+@import 'components/schedule';
+@import 'components/location-sheet';
+@import 'components/store-closed';
 @import 'components/order-bar';
 @import 'components/switch';
 @import 'components/order-meta';
@@ -124,12 +128,13 @@
 @import 'components/summary';
 @import 'components/legal-note';
 
-// Vista de pago por transferencia
+// Pantallas de confirmacion: transferencia (cuenta) y efectivo (donde recoger)
 @import 'components/bank-account';
+@import 'components/pickup-location';
 @import 'components/info-note';
 @import 'components/order-detail';
 
-// Cierre del pedido: confirmado (Mercado Pago) y recibido (transferencia)
+// Cierre del pedido: confirmado (Mercado Pago) y recibido (transferencia y efectivo)
 @import 'components/order-status';
 @import 'components/order-receipt';
 @import 'components/steps';

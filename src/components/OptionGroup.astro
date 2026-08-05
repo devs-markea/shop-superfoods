@@ -20,8 +20,10 @@ const { group } = Astro.props;
 const labelId = `${group.id}-label`;
 const errorId = `${group.id}-error`;
 
-// Los tres controles comparten la misma estructura: lo unico que cambia son
-// los valores de control / min / max, y de ellos sale todo lo demas.
+// Los tres controles comparten la misma estructura: lo unico que cambia son los
+// valores, y de ellos sale todo lo demas. min y max cuentan opciones distintas
+// en los tres; maxPerOption cuenta unidades y solo existe en `quantity`, donde
+// convive con los otros dos.
 const rule: OptionRule = {
   control: group.control,
   min: group.min,
@@ -86,9 +88,11 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
     {
       group.control === 'quantity'
         ? group.choices.map((choice) => (
-            // El techo del contador lo pone maxPerOption —unidades de esta
-            // opcion—, nunca max, que cuenta opciones distintas y llega null en
-            // este control. Sin el, queda el tope de forma de la API: 99.
+            // El techo del CONTADOR lo pone maxPerOption —unidades de esta
+            // opcion—; sin el, queda el tope de forma de la API: 99. El otro
+            // tope del grupo, max, no acota este contador sino cuantas opciones
+            // llevan unidades, y lo aplica el script deshabilitando el `+` de
+            // las que estan en 0.
             <div
               class="option option--quantity"
               data-choice

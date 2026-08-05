@@ -1,12 +1,22 @@
 ---
 import CopyButton from './CopyButton.astro';
-import { bankAccount, formatClabe } from '../data/bank-account.ts';
+import { formatClabe } from '../lib/clabe.ts';
+
+interface Props {
+  holder?: string;
+  bank?: string;
+  /** 18 digitos en crudo. */
+  clabe?: string;
+}
+
+const { holder, bank, clabe } = Astro.props;
 
 // Tarjeta con los datos de la cuenta de destino.
 //
-// La cuenta es una sola para toda la tienda, asi que se importa aqui en lugar
-// de recorrer la pagina como prop; el dia que la devuelva el checkout se pasa a
-// props sin tocar el marcado.
+// Los tres llegan de GET /api/store, con el respaldo de src/data/store-fallback.ts
+// rellenando lo que falte. La API los publica todo o nada —media tarjeta no sirve
+// para pagar y si para desconfiar— y aqui se respeta lo mismo: cada fila se pinta
+// solo si tiene dato.
 //
 // Spec: tarjeta gap 20 - padding 20 - radius 20 - sombra de tarjeta
 //       filas gap 6 - etiqueta 12/16 #9CA3AF - dato 14/20 #141821
@@ -14,27 +24,39 @@ import { bankAccount, formatClabe } from '../data/bank-account.ts';
 ---
 
 <div class="bank-account">
-  <div class="bank-account__field">
-    <span class="section-label section-label--soft">Titular</span>
-    <span class="bank-account__value">{bankAccount.holder}</span>
-  </div>
+  {
+    holder && (
+      <div class="bank-account__field">
+        <span class="section-label section-label--soft">Titular</span>
+        <span class="bank-account__value">{holder}</span>
+      </div>
+    )
+  }
 
-  <div class="bank-account__field">
-    <span class="section-label section-label--soft">Banco</span>
-    <span class="bank-account__value">{bankAccount.bank}</span>
-  </div>
+  {
+    bank && (
+      <div class="bank-account__field">
+        <span class="section-label section-label--soft">Banco</span>
+        <span class="bank-account__value">{bank}</span>
+      </div>
+    )
+  }
 
-  <div class="bank-account__field">
-    <span class="section-label section-label--soft">CLABE</span>
+  {
+    clabe && (
+      <div class="bank-account__field">
+        <span class="section-label section-label--soft">CLABE</span>
 
-    <div class="bank-account__row">
-      <span class="bank-account__value">{formatClabe(bankAccount.clabe)}</span>
+        <div class="bank-account__row">
+          <span class="bank-account__value">{formatClabe(clabe)}</span>
 
-      {/*
-        Se copia la CLABE en crudo (18 digitos seguidos), no el texto agrupado
-        de al lado: es lo que se pega en la banca en linea.
-      */}
-      <CopyButton value={bankAccount.clabe} label="Copiar la CLABE" />
-    </div>
-  </div>
+          {/*
+            Se copia la CLABE en crudo (18 digitos seguidos), no el texto agrupado
+            de al lado: es lo que se pega en la banca en linea.
+          */}
+          <CopyButton value={clabe} label="Copiar la CLABE" />
+        </div>
+      </div>
+    )
+  }
 </div>

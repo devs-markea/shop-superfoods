@@ -85,6 +85,14 @@
   cursor: not-allowed;
 }
 
+// Tope de opciones distintas alcanzado en un control de cantidad: esta opcion
+// esta en 0 y ya no se puede abrir. Mismo tratamiento que el checkbox
+// deshabilitado porque significa lo mismo. Ojo: no se atenua una opcion que
+// llego a su tope de UNIDADES —esa si esta elegida.
+.option--quantity[data-blocked] .option__label {
+  color: var(--sf-placeholder);
+}
+
 // Grupo con max: 0 — no admite ninguna opcion, asi que se lee pero no se toca.
 .option-group[data-inert] .option {
   cursor: default;

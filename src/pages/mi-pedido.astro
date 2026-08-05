@@ -6,7 +6,6 @@ import OrderItem from '../components/OrderItem.astro';
 import OrderComments from '../components/OrderComments.astro';
 import ActionBar from '../components/ActionBar.astro';
 import {
-  FREE_SHIPPING_THRESHOLD,
   getCart,
   remainingForFreeShipping,
   shippingProgress,
@@ -14,6 +13,7 @@ import {
 } from '../lib/cart.ts';
 import { resolveCartToken } from '../lib/cart-session.ts';
 import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
+import { getStoreConfig } from '../lib/store-config.ts';
 
 // El carrito es de esta sesion: no hay nada que prerenderizar.
 export const prerender = false;
@@ -36,6 +36,18 @@ const total = cart?.total ?? 0;
 // Los comentarios ya escritos: se guardan en el borrador del pedido, asi que
 // volver aqui desde el pago no los pierde.
 const { comments } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+
+// El envio gratis lo decide el negocio, y son tres respuestas distintas:
+//
+//   threshold  hay meta que alcanzar -> se pinta la barra
+//   always     ya es gratis           -> no hay nada que avanzar
+//   none       no hay envio gratis    -> no se promete lo que no existe
+//
+// El umbral viaja en data-threshold para que el script recalcule el avance con el
+// total que devuelve cada operacion de carrito.
+const { freeShipping } = (await getStoreConfig()).delivery ?? {};
+const threshold = freeShipping?.mode === 'threshold' ? (freeShipping.threshold ?? 0) : 0;
+const showProgress = threshold > 0;
 ---
 
 <Layout title="Mi pedido — Shop Superfoods" description="Revisa tu pedido antes de pagar.">
@@ -47,14 +59,15 @@ const { comments } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
     <!-- El formulario envuelve tambien la barra de accion: "Continuar" envia
          el pedido junto con los comentarios. -->
     <form class="d-flex flex-column flex-grow-1" action="#" method="post">
-      <!-- data-threshold: el umbral de envio gratis es de este front, la API no
-           tiene regla de envio todavia. El script recalcula el progreso con el
-           total que devuelve cada operacion de carrito. -->
-      <div class="screen-body" data-order-summary data-threshold={FREE_SHIPPING_THRESHOLD}>
-        <ShippingProgress
-          remaining={remainingForFreeShipping(total)}
-          progress={shippingProgress(total)}
-        />
+      <div class="screen-body" data-order-summary data-threshold={threshold}>
+        {
+          showProgress && (
+            <ShippingProgress
+              remaining={remainingForFreeShipping(total, threshold)}
+              progress={shippingProgress(total, threshold)}
+            />
+          )
+        }
 
         <ul class:list={['order-list', 'list-unstyled', items.length === 0 && 'd-none']} data-order-list>
           {items.map((item) => <OrderItem item={item} />)}

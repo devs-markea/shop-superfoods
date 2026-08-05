@@ -4,6 +4,10 @@
 // direccion— y la deja en el borrador para que sobreviva a las pantallas de pago.
 // Nada de esto viaja en la URL: ver src/lib/checkout-draft.ts.
 //
+// El modo de entrega es lo primero que se decide porque manda sobre el resto del
+// flujo: a domicilio hay que decir donde entregar y se paga por adelantado; al
+// recoger no hay direccion que dar y se paga en efectivo en el local.
+//
 // Pendiente: precargar el formulario con GET /api/customer cuando la sesion ya
 // haya cerrado un pedido ("¿enviamos a la misma direccion?").
 
@@ -12,7 +16,7 @@
 // Declarado en vite.optimizeDeps.include, como el resto del JS de Bootstrap.
 import 'bootstrap/js/dist/dropdown.js';
 
-import { draftGaps, listGaps, patchDraft } from '../lib/checkout-draft';
+import { draftGaps, listGaps, patchDraft, phoneDigits } from '../lib/checkout-draft';
 import type { CheckoutCustomer, DeliveryType } from '../lib/checkout';
 
 const form = document.querySelector<HTMLFormElement>('[data-delivery-form]');
@@ -53,8 +57,17 @@ if (form) {
   }
 
   // --- Modo de entrega ---
-  // Para recoger no hace falta direccion, y el backend tampoco la pide: los tres
-  // campos dejan de ser obligatorios para que el navegador no los reclame.
+  // El switch decide la mitad de esta pantalla:
+  //
+  //   a domicilio  hay que decir donde entregar -> ubicacion y direccion, con los
+  //                tres campos de la direccion obligatorios
+  //   para recoger el pedido se recoge en el local -> el bloque entero desaparece,
+  //                y con el la obligacion
+  //
+  // Se oculta y no solo se deja opcional: un campo visible es un campo que alguien
+  // va a rellenar, y una direccion de entrega en un pedido que nadie va a llevar
+  // solo puede confundir a quien lo prepara.
+  const addressBlock = form.querySelector<HTMLElement>('[data-address-block]');
   const addressNames = ['neighborhood', 'street', 'number'];
 
   const deliveryType = (): DeliveryType =>
@@ -62,17 +75,21 @@ if (form) {
       ? 'pickup'
       : 'delivery';
 
-  const syncAddressRequirement = (): void => {
-    const needed = deliveryType() === 'delivery';
+  const syncDeliveryMode = (): void => {
+    const home = deliveryType() === 'delivery';
 
+    if (addressBlock) addressBlock.hidden = !home;
+
+    // Un campo oculto y obligatorio bloquea el envio sin poder mostrar su globo:
+    // el navegador no sabe donde ponerlo.
     for (const name of addressNames) {
       const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`);
-      if (field) field.required = needed;
+      if (field) field.required = home;
     }
   };
 
-  form.addEventListener('change', syncAddressRequirement);
-  syncAddressRequirement();
+  form.addEventListener('change', syncDeliveryMode);
+  syncDeliveryMode();
 
   // --- Ubicacion ---
   const shareButton = form.querySelector<HTMLButtonElement>('[data-share-location]');
@@ -89,6 +106,8 @@ if (form) {
     error.hidden = !message;
   };
 
+  // La ubicacion no cambia lo que se pide: es un extra sobre la direccion escrita,
+  // no una alternativa. Compartirla o quitarla solo se ve aqui.
   const showLocation = (url: string, label: string): void => {
     if (locationUrl) locationUrl.value = url;
     if (locationLabel) locationLabel.textContent = label;
@@ -195,6 +214,14 @@ if (form) {
       return;
     }
 
+    // El telefono es la llave con la que el ERP identifica al cliente, asi que no
+    // basta con que este relleno: uno ilegible metia a compradores distintos en el
+    // mismo registro. La API lo rechaza con este mismo mensaje.
+    if (phoneDigits(value('phone')).length < 10) {
+      showError('Escribe un telefono valido, con 10 digitos.');
+      return;
+    }
+
     // Telefono en formato internacional. El ejemplo del contrato lo trae
     // nacional ("9981234567"), pero el campo acepta el +52 (comprobado contra
     // staging) y el selector de pais existe para algo.
@@ -202,21 +229,31 @@ if (form) {
     // OJO: el ERP identifica al cliente POR TELEFONO. Si el panel guarda los
     // numeros en nacional, el mismo comprador saldria dos veces. Conviene
     // confirmar con backend cual de las dos formas es la canonica.
+
+    // Al recoger solo viaja el contacto: la direccion no se pidio, y lo que quede
+    // escrito en los campos ocultos es de una eleccion anterior. Lo que el
+    // borrador siga recordando lo descarta toCheckoutRequest() al cerrar.
+    const home = deliveryType() === 'delivery';
+
     const customer: CheckoutCustomer = {
       name: value('name'),
       phone: `${value('country_code')}${value('phone')}`.trim(),
-      neighborhood: value('neighborhood'),
-      street: value('street'),
-      exteriorNumber: value('number'),
-      crossStreets: value('cross_streets'),
-      addressReferences: value('references'),
-      locationUrl: value('locationUrl'),
+      ...(home
+        ? {
+            neighborhood: value('neighborhood'),
+            street: value('street'),
+            exteriorNumber: value('number'),
+            crossStreets: value('cross_streets'),
+            addressReferences: value('references'),
+            locationUrl: value('locationUrl'),
+          }
+        : {}),
     };
 
     const draft = patchDraft({
-      deliveryType: deliveryType(),
+      deliveryType: home ? 'delivery' : 'pickup',
       customer,
-      locationLabel: locationLabel?.textContent?.trim() ?? '',
+      locationLabel: home ? (locationLabel?.textContent?.trim() ?? '') : '',
     });
 
     // Ultima red: si algo obligatorio sigue vacio, la API responderia 422 dos

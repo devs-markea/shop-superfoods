@@ -15,6 +15,7 @@
 // ---------------------------------------------------------------------------
 
 import { placeOrder } from './checkout.ts';
+import { ulid } from './ulid.ts';
 import type {
   CheckoutCustomer,
   CheckoutOutcome,
@@ -42,14 +43,20 @@ export interface CheckoutDraft {
    * la interfaz: al checkout va `customer.locationUrl`.
    */
   locationLabel: string;
-  /**
-   * Comentarios del pedido, capturados en /mi-pedido.
-   *
-   * PENDIENTE: `CheckoutRequest` no tiene campo para ellos (§6 del contrato), asi
-   * que hoy se guardan para no perderlos por el camino pero NO se envian. En
-   * cuanto la API acepte un campo de notas, se anade en toCheckoutRequest().
-   */
+  /** Comentarios del pedido, capturados en /mi-pedido. Viajan como `notes`. */
   comments: string;
+  /**
+   * Clave de idempotencia de ESTE intento de compra.
+   *
+   * Se emite en el primer envio y se reutiliza en los reintentos, porque es lo
+   * unico que hace que un timeout no acabe en dos pedidos. Vive en el borrador
+   * justamente por eso: si se generara en cada `fetch` no protegeria de nada, y si
+   * se generara al entrar en la pantalla se perderia al volver atras.
+   *
+   * Al cerrarse el pedido el borrador se borra, asi que la compra siguiente
+   * empieza con una clave nueva.
+   */
+  idempotencyKey: string;
 }
 
 /** Pedido recien creado. La cookie solo apunta: el pedido se relee de la API. */
@@ -57,6 +64,18 @@ export interface OrderPointer {
   id: string;
   /** El pedido no devuelve el metodo, y la pantalla de cierre lo rotula. */
   method: PaymentMethod;
+  /**
+   * Si el cobro llego a abrirse. Solo tiene sentido en Mercado Pago, donde el
+   * checkout puede devolver el pedido creado y la pasarela sin arrancar
+   * (`redirectUrl: null`, porque no respondio o no esta configurada).
+   *
+   * Lo guarda la tienda porque la API no lo puede decir: el pedido queda en "Pago
+   * pendiente" en los dos casos, y ese estado significa dos cosas distintas —"no
+   * empezaste a pagar" y "estamos esperando la confirmacion de tu pago"—. Sin este
+   * dato, el acuse tendria que elegir entre prometer un pago que nadie hizo o
+   * pedirle otra vez el dinero a quien ya pago.
+   */
+  chargeStarted?: boolean;
 }
 
 export const EMPTY_DRAFT: CheckoutDraft = {
@@ -66,6 +85,7 @@ export const EMPTY_DRAFT: CheckoutDraft = {
   customer: { name: '', phone: '' },
   locationLabel: '',
   comments: '',
+  idempotencyKey: '',
 };
 
 // --- Serializacion -------------------------------------------------------
@@ -95,7 +115,19 @@ export function parseOrderPointer(raw: string | undefined | null): OrderPointer 
 
   try {
     const parsed = JSON.parse(decodeURIComponent(raw)) as Partial<OrderPointer>;
-    return parsed.id && parsed.method ? { id: parsed.id, method: parsed.method } : null;
+
+    if (!parsed.id || !parsed.method) return null;
+
+    return {
+      id: parsed.id,
+      method: parsed.method,
+      // Se copia solo si viene: "no lo se" y "el cobro no arranco" no son lo
+      // mismo, y un false inventado convertiria en aviso de impago un pedido
+      // de transferencia.
+      ...(typeof parsed.chargeStarted === 'boolean'
+        ? { chargeStarted: parsed.chargeStarted }
+        : {}),
+    };
   } catch {
     return null;
   }
@@ -103,28 +135,64 @@ export function parseOrderPointer(raw: string | undefined | null): OrderPointer 
 
 // --- Reglas --------------------------------------------------------------
 
+/** Digitos utiles de un telefono, sin lada, espacios ni signos. */
+export function phoneDigits(phone: string): string {
+  return phone.replace(/\D/g, '');
+}
+
+/** Como se nombran los tres campos de la direccion en los avisos. */
+const ADDRESS_GAPS = ['la colonia', 'la calle', 'el numero exterior'];
+
+/**
+ * Campos del cliente que solo tienen sentido a domicilio. Al recoger no se piden
+ * ni se mandan: el pedido se entrega en el local.
+ */
+const ADDRESS_KEYS = [
+  'neighborhood',
+  'street',
+  'exteriorNumber',
+  'crossStreets',
+  'addressReferences',
+  'locationUrl',
+] as const;
+
+type OptionalCustomerKey = 'email' | (typeof ADDRESS_KEYS)[number];
+
 /**
  * Que falta para poder cerrar el pedido, en lenguaje de la interfaz.
  *
- * Reproduce las reglas de la API para no descubrirlas con un 422: nombre y
- * telefono siempre; colonia, calle y numero solo a domicilio. Para recoger no se
- * pide direccion, y el backend tampoco.
+ * Cubre las reglas de la API para no descubrirlas con un 422 dos pantallas mas
+ * adelante, cuando ya no hay donde arreglarlo:
  *
- * La ubicacion de Google Maps NO sustituye a la direccion: la API la exige
- * igualmente en los pedidos a domicilio. Es un extra que ayuda al repartidor y,
- * cuando haya clave de geocodificacion, la que rellena esos tres campos sola.
+ *   - Nombre y telefono, SIEMPRE, tambien al recoger.
+ *   - El telefono tiene que ser utilizable: es la llave con la que el ERP
+ *     identifica al cliente, y uno ilegible mete a compradores distintos en el
+ *     mismo registro.
+ *   - A domicilio, la direccion escrita entera: colonia, calle y numero exterior.
+ *   - Al recoger, nada mas: ni direccion ni ubicacion.
+ *
+ * Aqui la tienda es MAS estricta que la API a proposito. Arriba basta con una de
+ * las dos formas de decir donde entregar —la direccion escrita o `locationUrl`—,
+ * pero la que lee el repartidor es la escrita: un enlace de Maps no se puede
+ * dictar por telefono ni buscar en un portal. Asi que la ubicacion dejo de
+ * sustituir a la direccion y quedo como lo que es, un extra que la precisa.
  */
 export function draftGaps(draft: CheckoutDraft): string[] {
   const { customer } = draft;
   const gaps: string[] = [];
 
   if (!customer.name?.trim()) gaps.push('tu nombre');
-  if (!customer.phone?.trim()) gaps.push('tu telefono');
+
+  const digits = phoneDigits(customer.phone ?? '');
+  if (!digits) gaps.push('tu telefono');
+  else if (digits.length < 10) gaps.push('un telefono valido de 10 digitos');
 
   if (draft.deliveryType === 'delivery') {
-    if (!customer.neighborhood?.trim()) gaps.push('la colonia');
-    if (!customer.street?.trim()) gaps.push('la calle');
-    if (!customer.exteriorNumber?.trim()) gaps.push('el numero exterior');
+    const [neighborhood, street, exteriorNumber] = ADDRESS_GAPS;
+
+    if (!customer.neighborhood?.trim()) gaps.push(neighborhood);
+    if (!customer.street?.trim()) gaps.push(street);
+    if (!customer.exteriorNumber?.trim()) gaps.push(exteriorNumber);
   }
 
   return gaps;
@@ -149,25 +217,29 @@ export function toCheckoutRequest(draft: CheckoutDraft): CheckoutRequest | null 
   const { customer } = draft;
 
   const optional: Partial<CheckoutCustomer> = {};
-  const keys = [
-    'email',
-    'neighborhood',
-    'street',
-    'exteriorNumber',
-    'crossStreets',
-    'addressReferences',
-    'locationUrl',
-  ] as const;
+
+  // Al recoger se manda solo el contacto. Los campos de la direccion se descartan
+  // aunque el borrador los recuerde de una eleccion anterior: el pedido se recoge
+  // en el local, y mandar la casa de quien compra guardaria en el pedido una
+  // direccion de entrega que nadie va a usar.
+  const keys: readonly OptionalCustomerKey[] =
+    draft.deliveryType === 'pickup' ? ['email'] : ['email', ...ADDRESS_KEYS];
 
   for (const key of keys) {
     const value = customer[key]?.trim();
     if (value) optional[key] = value;
   }
 
+  const notes = draft.comments.trim();
+
   return {
     deliveryType: draft.deliveryType,
     paymentMethod: draft.paymentMethod,
     tip: draft.tip,
+    // La API acepta el campo ausente, null, vacio o con espacios: los cuatro se
+    // guardan igual. Se omite cuando no hay nada que decir, y no se recorta a los
+    // 1000 del limite porque el propio campo del carrito ya no deja escribir mas.
+    ...(notes ? { notes } : {}),
     customer: {
       name: customer.name.trim(),
       phone: customer.phone.trim(),
@@ -233,7 +305,15 @@ export function saveOrderPointer(pointer: OrderPointer): void {
  * vacio arriba y lo unico que queda del pedido es el pedido.
  */
 export async function confirmDraft(method: PaymentMethod): Promise<CheckoutOutcome> {
-  const draft = patchDraft({ paymentMethod: method });
+  const current = readDraft();
+
+  // La clave se emite una sola vez por intento de compra: si ya hay una, este
+  // envio es un reintento y tiene que llevar la misma.
+  const draft = patchDraft({
+    paymentMethod: method,
+    idempotencyKey: current.idempotencyKey || ulid(),
+  });
+
   const gaps = draftGaps(draft);
 
   if (gaps.length > 0) {
@@ -249,12 +329,28 @@ export async function confirmDraft(method: PaymentMethod): Promise<CheckoutOutco
     return { ok: false, message: 'Faltan datos del pedido. Revisa tus datos de entrega.' };
   }
 
-  const outcome = await placeOrder(request);
+  const outcome = await placeOrder(request, draft.idempotencyKey);
 
   if (outcome.ok) {
-    saveOrderPointer({ id: outcome.order.id, method });
+    const { payment } = outcome.order;
+
+    saveOrderPointer({
+      id: outcome.order.id,
+      method,
+      // El bloque `payment` solo viaja en Mercado Pago, asi que su ausencia es
+      // tambien la de la pregunta: en transferencia y efectivo no hay cobro que
+      // arrancar. Con el, lo que decide es la pasarela: sin URL no hubo cobro.
+      ...(payment ? { chargeStarted: Boolean(payment.redirectUrl) } : {}),
+    });
+
     clearDraft();
+    return outcome;
   }
+
+  // 409: la API ya no recuerda la clave, pero el pedido se envio. Reintentar con
+  // ella no llevaria a ninguna parte, asi que el borrador se retira y la tienda
+  // vuelve a empezar limpia. El carrito, arriba, ya se vacio con ese pedido.
+  if (outcome.status === 409) clearDraft();
 
   return outcome;
 }

@@ -1,0 +1,43 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  /** Id con el que lo abre el boton (`data-sheet="..."`). */
+  id: string;
+  title: string;
+}
+
+const { id, title } = Astro.props;
+
+// Hoja modal de la barra superior: horario y ubicacion.
+//
+// Es un <dialog> nativo y no el modal de Bootstrap. El nativo ya trae fondo,
+// cierre con Escape, foco atrapado dentro y el resto de la pagina inerte, que es
+// justo lo que un modal tiene que resolver; el de Bootstrap habria costado su
+// SCSS, su JS y una entrada en optimizeDeps para acabar en lo mismo. El unico JS
+// propio son las dos lineas que lo abren y lo cierran (scripts/sheet.ts).
+//
+// Se abre desde abajo, como una hoja: es una consulta rapida desde la cabecera,
+// no una pantalla, y en movil el pulgar la alcanza.
+//
+// El titulo lo lee `aria-labelledby`, asi que el dialogo se anuncia por su nombre.
+---
+
+<dialog class="sheet" id={id} aria-labelledby={`${id}-title`}>
+  <div class="sheet__header">
+    <h2 class="sheet__title" id={`${id}-title`}>{title}</h2>
+
+    {/*
+      Cierre propio y no el .btn-close de Bootstrap: aquel es una imagen de fondo
+      con su grosor y su negro, y aqui el icono tiene que seguir el sistema —trazo
+      de 2, currentColor— como el resto de botones de icono del proyecto.
+    */}
+    <button class="sheet__close btn-plain" type="button" aria-label="Cerrar" data-sheet-close>
+      <Icon name="close" size="sm" />
+    </button>
+  </div>
+
+  <div class="sheet__body">
+    <slot />
+  </div>
+</dialog>

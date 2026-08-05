@@ -1,6 +1,14 @@
 ---
 import CopyButton from './CopyButton.astro';
-import { bankAccount, formatClabe } from '../data/bank-account.ts';
+import { formatClabe } from '../lib/clabe.ts';
+
+interface Props {
+  bank?: string;
+  /** 18 digitos en crudo. */
+  clabe: string;
+}
+
+const { bank, clabe } = Astro.props;
 
 // La CLABE otra vez, a mano y sin volver atras: en esta pantalla es el unico dato
 // que hace falta para completar la transferencia.
@@ -12,10 +20,10 @@ import { bankAccount, formatClabe } from '../data/bank-account.ts';
 
 <div class="clabe-card">
   <div class="clabe-card__field">
-    <span class="clabe-card__label">CLABE {bankAccount.bank}</span>
-    <span class="clabe-card__value">{formatClabe(bankAccount.clabe)}</span>
+    <span class="clabe-card__label">CLABE{bank && ` ${bank}`}</span>
+    <span class="clabe-card__value">{formatClabe(clabe)}</span>
   </div>
 
   {/* Se copia en crudo, no el texto agrupado: es lo que acepta la banca. */}
-  <CopyButton value={bankAccount.clabe} label="Copiar la CLABE" size="lg" />
+  <CopyButton value={clabe} label="Copiar la CLABE" size="lg" />
 </div>

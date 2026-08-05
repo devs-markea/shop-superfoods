@@ -28,9 +28,9 @@ function pick(components: GoogleComponent[], types: string[]): string | undefine
  *
  * Es opcional. Sin `GOOGLE_MAPS_API_KEY` responde `{ configured: false }` y no un
  * error, porque no lo es: la interfaz se queda entonces con las coordenadas como
- * texto de la ubicacion, que es peor pero funciona. Los tres campos de direccion
- * siguen siendo obligatorios a domicilio en cualquier caso — los exige la API —,
- * asi que esto solo decide si el comprador los escribe o le llegan rellenos.
+ * texto de la ubicacion, que es peor pero funciona. Y se puede pedir igual, porque
+ * la ubicacion compartida basta por si sola: esto solo decide si el repartidor
+ * recibe ademas una direccion legible.
  */
 export const GET: APIRoute = async ({ url }) => {
   const lat = Number.parseFloat(url.searchParams.get('lat') ?? '');

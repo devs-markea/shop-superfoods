@@ -74,15 +74,12 @@ export interface AddToCartPayload {
   options?: Array<{ optionId: string; quantity: number }>;
 }
 
-/**
- * Umbral de envio gratis, en MXN.
- *
- * Vive en el front a proposito: el backend no tiene regla de envio y congela
- * shippingTotal en 0 (§12 del contrato). La barra de progreso es, de momento,
- * una promesa comercial de esta interfaz. Cuando el backend calcule envio, el
- * umbral debe venir de el y esta constante desaparece.
- */
-export const FREE_SHIPPING_THRESHOLD = 400;
+// El umbral de envio gratis ya no vive aqui: lo configura el negocio y llega en
+// `delivery.freeShipping` de GET /api/store, que ademas dice si hay envio gratis
+// —`none`, `always` o `threshold`—. Ver src/lib/store-config.ts.
+//
+// Sigue siendo una promesa de esta interfaz: el backend no tiene regla de envio y
+// congela shippingTotal en 0 (§12 del contrato).
 
 /**
  * Peticion cruda al carrito. Devuelve la Response tal cual para que el proxy
@@ -129,11 +126,12 @@ export function describeSelection(item: CartItem): string {
 }
 
 /** Cuanto falta para el envio gratis. 0 si ya se alcanzo. */
-export function remainingForFreeShipping(total: number): number {
-  return Math.max(0, FREE_SHIPPING_THRESHOLD - total);
+export function remainingForFreeShipping(total: number, threshold: number): number {
+  return Math.max(0, threshold - total);
 }
 
 /** Porcentaje de avance hacia el envio gratis, acotado a 100. */
-export function shippingProgress(total: number): number {
-  return Math.min(100, Math.round((total / FREE_SHIPPING_THRESHOLD) * 100));
+export function shippingProgress(total: number, threshold: number): number {
+  if (threshold <= 0) return 100;
+  return Math.min(100, Math.round((total / threshold) * 100));
 }

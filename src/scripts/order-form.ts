@@ -80,7 +80,11 @@ function ruleOf(group: HTMLElement): OptionRule {
   };
 }
 
-/** Opciones DISTINTAS elegidas en el grupo, que es lo que acotan min y max. */
+/**
+ * Opciones DISTINTAS elegidas en el grupo, que es lo que acotan min y max en los
+ * tres controles. En el contador, una opcion cuenta como elegida a partir de una
+ * unidad: el 0 no es una eleccion, y bajar a 0 libera el hueco en el grupo.
+ */
 function countSelected(group: HTMLElement): number {
   if (group.dataset.control === 'quantity') {
     return choicesOf(group).filter((row) => quantityOf(row) > 0).length;
@@ -135,9 +139,9 @@ function totalOf(selection: Selection): number {
 }
 
 /**
- * Aplica los topes que se pueden dibujar, en lugar de avisar despues: el de
- * opciones distintas del checkbox, el de unidades por opcion de la API y el
- * piso de 0 del contador.
+ * Aplica los topes que se pueden dibujar, en lugar de avisar despues. Los
+ * maximos se dejan cumplir deshabilitando controles; el minimo no se puede
+ * dibujar —solo avisar— y de eso se encarga problemsOf().
  */
 function applyLimits(group: HTMLElement): void {
   // Grupo con max: 0. No admite ninguna opcion y llega ya inerte del servidor.
@@ -158,20 +162,30 @@ function applyLimits(group: HTMLElement): void {
       const minus = row.querySelector<HTMLButtonElement>('[data-step="-1"]');
       if (minus) minus.disabled = quantity === 0;
 
-      // El tope de unidades se COMUNICA: el `+` se deshabilita y se atenua, a
-      // diferencia del checkbox, que ignora el clic en silencio al llegar a su
-      // maximo de opciones. Es deliberado: un tope de unidades se alcanza
-      // pulsando el mismo boton varias veces, y uno que deja de responder sin
-      // senal se lee como una averia.
+      // Los DOS topes del control, que cuentan magnitudes distintas y pueden
+      // estar activos a la vez en el mismo grupo:
       //
-      // El segundo caso es el otro tope, el de opciones distintas: alcanzado,
-      // no se puede empezar una opcion nueva, pero si seguir sumando unidades
-      // de las ya elegidas. Hoy no coinciden nunca —max y maxPerOption son
-      // excluyentes por construccion— pero la condicion no da nada por hecho.
+      //   atUnitCap    esta opcion llego a sus unidades maximas (maxPerOption)
+      //   atGroupCap   el grupo ya tiene max opciones elegidas, y esta esta en 0
+      //
+      // El segundo solo cierra la puerta a ABRIR una opcion nueva: el `+` de las
+      // ya elegidas sigue subiendo. Para elegir otra hay que bajar una a 0, que
+      // es lo que libera el hueco.
+      const atUnitCap = quantity >= cap;
+      const atGroupCap = max !== null && quantity === 0 && selected >= max;
+
+      // Los dos se COMUNICAN deshabilitando el boton, a diferencia del checkbox,
+      // que ignora el clic en silencio. Es deliberado: un contador se sube
+      // pulsando repetidamente, y un boton que deja de responder sin senal se
+      // lee como una averia.
       const plus = row.querySelector<HTMLButtonElement>('[data-step="1"]');
-      if (plus) {
-        plus.disabled = quantity >= cap || (max !== null && quantity === 0 && selected >= max);
-      }
+      if (plus) plus.disabled = atUnitCap || atGroupCap;
+
+      // Solo el tope del grupo atenua la etiqueta, con el mismo lenguaje visual
+      // que un checkbox deshabilitado: significan lo mismo, que esa opcion no se
+      // puede elegir. Una opcion en su tope de unidades SI esta elegida, asi que
+      // atenuarla seria mentir.
+      row.toggleAttribute('data-blocked', atGroupCap);
 
       // El importe solo dice algo a partir de la segunda unidad: con una, la
       // etiqueta de la opcion ya lleva el precio.

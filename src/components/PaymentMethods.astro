@@ -1,14 +1,21 @@
 ---
 import PaymentOption from './PaymentOption.astro';
-import type { PaymentMethod } from '../lib/checkout.ts';
+import type { DeliveryType, PaymentMethod } from '../lib/checkout.ts';
 
 interface Props {
   /** Metodo ya elegido, para cuando se vuelve atras desde el pago. */
   selected?: PaymentMethod | null;
+  /**
+   * Modo de entrega. Es lo que decide QUE metodos existen, no solo cual viene
+   * marcado: al recoger, el unico es efectivo.
+   */
+  deliveryType?: DeliveryType;
 }
 
 // Transferencia por defecto: es el metodo que hoy se cobra de verdad.
-const { selected = 'bank_transfer' } = Astro.props;
+const { selected = 'bank_transfer', deliveryType = 'delivery' } = Astro.props;
+
+const pickup = deliveryType === 'pickup';
 
 // Spec: etiqueta + dos opciones, gap 12 en los dos contenedores.
 //
@@ -21,29 +28,52 @@ const { selected = 'bank_transfer' } = Astro.props;
   <span class="section-label" id="payment-label">Metodo de pago</span>
 
   <div class="d-flex flex-column gap-3" role="group" aria-labelledby="payment-label">
-    <PaymentOption
-      id="payment-transfer"
-      value="transferencia"
-      title="Transferencia bancaria"
-      icon="phone"
-      note="Transferencia bancaria"
-      checked={selected !== 'mercado_pago'}
-    />
+    {
+      pickup ? (
+        /*
+          Al recoger se paga en el local, y entonces transferencia y Mercado Pago
+          no vienen a cuento: los dos son formas de pagar por adelantado un pedido
+          que va a salir a la calle. Queda una sola opcion, marcada de entrada.
 
-    {/*
-      Icono provisional: el de Mercado Pago es un logo propio y llegara como
-      asset. Cuando este, se anade a BrandIcon.astro y se cambia aqui.
+          Se pinta igual que las demas —no como un rotulo— para que la pantalla
+          siga diciendo lo mismo en el mismo sitio: como se va a pagar.
+        */
+        <PaymentOption
+          id="payment-cash"
+          value="efectivo"
+          title="Efectivo"
+          icon="cash"
+          note="Pagas al recoger tu pedido en el local"
+          checked
+        />
+      ) : (
+        <>
+          <PaymentOption
+            id="payment-transfer"
+            value="transferencia"
+            title="Transferencia bancaria"
+            icon="phone"
+            note="Transferencia bancaria"
+            checked={selected !== 'mercado_pago'}
+          />
 
-      Seleccionable: cierra el pedido en /pedido-confirmado, sin pasar por los
-      datos de la cuenta. Lo que falta es el cobro real —la pasarela no forma
-      parte de las cuatro APIs—, no la pantalla.
-    */}
-    <PaymentOption
-      id="payment-mercadopago"
-      value="mercadopago"
-      title="Mercado Pago"
-      icon="credit-card"
-      checked={selected === 'mercado_pago'}
-    />
+          {/*
+            Icono provisional: el de Mercado Pago es un logo propio y llegara como
+            asset. Cuando este, se anade a BrandIcon.astro y se cambia aqui.
+
+            Seleccionable: cierra el pedido en /pedido-confirmado, sin pasar por los
+            datos de la cuenta. Lo que falta es el cobro real —la pasarela no forma
+            parte de las cuatro APIs—, no la pantalla.
+          */}
+          <PaymentOption
+            id="payment-mercadopago"
+            value="mercadopago"
+            title="Mercado Pago"
+            icon="credit-card"
+            checked={selected === 'mercado_pago'}
+          />
+        </>
+      )
+    }
   </div>
 </div>

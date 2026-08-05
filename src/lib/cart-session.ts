@@ -19,34 +19,10 @@
 // ---------------------------------------------------------------------------
 
 import type { AstroCookies } from 'astro';
+import { ulid } from './ulid.ts';
 
 const COOKIE_NAME = 'sf_cart';
 const THIRTY_DAYS = 60 * 60 * 24 * 30;
-
-// Crockford base32, el alfabeto de ULID: sin I, L, O ni U.
-const CROCKFORD = '0123456789ABCDEFGHJKMNPQRSTVWXYZ';
-
-/**
- * ULID de 26 caracteres: 10 de marca de tiempo + 16 de aleatoriedad.
- *
- * 256 es multiplo de 32, asi que el `% 32` sobre bytes criptograficos reparte
- * uniforme y no introduce sesgo.
- */
-export function ulid(now = Date.now()): string {
-  let time = '';
-  let rest = now;
-
-  for (let i = 0; i < 10; i += 1) {
-    time = CROCKFORD[rest % 32] + time;
-    rest = Math.floor(rest / 32);
-  }
-
-  const bytes = crypto.getRandomValues(new Uint8Array(16));
-  let random = '';
-  for (const byte of bytes) random += CROCKFORD[byte % 32];
-
-  return time + random;
-}
 
 /**
  * Token de la sesion actual, emitiendolo si es la primera visita.

@@ -9,9 +9,12 @@ import Icon from './Icon.astro';
 // `customer.locationUrl`: un enlace de Google Maps al punto. Debajo del boton
 // aparece el label con la ubicacion, oculto mientras no haya ninguna.
 //
-// Ojo: la ubicacion NO sustituye a la direccion. La API exige colonia, calle y
-// numero en los pedidos a domicilio aunque venga `locationUrl`. Cuando haya clave
-// de geocodificacion, compartir la ubicacion rellenara esos tres campos.
+// La ubicacion **sustituye** a la direccion escrita: a domicilio hace falta una de
+// las dos, y compartirla deja los tres campos de direccion en opcionales. Es lo
+// mismo que valida la API.
+//
+// Aun asi conviene tener la direccion escrita, porque es la que lee el repartidor:
+// con clave de geocodificacion, compartir la ubicacion rellena esos tres campos.
 ---
 
 <div class="location" data-location>
