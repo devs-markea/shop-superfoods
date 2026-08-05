@@ -7,6 +7,19 @@ import PhoneField from '../components/PhoneField.astro';
 import LocationPicker from '../components/LocationPicker.astro';
 import AddressFields from '../components/AddressFields.astro';
 import ActionBar from '../components/ActionBar.astro';
+import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
+
+// Depende de la sesion: el modo de entrega decide que se pide en esta pantalla, y
+// se lee del borrador. Volver aqui desde el pago no puede reiniciarlo a "a
+// domicilio" y pedir de nuevo una direccion que el pedido no necesita.
+export const prerender = false;
+
+const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+
+// Al recoger, donde entregar deja de existir: el pedido se recoge en el local.
+// El script repite esta decision al tocar el switch; aqui se declara para que la
+// pantalla llegue ya correcta, sin un salto al arrancar el JavaScript.
+const pickup = deliveryType === 'pickup';
 ---
 
 <Layout
@@ -21,9 +34,11 @@ import ActionBar from '../components/ActionBar.astro';
     <form class="d-flex flex-column flex-grow-1" action="#" method="post" data-delivery-form>
       <div class="screen-body">
         <!-- 1. Modo de entrega: el mismo switch del listado -->
-        <DeliverySwitch />
+        <DeliverySwitch selected={deliveryType} />
 
-        <!-- 2. Contacto (gap 8) -->
+        <!-- 2. Contacto (gap 8). Nombre y telefono se piden SIEMPRE, tambien al
+             recoger: el telefono es la llave con la que el ERP identifica al
+             cliente y el canal por el que se avisa que el pedido esta listo. -->
         <div class="d-flex flex-column gap-2">
           <TextField
             name="name"
@@ -35,11 +50,22 @@ import ActionBar from '../components/ActionBar.astro';
           <PhoneField />
         </div>
 
-        <!-- 3. Ubicacion (gap 16) -->
-        <LocationPicker />
+        <!-- 3. Donde entregar: solo a domicilio.
+             El gap de 24 es el de .screen-body, que este contenedor repite para
+             que agrupar los dos bloques no cambie el ritmo de la pantalla.
 
-        <!-- 4. Direccion (gap 12) -->
-        <AddressFields />
+             Ubicacion (gap 16) y direccion (gap 12) siguen siendo dos bloques:
+             la direccion escrita es la obligatoria —es la que lee el repartidor—
+             y la ubicacion, opcional, la precisa. -->
+        <div class="d-flex flex-column gap-6" hidden={pickup} data-address-block>
+          <LocationPicker />
+          <AddressFields required={!pickup} />
+        </div>
+
+        <!-- Lo que falta para poder continuar. Lo rellena el script al intentar
+             avanzar: los globos del navegador se cierran al primer toque y hay
+             que dejar el aviso escrito en la pantalla. -->
+        <p class="form-error" role="alert" hidden data-delivery-error></p>
       </div>
 
       <ActionBar label="Continuar" />

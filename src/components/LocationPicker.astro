@@ -4,9 +4,20 @@ import Icon from './Icon.astro';
 // Spec: gap 16 — etiqueta + boton dorado + pista.
 // El icono es el mismo componente que usa la navbar en gris: hereda el dorado
 // de .location__button por currentColor.
+//
+// La ubicacion elegida se guarda en un input oculto, que es lo que la API llama
+// `customer.locationUrl`: un enlace de Google Maps al punto. Debajo del boton
+// aparece el label con la ubicacion, oculto mientras no haya ninguna.
+//
+// La ubicacion **sustituye** a la direccion escrita: a domicilio hace falta una de
+// las dos, y compartirla deja los tres campos de direccion en opcionales. Es lo
+// mismo que valida la API.
+//
+// Aun asi conviene tener la direccion escrita, porque es la que lee el repartidor:
+// con clave de geocodificacion, compartir la ubicacion rellena esos tres campos.
 ---
 
-<div class="location">
+<div class="location" data-location>
   <h2 class="section-label" id="location-label">Ubicacion</h2>
 
   <button
@@ -18,6 +29,29 @@ import Icon from './Icon.astro';
     <Icon name="map-pin" />
     <span>Compartir ubicacion (recomendado)</span>
   </button>
+
+  <input type="hidden" name="locationUrl" data-location-url />
+
+  {/*
+    Ubicacion elegida. El propio texto es el enlace al punto en Google Maps, para
+    que se pueda comprobar antes de seguir.
+  */}
+  <p class="location__selected" hidden data-location-selected>
+    <Icon name="map-pin" size="sm" />
+
+    <a class="location__value" href="#" target="_blank" rel="noopener" data-location-link>
+      <span data-location-label></span>
+    </a>
+
+    <button
+      class="location__clear btn-plain"
+      type="button"
+      aria-label="Quitar la ubicacion"
+      data-location-clear
+    >
+      Quitar
+    </button>
+  </p>
 
   <p class="location__hint">o ingresa manualmente</p>
 </div>

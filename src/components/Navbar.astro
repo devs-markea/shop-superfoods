@@ -3,9 +3,33 @@ import { Image } from 'astro:assets';
 import logo from '../assets/logo-superfoods.png';
 import Icon from './Icon.astro';
 import MenuDrawer from './MenuDrawer.astro';
+import ScheduleSheet from './ScheduleSheet.astro';
+import LocationSheet from './LocationSheet.astro';
+import type { StoreSchedule, StoreSettings } from '../lib/store-config.ts';
+
+interface Props {
+  store: StoreSettings;
+  schedule: StoreSchedule | null;
+}
+
+const { store, schedule } = Astro.props;
 
 // 5 elementos: hamburguesa (izq) - logo (centro) - 3 iconos (der).
 // La hamburguesa abre el offcanvas de Bootstrap via data API, sin JS propio.
+//
+// Los iconos de la derecha existen solo si tienen algo que ensenar: un icono que
+// abre una hoja vacia es peor que un icono que no esta. Quien decide es el dato,
+// no la pantalla.
+const address = store.location?.address;
+const mapsUrl = store.location?.mapsUrl;
+
+// Ubicacion: basta con uno de los dos. Con direccion se lee, con enlace se abre.
+const hasLocation = Boolean(address || mapsUrl);
+
+// Horario: hace falta algo que ensenar. Sin horario predeterminado —o con uno sin
+// turnos— la API devuelve `isOpen: null` y `days` vacio, y entonces el reloj no
+// abriria mas que una hoja en blanco.
+const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 ---
 
 <header class="navbar">
@@ -35,12 +59,35 @@ import MenuDrawer from './MenuDrawer.astro';
     </a>
 
     <div class="navbar__side navbar__side--end">
-      <button class="navbar__action btn-plain" type="button" aria-label="Horario de la tienda">
-        <Icon name="clock" class="navbar__icon" />
-      </button>
-      <button class="navbar__action btn-plain" type="button" aria-label="Cambiar ubicacion">
-        <Icon name="map-pin" class="navbar__icon" />
-      </button>
+      {
+        hasSchedule && (
+          <button
+            class="navbar__action btn-plain"
+            type="button"
+            aria-label="Horario de la tienda"
+            aria-haspopup="dialog"
+            data-sheet="sheet-schedule"
+          >
+            <Icon name="clock" class="navbar__icon" />
+          </button>
+        )
+      }
+
+      {
+        hasLocation && (
+          <button
+            class="navbar__action btn-plain"
+            type="button"
+            aria-label="Ubicacion de la tienda"
+            aria-haspopup="dialog"
+            data-sheet="sheet-location"
+          >
+            <Icon name="map-pin" class="navbar__icon" />
+          </button>
+        )
+      }
+
+      {/* Pendiente: compartir necesita el dominio real (`publicUrl`). */}
       <button class="navbar__action btn-plain" type="button" aria-label="Compartir tienda">
         <Icon name="share" class="navbar__icon" />
       </button>
@@ -49,3 +96,6 @@ import MenuDrawer from './MenuDrawer.astro';
 </header>
 
 <MenuDrawer />
+
+{hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
+{hasLocation && <LocationSheet address={address} mapsUrl={mapsUrl} />}

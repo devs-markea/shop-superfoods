@@ -3,21 +3,28 @@ import Icon from './Icon.astro';
 
 interface Props {
   quantity: number;
-  /** Nombre del producto, para etiquetar los botones de forma inequivoca. */
-  productName: string;
+  /**
+   * Lo que se cuenta —un platillo del pedido o una opcion de la ficha—, para
+   * etiquetar los botones de forma inequivoca.
+   */
+  itemName: string;
   min?: number;
+  /** Techo de unidades. Sin el, el `+` no se detiene nunca. */
+  max?: number;
+  /** Grupo en solo lectura: se ve el contador, no se puede mover. */
+  disabled?: boolean;
 }
 
-const { quantity, productName, min = 1 } = Astro.props;
+const { quantity, itemName, min = 1, max, disabled = false } = Astro.props;
 ---
 
 <div class="stepper" data-stepper>
   <button
     class="stepper__button stepper__button--minus btn-plain"
     type="button"
-    aria-label={`Quitar una unidad de ${productName}`}
+    aria-label={`Quitar una unidad de ${itemName}`}
     data-step="-1"
-    disabled={quantity <= min}
+    disabled={disabled || quantity <= min}
   >
     <!-- La spec pide un rectangulo de 10x1.5, no un icono de trazo. -->
     <span class="stepper__minus"></span>
@@ -28,8 +35,9 @@ const { quantity, productName, min = 1 } = Astro.props;
   <button
     class="stepper__button stepper__button--plus btn-plain"
     type="button"
-    aria-label={`Agregar una unidad de ${productName}`}
+    aria-label={`Agregar una unidad de ${itemName}`}
     data-step="1"
+    disabled={disabled || (max !== undefined && quantity >= max)}
   >
     <Icon name="plus" size="sm" />
   </button>

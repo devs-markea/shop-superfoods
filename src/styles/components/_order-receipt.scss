@@ -1,0 +1,91 @@
+// ---------------------------------------------------------------------------
+// Block: order-receipt
+// ---------------------------------------------------------------------------
+// Resumen del pedido ya confirmado.
+// Spec: gap 16 - padding 20 - radius 20 - bg #FFFFFF
+//       lineas gap 12 - Inter 400 14/20 (cantidad #6C757D, nombre #141821)
+//       pie con el metodo a la izquierda y el importe a la derecha (20/700)
+//
+// Misma superficie que .bank-account —tarjeta blanca de radius 20— pero sin
+// sombra: la spec no le da ninguna. Si se decide que las dos son la misma
+// superficie, el box-shadow entra aqui.
+// ---------------------------------------------------------------------------
+
+.order-receipt {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-4);
+  padding: var(--sf-space-5);
+  border-radius: var(--sf-radius-xl);
+  background-color: var(--sf-surface);
+}
+
+.order-receipt__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-3);
+  margin: 0;
+}
+
+// Element: linea — cantidad + nombre, Inter 400 14/20.
+// El hueco entre los dos no viene en la spec: 8 es el minimo de la escala que
+// separa dos textos seguidos sin que se lean como uno.
+.order-receipt__item {
+  display: flex;
+  gap: var(--sf-space-2);
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-regular);
+  line-height: var(--sf-line-height-base);
+}
+
+.order-receipt__quantity {
+  color: var(--sf-muted);
+  white-space: nowrap;
+}
+
+.order-receipt__name {
+  color: var(--sf-ink);
+}
+
+// Element: pie — metodo de pago e importe, uno en cada extremo
+.order-receipt__payment {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sf-space-3);
+}
+
+// Element: columna del metodo. El 6 es el mismo hueco etiqueta/dato que usan
+// las filas de .bank-account.
+.order-receipt__method {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+// Element: nombre del metodo — icono de 20 + Inter 600 12/16
+.order-receipt__method-name {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-ink);
+}
+
+// La spec no da color para el icono. Dorado, como el de .payment-option__media:
+// es el color de la iconografia de pago en todo el proyecto.
+.order-receipt__method-icon {
+  color: var(--sf-gold);
+}
+
+// Element: importe — Inter 700 20/20. Los 20 quedan fuera de la escala de tipos,
+// igual que el folio: es el otro dato que se lee de un vistazo.
+.order-receipt__total {
+  font-size: 20px;
+  font-weight: var(--sf-weight-bold);
+  line-height: 1;
+  color: var(--sf-ink);
+  white-space: nowrap;
+}

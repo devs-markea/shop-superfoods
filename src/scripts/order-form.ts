@@ -1,35 +1,452 @@
-// Vista de detalle — total del boton.
-// Suma los [data-price] marcados: el radio de tamano aporta el precio total y
-// cada extra su sobrecoste. El texto sale de data-total-template, asi la copia
-// vive en el marcado.
-// Portado de shared/js/main.js.
+// Ficha del platillo: seleccion, total y alta en el carrito.
+//
+// El total se calcula igual que el simulador del panel:
+//
+//     variante elegida + Σ (cantidad x precio de opcion)
+//
+// donde la cantidad es 0/1 en radio y checkbox, y 0..n en el control de
+// cantidad —el unico donde el precio se multiplica por algo distinto de 0 o 1.
+//
+// Los importes que se muestran aqui son solo para mostrar. El precio que cuenta
+// es el que recalcula el servidor al agregar: al carrito solo se envian
+// identificadores y cantidades.
+//
+// La peticion va a /api/cart/items de este mismo front, que reenvia a la API
+// con el token de la sesion. Al ser mismo origen la cookie viaja sola, sin
+// credentials: 'include' ni configuracion de CORS.
 
-const priceFormatter = new Intl.NumberFormat('es-MX', {
-  style: 'currency',
-  currency: 'MXN',
-});
+import { formatPrice } from '../lib/price';
+import {
+  OPTION_ENTRIES_MAX,
+  isUnfulfillable,
+  missingMessage,
+  unfulfillableMessage,
+  unitCap,
+  type OptionControl,
+  type OptionRule,
+} from '../lib/options';
+
+interface SelectedOption {
+  optionId: string;
+  quantity: number;
+  price: number;
+  /**
+   * Solo el control `quantity` significa unidades. En radio y checkbox el
+   * numero es presencia/ausencia y el servidor lo normaliza a 1, asi que ni se
+   * manda.
+   */
+  counted: boolean;
+}
+
+interface Selection {
+  variantId: string | null;
+  variantPrice: number;
+  options: SelectedOption[];
+}
+
+/** Un minimo sin cumplir. Sin grupo cuando afecta al conjunto del envio. */
+interface Problem {
+  group: HTMLElement | null;
+  message: string;
+}
+
+const groupsOf = (form: HTMLFormElement) => [
+  ...form.querySelectorAll<HTMLElement>('[data-option-group]'),
+];
+
+const choicesOf = (group: HTMLElement) => [
+  ...group.querySelectorAll<HTMLElement>('[data-choice]'),
+];
+
+const priceOf = (element: HTMLElement) => Number.parseFloat(element.dataset.price ?? '') || 0;
+
+const quantityOf = (row: HTMLElement) =>
+  Number.parseInt(row.querySelector<HTMLElement>('[data-quantity]')?.textContent ?? '', 10) || 0;
+
+/**
+ * La regla del grupo tal como la publica la API. No se deriva nada aqui: el
+ * backend ya resolvio el control y los topes en un solo sitio.
+ */
+function ruleOf(group: HTMLElement): OptionRule {
+  return {
+    control: (group.dataset.control ?? 'checkbox') as OptionControl,
+    min: Number.parseInt(group.dataset.min ?? '', 10) || 0,
+    // data-max vacio es "sin tope"; data-max="0" es un grupo que no admite
+    // ninguna opcion, y son cosas distintas.
+    max: group.dataset.max ? Number.parseInt(group.dataset.max, 10) : null,
+    maxPerOption: group.dataset.maxPerOption
+      ? Number.parseInt(group.dataset.maxPerOption, 10)
+      : null,
+  };
+}
+
+/**
+ * Opciones DISTINTAS elegidas en el grupo, que es lo que acotan min y max en los
+ * tres controles. En el contador, una opcion cuenta como elegida a partir de una
+ * unidad: el 0 no es una eleccion, y bajar a 0 libera el hueco en el grupo.
+ */
+function countSelected(group: HTMLElement): number {
+  if (group.dataset.control === 'quantity') {
+    return choicesOf(group).filter((row) => quantityOf(row) > 0).length;
+  }
+
+  return group.querySelectorAll('[data-choice]:checked').length;
+}
+
+function readSelection(form: HTMLFormElement): Selection {
+  // Con hasVariants: false no hay selector, pero la variante existe y su id
+  // viaja igual. El precio base es el suyo.
+  let variantId = form.dataset.variantId || null;
+  let variantPrice = Number.parseFloat(form.dataset.basePrice ?? '') || 0;
+  const options: SelectedOption[] = [];
+
+  for (const group of groupsOf(form)) {
+    if (group.dataset.control === 'quantity') {
+      // Solo viajan las opciones con contador > 0: una entrada con quantity 0
+      // no se ignora, rompe la peticion entera con un 422.
+      for (const row of choicesOf(group)) {
+        const quantity = quantityOf(row);
+        if (quantity > 0) {
+          options.push({
+            optionId: row.dataset.optionId ?? '',
+            quantity,
+            price: priceOf(row),
+            counted: true,
+          });
+        }
+      }
+      continue;
+    }
+
+    for (const input of group.querySelectorAll<HTMLInputElement>('[data-choice]:checked')) {
+      if (group.dataset.kind === 'variant') {
+        variantId = input.value;
+        variantPrice = priceOf(input);
+      } else {
+        options.push({ optionId: input.value, quantity: 1, price: priceOf(input), counted: false });
+      }
+    }
+  }
+
+  return { variantId, variantPrice, options };
+}
+
+function totalOf(selection: Selection): number {
+  return selection.options.reduce(
+    (sum, option) => sum + option.price * option.quantity,
+    selection.variantPrice,
+  );
+}
+
+/**
+ * Aplica los topes que se pueden dibujar, en lugar de avisar despues. Los
+ * maximos se dejan cumplir deshabilitando controles; el minimo no se puede
+ * dibujar —solo avisar— y de eso se encarga problemsOf().
+ */
+function applyLimits(group: HTMLElement): void {
+  // Grupo con max: 0. No admite ninguna opcion y llega ya inerte del servidor.
+  if (group.hasAttribute('data-inert')) return;
+
+  const rule = ruleOf(group);
+  const { control, max } = rule;
+
+  if (control === 'quantity') {
+    const rows = choicesOf(group);
+    const selected = rows.filter((row) => quantityOf(row) > 0).length;
+    const cap = unitCap(rule);
+
+    for (const row of rows) {
+      const quantity = quantityOf(row);
+      row.toggleAttribute('data-selected', quantity > 0);
+
+      const minus = row.querySelector<HTMLButtonElement>('[data-step="-1"]');
+      if (minus) minus.disabled = quantity === 0;
+
+      // Los DOS topes del control, que cuentan magnitudes distintas y pueden
+      // estar activos a la vez en el mismo grupo:
+      //
+      //   atUnitCap    esta opcion llego a sus unidades maximas (maxPerOption)
+      //   atGroupCap   el grupo ya tiene max opciones elegidas, y esta esta en 0
+      //
+      // El segundo solo cierra la puerta a ABRIR una opcion nueva: el `+` de las
+      // ya elegidas sigue subiendo. Para elegir otra hay que bajar una a 0, que
+      // es lo que libera el hueco.
+      const atUnitCap = quantity >= cap;
+      const atGroupCap = max !== null && quantity === 0 && selected >= max;
+
+      // Los dos se COMUNICAN deshabilitando el boton, a diferencia del checkbox,
+      // que ignora el clic en silencio. Es deliberado: un contador se sube
+      // pulsando repetidamente, y un boton que deja de responder sin senal se
+      // lee como una averia.
+      const plus = row.querySelector<HTMLButtonElement>('[data-step="1"]');
+      if (plus) plus.disabled = atUnitCap || atGroupCap;
+
+      // Solo el tope del grupo atenua la etiqueta, con el mismo lenguaje visual
+      // que un checkbox deshabilitado: significan lo mismo, que esa opcion no se
+      // puede elegir. Una opcion en su tope de unidades SI esta elegida, asi que
+      // atenuarla seria mentir.
+      row.toggleAttribute('data-blocked', atGroupCap);
+
+      // El importe solo dice algo a partir de la segunda unidad: con una, la
+      // etiqueta de la opcion ya lleva el precio.
+      const amount = row.querySelector<HTMLElement>('[data-option-amount]');
+      if (amount) {
+        const price = priceOf(row);
+        const visible = quantity > 1 && price > 0;
+        amount.textContent = visible ? `+ ${formatPrice(price * quantity)}` : '';
+        amount.hidden = !visible;
+      }
+    }
+    return;
+  }
+
+  if (control !== 'checkbox' || max === null) return;
+
+  const inputs = [...group.querySelectorAll<HTMLInputElement>('[data-choice]')];
+  const checked = inputs.filter((input) => input.checked).length;
+  for (const input of inputs) input.disabled = !input.checked && checked >= max;
+}
+
+function setGroupError(group: HTMLElement, message: string | null): void {
+  const slot = group.querySelector<HTMLElement>('[data-group-error]');
+  if (!slot) return;
+  slot.textContent = message ?? '';
+  slot.hidden = message === null;
+}
+
+function setFormError(form: HTMLFormElement, message: string | null): void {
+  const slot = form.querySelector<HTMLElement>('[data-form-error]');
+  if (!slot) return;
+  slot.textContent = message ?? '';
+  slot.hidden = message === null;
+}
+
+/**
+ * Un grupo de cantidad obligatorio nace incumplido: todos los contadores
+ * arrancan en 0 y nada indica que falta algo. El contrato pide que sea el
+ * cliente quien bloquee la compra hasta que se cumpla el minimo.
+ *
+ * El boton se apaga pero sigue siendo pulsable: un `disabled` real no emite
+ * click y no habria forma de contar que falta.
+ */
+function setBlocked(form: HTMLFormElement, blocked: boolean): void {
+  const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+  if (button) button.setAttribute('aria-disabled', String(blocked));
+}
+
+/**
+ * Comprueba los minimos antes de gastar un viaje al servidor. El servidor
+ * revalida igual: esto es comodidad, no la garantia.
+ */
+function problemsOf(form: HTMLFormElement): Problem[] {
+  const problems: Problem[] = [];
+  let entries = 0;
+
+  for (const group of groupsOf(form)) {
+    const rule = ruleOf(group);
+    const choices = choicesOf(group).length;
+    const selected = countSelected(group);
+
+    // La variante no viaja en `options`, asi que no cuenta para el tope.
+    if (group.dataset.kind !== 'variant') entries += selected;
+
+    if (isUnfulfillable(rule, choices)) {
+      problems.push({ group, message: unfulfillableMessage(rule, choices) });
+    } else if (selected < rule.min) {
+      problems.push({ group, message: missingMessage(rule, group.dataset.label ?? '') });
+    }
+  }
+
+  if (entries > OPTION_ENTRIES_MAX) {
+    problems.push({
+      group: null,
+      message: `Elegiste demasiadas opciones distintas: el maximo es ${OPTION_ENTRIES_MAX}.`,
+    });
+  }
+
+  return problems;
+}
+
+/**
+ * §9 del contrato: la API responde en dos idiomas. Los errores de negocio —los
+ * que nombra `options.{personalizationId}`— llegan en espanol y se muestran tal
+ * cual junto a su grupo. Los de forma llegan en ingles
+ * (`The options.0.quantity field must be at least 1.`), asi que de esos se usa
+ * la clave y el texto lo pone la tienda.
+ */
+const FIELD_MESSAGE: Record<string, string> = {
+  productId: 'Este platillo ya no se puede pedir ahora mismo.',
+  priceId: 'Elige una variante de precio.',
+  quantity: 'Esa cantidad no es valida.',
+  options: 'Revisa las opciones que elegiste.',
+  cart: 'No pudimos actualizar tu pedido.',
+};
+
+const GENERIC_ERROR = 'No pudimos agregar el platillo.';
+
+function showApiErrors(form: HTMLFormElement, body: unknown): void {
+  const payload = body as { errors?: unknown } | null;
+  const errors =
+    payload && typeof payload.errors === 'object' && payload.errors !== null
+      ? (payload.errors as Record<string, unknown>)
+      : null;
+
+  for (const group of groupsOf(form)) setGroupError(group, null);
+
+  // Un Set porque varias entradas de forma comparten clave: `options.0.quantity`
+  // y `options.1.optionId` no deben pintar dos veces el mismo aviso.
+  const loose = new Set<string>();
+
+  for (const [field, value] of Object.entries(errors ?? {})) {
+    const text = String(Array.isArray(value) ? value[0] : value);
+    const parts = field.split('.');
+
+    // `options.{personalizationId}` son exactamente dos segmentos y es el error
+    // de negocio del grupo. `options.0.quantity` son tres y es de forma: ese no
+    // se muestra tal cual porque viene en ingles.
+    const group =
+      parts.length === 2 && parts[0] === 'options'
+        ? form.querySelector<HTMLElement>(`[data-group-id="${CSS.escape(parts[1])}"]`)
+        : null;
+
+    if (group) {
+      setGroupError(group, text);
+      continue;
+    }
+
+    loose.add(FIELD_MESSAGE[parts[0]] ?? GENERIC_ERROR);
+  }
+
+  // El `message` de la respuesta tampoco se muestra: tambien puede venir en
+  // ingles si el fallo fue de forma.
+  setFormError(form, loose.size > 0 ? [...loose].join(' ') : errors ? null : GENERIC_ERROR);
+}
+
+async function addToCart(form: HTMLFormElement): Promise<void> {
+  const endpoint = form.dataset.endpoint;
+  const productId = form.dataset.productId;
+  if (!endpoint || !productId) return;
+
+  setFormError(form, null);
+
+  const selection = readSelection(form);
+  const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+  if (button) button.disabled = true;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+      body: JSON.stringify({
+        productId,
+        quantity: 1,
+        // priceId es obligatorio si y solo si el platillo tiene variantes; en
+        // los de precio unico se manda igual cuando lo conocemos.
+        ...(selection.variantId ? { priceId: selection.variantId } : {}),
+        options: selection.options.map(({ optionId, quantity, counted }) =>
+          counted ? { optionId, quantity } : { optionId },
+        ),
+      }),
+    });
+
+    if (response.ok) {
+      // La linea ya esta en el carrito: el pedido es la confirmacion.
+      window.location.assign(form.dataset.redirect || '/mi-pedido');
+      return;
+    }
+
+    showApiErrors(form, await response.json().catch(() => null));
+  } catch {
+    setFormError(form, 'No pudimos agregar el platillo. Revisa tu conexion.');
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
 
 function initOrderForm(form: HTMLFormElement): void {
   const output = form.querySelector<HTMLElement>('[data-total]');
   const template = output?.dataset.totalTemplate;
 
-  if (output && template) {
-    const update = () => {
-      let total = 0;
-      for (const input of form.querySelectorAll<HTMLInputElement>(
-        '[data-price]:checked',
-      )) {
-        total += Number.parseFloat(input.dataset.price ?? '') || 0;
-      }
-      output.textContent = template.replace('{total}', priceFormatter.format(total));
-    };
+  // Los errores de cada grupo no aparecen de entrada: seria regañar a alguien
+  // que aun no ha tocado nada. Hasta el primer intento de envio, lo que falta
+  // se resume en una linea sobre el boton.
+  let revealed = false;
 
-    form.addEventListener('change', update);
-    update();
-  }
+  const refresh = (): void => {
+    for (const group of groupsOf(form)) applyLimits(group);
 
-  // Sin backend todavia: evita que el submit recargue la pagina.
-  form.addEventListener('submit', (event) => event.preventDefault());
+    if (output && template) {
+      output.textContent = template.replace('{total}', formatPrice(totalOf(readSelection(form))));
+    }
+
+    const problems = problemsOf(form);
+    setBlocked(form, problems.length > 0);
+
+    if (!revealed) {
+      setFormError(form, problems[0]?.message ?? null);
+      return;
+    }
+
+    const byGroup = new Map<HTMLElement, string>();
+    const loose: string[] = [];
+    for (const problem of problems) {
+      if (problem.group) byGroup.set(problem.group, problem.message);
+      else loose.push(problem.message);
+    }
+
+    for (const group of groupsOf(form)) setGroupError(group, byGroup.get(group) ?? null);
+    setFormError(form, loose.length > 0 ? loose.join(' ') : null);
+  };
+
+  form.addEventListener('change', refresh);
+
+  form.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const step = target.closest<HTMLElement>('[data-step]');
+    if (!step) return;
+
+    const row = step.closest<HTMLElement>('[data-choice]');
+    const group = row?.closest<HTMLElement>('[data-option-group]');
+    const value = row?.querySelector<HTMLElement>('[data-quantity]');
+    if (!row || !group || !value) return;
+
+    // Piso en 0 y techo en el tope de unidades de la opcion. El `+` ya esta
+    // deshabilitado al llegar, asi que esto es solo el cinturon: pasarse solo
+    // serviria para cobrar un 422.
+    const delta = Number.parseInt(step.dataset.step ?? '', 10) || 0;
+    const next = Math.min(unitCap(ruleOf(group)), Math.max(0, quantityOf(row) + delta));
+
+    value.textContent = String(next);
+    refresh();
+  });
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    const problems = problemsOf(form);
+    if (problems.length > 0) {
+      revealed = true;
+      refresh();
+
+      // El foco primero y el desplazamiento despues: lo que importa es dejar
+      // el cursor en el grupo que falta, no la animacion.
+      const group = problems.find((problem) => problem.group)?.group;
+      group
+        ?.querySelector<HTMLElement>('input:not(:disabled), button:not(:disabled)')
+        ?.focus({ preventScroll: true });
+      group?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
+
+    // A partir de aqui manda el servidor: si responde 422, sus mensajes se
+    // reparten por grupo y refresh() los mantiene desde entonces.
+    revealed = true;
+    void addToCart(form);
+  });
+
+  refresh();
 }
 
 for (const form of document.querySelectorAll<HTMLFormElement>('[data-order-form]')) {

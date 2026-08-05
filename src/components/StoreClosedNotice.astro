@@ -1,0 +1,27 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  /** Estado ya redactado: "Cerrado · Abre manana a las 09:00". */
+  label: string;
+}
+
+const { label } = Astro.props;
+
+// Aviso de que la tienda esta cerrada, en la portada.
+//
+// Lo pinta la pagina solo cuando el horario dice `isOpen: false`. Con `null` —no
+// hay horario, o lo hay sin turnos— no aparece: anunciar "cerrado" por un descuido
+// del panel espanta compradores en plena hora de venta.
+//
+// Reusa .info-note, la caja de aviso del proyecto, con el reloj en lugar del icono
+// de informacion: es el mismo icono que abre el horario en la cabecera, asi que
+// quien quiera el detalle sabe donde mirar.
+---
+
+<div class="store-closed">
+  <div class="store-closed__inner info-note" role="status">
+    <Icon name="clock" size="sm" />
+    <p class="info-note__text">{label}</p>
+  </div>
+</div>

@@ -1,0 +1,39 @@
+// ---------------------------------------------------------------------------
+// Block: location-sheet
+// ---------------------------------------------------------------------------
+// Contenido de la hoja de ubicacion: la direccion escrita y el boton que abre
+// Google Maps.
+//
+// Sin spec de Figma: el boton es el de accion del proyecto (44 de alto, radius 12,
+// dorado) y la direccion, el tipo de dato de las tarjetas.
+//
+// Los dos elementos son independientes: con solo direccion la hoja se queda sin
+// boton, y con solo enlace la direccion se sustituye por una pista.
+// ---------------------------------------------------------------------------
+
+// Element: direccion — Inter 500 14/20
+.location-sheet__address {
+  margin: 0;
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-ink);
+}
+
+// Element: pista cuando no hay direccion escrita
+.location-sheet__hint {
+  margin: 0;
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-placeholder);
+}
+
+// Element: boton a Maps. Mismas medidas que la accion principal del proyecto.
+.location-sheet__link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sf-space-2);
+  height: 44px;
+}

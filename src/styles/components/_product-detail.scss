@@ -40,6 +40,26 @@
   color: var(--sf-muted);
 }
 
+// Element: aviso de la ficha — motivo de no disponible, o el error que
+// devuelve la API al agregar. Justo encima de la barra de accion, centrado con
+// el mismo ancho maximo que el boton.
+.product-detail__notice {
+  width: 100%;
+  max-width: var(--sf-switch-width);
+  margin: 0 auto;
+  padding-inline: var(--sf-space-5);
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-muted);
+  text-align: center;
+}
+
+// Modifier: el aviso es un fallo, no una informacion.
+.product-detail__notice--error {
+  color: var(--sf-indigo);
+}
+
 // Element: linea divisora
 .product-detail__divider {
   height: 1px;

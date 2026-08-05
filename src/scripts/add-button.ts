@@ -2,7 +2,11 @@
 // Portado de shared/js/main.js. Delegacion en document, asi funciona con las
 // tarjetas que se pinten despues (filtros, paginacion, scroll infinito).
 //
-// Pendiente: conectar con el carrito real. Hoy solo anima el boton.
+// Pendiente: conectar con el carrito real (API 3, POST /api/cart/items). El
+// boton ya lleva el identificador en data-product-id, pero un platillo con
+// personalizaciones obligatorias no se puede añadir sin pasar por el detalle:
+// hay que decidir si este "+" navega o manda la seleccion por defecto. Hoy
+// solo anima.
 
 document.addEventListener('click', (event) => {
   const target = event.target;

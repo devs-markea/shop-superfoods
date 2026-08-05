@@ -1,0 +1,42 @@
+---
+import { formatPrice } from '../lib/price.ts';
+import type { OrderLine } from '../lib/checkout.ts';
+
+interface Props {
+  /** Lineas del carrito de la sesion. Solo se leen cantidad y nombre. */
+  items: OrderLine[];
+  /** Importe a transferir, en MXN. */
+  total: number;
+}
+
+const { items, total } = Astro.props;
+
+// Recordatorio de lo que se pidio, ya en la pantalla de pago: aqui no se edita
+// nada, por eso las lineas son texto y no <OrderItem>.
+//
+// Spec: contenedor gap 12 - padding 16 - radius 16 - borde 1px
+//       lineas gap 8, 12/16 #6C757D - divisora discontinua - total 14/20
+---
+
+<div class="order-detail">
+  <span class="section-label">Detalle del pedido</span>
+
+  {
+    items.length > 0 ? (
+      <ul class="order-detail__items list-unstyled">
+        {items.map((item) => (
+          <li class="order-detail__item">{`${item.quantity}× ${item.name}`}</li>
+        ))}
+      </ul>
+    ) : (
+      <p class="order-detail__item">Tu pedido esta vacio.</p>
+    )
+  }
+
+  <hr class="dashed-divider" />
+
+  <div class="order-detail__total">
+    <span class="order-detail__total-term">Total a pagar</span>
+    <span class="order-detail__total-value">{formatPrice(total)}</span>
+  </div>
+</div>

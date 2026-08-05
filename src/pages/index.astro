@@ -3,28 +3,95 @@ import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
 import OrderBar from '../components/OrderBar.astro';
 import ProductCard from '../components/ProductCard.astro';
-import { categories, products } from '../data/products.ts';
+import { getCategories, getProducts, type ProductListItem } from '../lib/catalog.ts';
+import StoreClosedNotice from '../components/StoreClosedNotice.astro';
+import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
+import { scheduleLabel } from '../lib/schedule.ts';
+import { formatPrice } from '../lib/price.ts';
+
+// On-demand, no prerenderizado: `available` depende del horario de la
+// categoria resuelto en America/Cancun, asi que una pagina generada en el
+// build serviria la disponibilidad congelada del momento del deploy y
+// mostraria como comprable un platillo que ya cerro.
+export const prerender = false;
+
+let products: ProductListItem[] = [];
+let unreachable = false;
+
+try {
+  products = await getProducts();
+} catch (error) {
+  // Sin catalogo la pagina sigue en pie —cabecera y barra de pedido— con un
+  // aviso en lugar de la rejilla. Una portada en blanco es peor que una
+  // portada que explica que paso.
+  console.error('[catalogo] fallo GET /api/products', error);
+  unreachable = true;
+}
+
+const categories = getCategories(products);
+
+// Configuracion y horario van en paralelo con lo que ya se pidio: son dos
+// peticiones publicas y cacheadas, y encadenarlas retrasaria la portada por nada.
+// Ninguna de las dos lanza: sin ellas la cabecera se queda sin sus iconos, pero el
+// catalogo se sirve igual.
+const [store, schedule] = await Promise.all([getStoreConfig(), getStoreSchedule()]);
+
+// El rotulo de envio lo compone la tienda a partir del modo, porque es un rotulo y
+// los rotulos son suyos. Con `none` no se pinta: prometer un envio gratis que el
+// negocio apago es peor que no decir nada.
+const freeShipping = store.delivery?.freeShipping;
+
+const shippingLabel =
+  freeShipping?.mode === 'always'
+    ? 'Envio gratis'
+    : freeShipping?.mode === 'threshold' && freeShipping.threshold
+      ? `Envio gratis desde ${formatPrice(freeShipping.threshold)}`
+      : undefined;
+
+// El aviso solo aparece con la tienda cerrada de verdad. Con `null` —sin horario, o
+// con uno sin turnos— no se afirma nada: seria anunciar "cerrado" por un descuido
+// del panel en plena hora de venta.
+const closedLabel = schedule?.isOpen === false ? scheduleLabel(schedule) : null;
 ---
 
 <Layout title="Shop Superfoods">
-  <Navbar />
+  <Navbar store={store} schedule={schedule} />
 
   <main>
-    <OrderBar categories={categories} />
+    {closedLabel && <StoreClosedNotice label={closedLabel} />}
+
+    <OrderBar
+      categories={categories}
+      estimate={store.delivery?.estimate}
+      shipping={shippingLabel}
+    />
 
     <section class="product-list" aria-label="Productos">
       <div class="product-list__items">
-        <!-- m-0: .row solo resetea los margenes laterales y el superior, asi
-             que el margin-bottom que el Reboot pone a <ul> sobreviviria. -->
-        <ul class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-6 list-unstyled m-0">
-          {
-            products.map((product, index) => (
-              <li class="col">
-                <ProductCard product={product} eager={index === 0} />
-              </li>
-            ))
-          }
-        </ul>
+        {
+          products.length > 0 ? (
+            // m-0: .row solo resetea los margenes laterales y el superior, asi
+            // que el margin-bottom que el Reboot pone a <ul> sobreviviria.
+            <ul
+              class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-6 list-unstyled m-0"
+              data-product-list
+            >
+              {products.map((product, index) => (
+                // data-category en la celda, no en la tarjeta: es la celda lo
+                // que oculta el filtro.
+                <li class="col" data-category={product.category}>
+                  <ProductCard product={product} eager={index === 0} />
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p class="product-list__notice">
+              {unreachable
+                ? 'No pudimos cargar el menu en este momento. Vuelve a intentarlo en unos minutos.'
+                : 'Todavia no hay platillos publicados.'}
+            </p>
+          )
+        }
       </div>
     </section>
   </main>
@@ -33,5 +100,7 @@ import { categories, products } from '../data/products.ts';
 <script>
   import '../scripts/bootstrap';
   import '../scripts/category-nav';
+  import '../scripts/category-filter';
   import '../scripts/add-button';
+  import '../scripts/sheet';
 </script>

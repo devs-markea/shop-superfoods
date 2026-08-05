@@ -1,21 +1,21 @@
 ---
 import Icon from './Icon.astro';
-import { photoUrl, type Product } from '../data/products.ts';
+import { productImageSrc, type ProductDetail } from '../lib/catalog.ts';
 
 interface Props {
-  product: Product;
+  product: ProductDetail;
 }
 
 const { product } = Astro.props;
 ---
 
 <div class="product-hero">
+  <!-- La API no expone variantes de tamano de la foto, asi que se pide la
+       original y la recorta el CSS del bloque. -->
   <img
     class="product-hero__image"
-    src={photoUrl(product.photoId, 1200, 720)}
-    width="1200"
-    height="720"
-    alt={product.alt}
+    src={productImageSrc(product)}
+    alt={product.image.alt}
     loading="eager"
     decoding="async"
   />

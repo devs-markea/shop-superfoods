@@ -1,0 +1,47 @@
+---
+import Sheet from './Sheet.astro';
+import Icon from './Icon.astro';
+
+interface Props {
+  /** Direccion escrita. Puede faltar: entonces solo se ofrece el boton. */
+  address?: string;
+  /** Enlace de Google Maps al local. Puede faltar: entonces no hay boton. */
+  mapsUrl?: string;
+}
+
+const { address, mapsUrl } = Astro.props;
+
+// Ubicacion de la tienda, detras del icono del pin.
+//
+// Los dos datos sirven por separado y por eso ninguno obliga al otro: de un enlace
+// de Maps no sale una direccion legible —`maps.app.goo.gl/xxxx` es opaco— y de una
+// direccion escrita no sale un enlace fiable. Con los dos, se lee y se abre; con
+// uno, se hace lo que ese permita.
+//
+// Quien decide si esta hoja existe es la barra superior: sin ninguno de los dos, el
+// icono no se pinta y aqui no se llega.
+---
+
+<Sheet id="sheet-location" title="Ubicacion">
+  {
+    address ? (
+      <p class="location-sheet__address">{address}</p>
+    ) : (
+      <p class="location-sheet__hint">Abre el mapa para ver donde estamos.</p>
+    )
+  }
+
+  {
+    mapsUrl && (
+      <a
+        class="location-sheet__link btn btn-primary"
+        href={mapsUrl}
+        target="_blank"
+        rel="noopener"
+      >
+        <Icon name="map-pin" size="sm" />
+        <span>Abrir en Google Maps</span>
+      </a>
+    )
+  }
+</Sheet>

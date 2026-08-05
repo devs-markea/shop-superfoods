@@ -1,0 +1,38 @@
+---
+import Sheet from './Sheet.astro';
+import { formatShifts, type StoreSchedule } from '../lib/schedule.ts';
+
+interface Props {
+  schedule: StoreSchedule;
+}
+
+const { schedule } = Astro.props;
+
+// Horario de la tienda, detras del icono del reloj.
+//
+// Solo el horario: si esta abierta ahora o no se dice en la portada, donde sirve
+// para algo. Aqui repetirlo no anadiria nada y competiria con el dato.
+//
+// La API manda los siete dias sueltos, cada uno con sus turnos, y los cerrados
+// llegan con la lista vacia. Se pintan tal cual, sin agrupar: agrupar es una
+// interpretacion —"Lunes a domingo"— y de un grupo no se puede volver a sacar el
+// dia suelto que alguien viene a consultar.
+---
+
+<Sheet id="sheet-schedule" title="Horario">
+  <dl class="schedule">
+    {
+      schedule.days.map((day) => (
+        <div class="schedule__row">
+          <dt class="schedule__day">{day.name}</dt>
+
+          <dd
+            class:list={['schedule__shifts', { 'schedule__shifts--closed': day.shifts.length === 0 }]}
+          >
+            {day.shifts.length > 0 ? formatShifts(day) : 'Cerrado'}
+          </dd>
+        </div>
+      ))
+    }
+  </dl>
+</Sheet>

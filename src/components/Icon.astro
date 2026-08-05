@@ -15,11 +15,16 @@ export type IconName =
   | 'arrow-left'
   | 'trash'
   | 'phone'
-  | 'credit-card';
+  | 'credit-card'
+  | 'cash'
+  | 'copy'
+  | 'check'
+  | 'info'
+  | 'close';
 
 interface Props {
   name: IconName;
-  size?: 'md' | 'sm';
+  size?: 'lg' | 'md' | 'sm';
   class?: string;
 }
 
@@ -47,11 +52,30 @@ const paths: Record<IconName, string> = {
     '<rect x="5" y="2" width="10" height="16" rx="2"/><path d="M8.75 15h2.5"/>',
   'credit-card':
     '<rect x="1.667" y="4.167" width="16.666" height="11.666" rx="1.667"/><path d="M1.667 8.333h16.666"/>',
+  // Billete con el importe en el centro: el pago en efectivo, al recoger. No
+  // reusa 'credit-card' —una tarjeta no es efectivo— y por eso es mas bajo que
+  // ella: 10 de alto contra 11.666, la proporcion de un billete.
+  cash: '<rect x="1.667" y="5" width="16.666" height="10" rx="1.667"/><circle cx="10" cy="10" r="2.083"/>',
+  // Dos cuadrados superpuestos: el de atras se dibuja abierto, para que el de
+  // delante no lo cruce. Copiar la CLABE.
+  copy: '<rect x="6.667" y="6.667" width="11.666" height="11.666" rx="1.667"/><path d="M3.333 13.333a1.667 1.667 0 0 1-1.666-1.666V3.333c0-.92.746-1.666 1.666-1.666h8.334c.92 0 1.666.746 1.666 1.666"/>',
+  // Confirmacion del boton de copiar.
+  check: '<path d="M16.667 5 7.5 14.167 3.333 10"/>',
+  // El punto de la "i" es un trazo de longitud casi cero: con el remate redondo
+  // del sistema sale redondo sin necesidad de un circulo relleno.
+  info: '<circle cx="10" cy="10" r="8.333"/><path d="M10 13.333V10M10 6.667h.008"/>',
+  // Cerrar. El de Bootstrap (.btn-close) es una imagen de fondo con su propio
+  // grosor y su propio negro: no sigue el sistema ni hereda el color del padre.
+  close: '<path d="M15 5 5 15M5 5l10 10"/>',
 };
 ---
 
 <svg
-  class:list={['icon', { 'icon--sm': size === 'sm' }, className]}
+  class:list={[
+    'icon',
+    { 'icon--sm': size === 'sm', 'icon--lg': size === 'lg' },
+    className,
+  ]}
   viewBox="0 0 20 20"
   aria-hidden="true"
   focusable="false"

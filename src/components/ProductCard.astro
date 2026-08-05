@@ -1,25 +1,40 @@
 ---
 import Icon from './Icon.astro';
-import { formatPrice, photoUrl, type Product } from '../data/products.ts';
+import { formatPrice } from '../lib/price.ts';
+import { productHref, productImageSrc, type ProductListItem } from '../lib/catalog.ts';
 
 interface Props {
-  product: Product;
+  product: ProductListItem;
   /** La primera tarjeta no se carga en diferido: entra en el primer viewport. */
   eager?: boolean;
 }
 
 const { product, eager = false } = Astro.props;
-const href = `/producto/${product.slug}`;
+
+// El contrato distingue por que no se puede comprar, asi que el aviso tambien.
+// Record<string, string> y no Record<UnavailableReason, string>: si el backend
+// anade un motivo nuevo, la tarjeta cae en el texto generico en lugar de
+// pintar "undefined".
+const UNAVAILABLE_LABEL: Record<string, string> = {
+  no_price: 'Sin precio',
+  out_of_schedule: 'Fuera de horario',
+};
+
+const notice = product.available
+  ? null
+  : (UNAVAILABLE_LABEL[product.unavailableReason ?? ''] ?? 'No disponible');
 ---
 
-<article class="product-card card">
+<article
+  class:list={['product-card', 'card', !product.available && 'product-card--unavailable']}
+>
   <div class="product-card__media">
     <img
       class="product-card__image"
-      src={photoUrl(product.photoId, 200, 200)}
+      src={productImageSrc(product)}
       width="80"
       height="80"
-      alt={product.alt}
+      alt={product.image.alt}
       loading={eager ? 'eager' : 'lazy'}
       decoding="async"
     />
@@ -27,25 +42,33 @@ const href = `/producto/${product.slug}`;
 
   <div class="product-card__body">
     <h3 class="product-card__title">
-      <!-- stretched-link: toda la tarjeta es clicable, sin anidar el boton -->
-      <a class="stretched-link text-reset" href={href}>{product.name}</a>
+      <!-- stretched-link: toda la tarjeta es clicable, sin anidar el boton.
+           Los no disponibles tambien enlazan: el detalle existe. -->
+      <a class="stretched-link text-reset" href={productHref(product)}>{product.name}</a>
     </h3>
 
-    <p class="product-card__description">{product.description}</p>
+    <!-- La API manda cadena vacia cuando no hay descripcion -->
+    {product.description && <p class="product-card__description">{product.description}</p>}
 
     <div class="product-card__footer">
-      <span class="product-card__price">{formatPrice(product.price)}</span>
+      <span class="product-card__price">{formatPrice(product.basePrice)}</span>
 
-      <!-- position-relative saca el boton por encima del stretched-link -->
-      <button
-        class="product-card__add btn-plain position-relative"
-        type="button"
-        aria-label={`Agregar ${product.name} al carrito`}
-        data-add
-        data-slug={product.slug}
-      >
-        <Icon name="plus" size="sm" />
-      </button>
+      {
+        notice ? (
+          <span class="tag tag--optional badge">{notice}</span>
+        ) : (
+          // position-relative saca el boton por encima del stretched-link
+          <button
+            class="product-card__add btn-plain position-relative"
+            type="button"
+            aria-label={`Agregar ${product.name} al carrito`}
+            data-add
+            data-product-id={product.id}
+          >
+            <Icon name="plus" size="sm" />
+          </button>
+        )
+      }
     </div>
   </div>
 </article>

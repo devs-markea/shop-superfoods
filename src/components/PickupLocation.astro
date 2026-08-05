@@ -1,0 +1,53 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  /** Direccion escrita del local. Puede faltar. */
+  address?: string;
+  /** Enlace de Google Maps al local. Puede faltar. */
+  mapsUrl?: string;
+}
+
+const { address, mapsUrl } = Astro.props;
+
+// Donde recoger el pedido: la contraparte de <BankAccount> en el flujo de efectivo.
+// Ocupa el mismo sitio de la pantalla y se lee igual —etiqueta y dato—, pero aqui
+// no hay nada que copiar y pegar: se abre el mapa.
+//
+// Los dos datos llegan de GET /api/store y sirven por separado, como en la hoja de
+// la barra superior: de un enlace de Maps no sale una direccion legible
+// —`maps.app.goo.gl/xxxx` es opaco— y de una direccion escrita no sale un enlace
+// fiable. Con los dos, se lee y se abre; con uno, se hace lo que ese permita.
+//
+// Sin ninguno de los dos la tarjeta sigue en pie, con la pista: el pedido se puede
+// recoger igual, y el local lo dira por WhatsApp. Es lo contrario que en la cuenta
+// bancaria, donde una fila vacia deja el pago sin destino.
+//
+// Sin spec de Figma: son las medidas de .bank-account, que es la tarjeta del mismo
+// sitio en la otra pantalla, y el boton de accion del proyecto.
+---
+
+<div class="pickup-location">
+  <div class="pickup-location__field">
+    <span class="section-label section-label--soft">Donde recoger</span>
+
+    {
+      address ? (
+        <span class="pickup-location__value">{address}</span>
+      ) : (
+        <span class="pickup-location__hint">
+          Te confirmamos la direccion por WhatsApp al recibir tu pedido.
+        </span>
+      )
+    }
+  </div>
+
+  {
+    mapsUrl && (
+      <a class="pickup-location__link" href={mapsUrl} target="_blank" rel="noopener">
+        <Icon name="map-pin" size="sm" />
+        <span>Abrir en Google Maps</span>
+      </a>
+    )
+  }
+</div>

@@ -4,13 +4,65 @@ import ScreenHeader from '../components/ScreenHeader.astro';
 import TipSelector from '../components/TipSelector.astro';
 import PaymentMethods from '../components/PaymentMethods.astro';
 import PaymentSummary from '../components/PaymentSummary.astro';
+import LegalNote from '../components/LegalNote.astro';
 import ActionBar from '../components/ActionBar.astro';
-import { getCartTotal, getCartView } from '../data/cart.ts';
+import { getCart } from '../lib/cart.ts';
+import { resolveCartToken } from '../lib/cart-session.ts';
+import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
+import { getStoreConfig } from '../lib/store-config.ts';
 
-// El importe de los productos sale del pedido, no de un valor fijo: la spec
-// muestra $300 de ejemplo, pero el carrito manda.
-const products = getCartTotal(getCartView());
-const defaultTip = 15;
+// El carrito de la sesion manda sobre cualquier valor de ejemplo.
+export const prerender = false;
+
+// Mercado Pago devuelve aqui al comprador cuando el cobro se rechaza o se cancela,
+// con `?order={id}&pago=rechazado`. Pero esta pantalla ya no puede ayudarle: el
+// pedido EXISTE —se creo antes de ir a la pasarela— y con el cierre el carrito
+// quedo vacio, asi que lo que se pintaria es un resumen de $0 cuyo "Continuar"
+// intentaria crear un pedido nuevo contra un carrito vacio.
+//
+// Lo que hay que hacer es cobrar otra vez SOBRE ESE pedido, y eso vive en el acuse:
+// alli se relee el estado, se muestra el motivo del rechazo ya traducido y se
+// reintenta con POST /api/orders/{id}/payment.
+//
+// El parametro no se cree —los de la vuelta los pone el cliente—: solo se usa como
+// pista para llevar al comprador donde se lee la verdad.
+const rejectedOrder = Astro.url.searchParams.get('order');
+
+if (Astro.url.searchParams.get('pago') === 'rechazado' && rejectedOrder) {
+  return Astro.redirect(`/pedido-confirmado?order=${encodeURIComponent(rejectedOrder)}`);
+}
+
+// Esta pantalla solo lee el importe de los productos. La propina y el metodo se
+// guardan en el borrador, y con Mercado Pago el pedido se cierra aqui mismo.
+let products = 0;
+
+try {
+  products = (await getCart(resolveCartToken(Astro.cookies))).total;
+} catch (error) {
+  console.error('[resumen] fallo GET /api/cart', error);
+}
+
+const store = await getStoreConfig();
+
+// La propina la decide el negocio: con el interruptor apagado no se pide, y sin
+// importes no hay selector que pintar.
+const tipAmounts = store.tips?.enabled ? (store.tips.amounts ?? []) : [];
+const showTips = tipAmounts.length > 0;
+
+// Propina y metodo elegidos antes, si se vuelve atras desde el pago. La primera
+// vez no hay borrador y manda el primer importe configurado: distinguir "sin
+// borrador" de "eligio $0" es lo que evita reponer un valor encima de una decision.
+const raw = Astro.cookies.get(DRAFT_COOKIE)?.value;
+const draft = parseDraft(raw);
+
+// Sin propina configurada, no hay propina que sumar.
+const tip = showTips ? (raw ? draft.tip : (tipAmounts[1] ?? tipAmounts[0])) : 0;
+
+// El modo de entrega, que se eligio en la pantalla anterior, decide los metodos:
+// al recoger solo hay efectivo, asi que la eleccion anterior no se repone —podria
+// ser una transferencia de un intento a domicilio— y tampoco hay envio que cotizar.
+const pickup = draft.deliveryType === 'pickup';
+const method = pickup ? 'efectivo' : draft.paymentMethod;
 ---
 
 <Layout
@@ -28,22 +80,25 @@ const defaultTip = 15;
       data-products={products}
     >
       <div class="screen-body">
-        <TipSelector selected={defaultTip} />
+        {showTips && <TipSelector selected={tip} amounts={tipAmounts} />}
 
-        <PaymentMethods />
+        <PaymentMethods selected={method} deliveryType={draft.deliveryType} />
 
-        <PaymentSummary products={products} tip={defaultTip} />
+        <PaymentSummary products={products} tip={tip} shipping={!pickup} />
 
-        <p class="legal-note">
-          Al continuar aceptas nuestros terminos y condiciones de servicio.
-        </p>
+        {/* Lo rellena el script si el checkout rechaza el pedido. */}
+        <p class="form-error" role="alert" hidden data-checkout-error></p>
+
+        <LegalNote termsUrl={store.legal?.termsUrl} />
       </div>
 
-      <ActionBar
-        label="Enviar pedido por WhatsApp"
-        icon="whatsapp"
-        variant="whatsapp"
-      />
+      {/*
+        Boton comun, no de WhatsApp: lo que hace es continuar el flujo —con
+        transferencia lleva a la cuenta, con efectivo a donde recoger, y con Mercado
+        Pago cierra el pedido—, y por aqui no se manda nada por WhatsApp. Ese canal
+        aparece en las dos pantallas finales, que es donde tiene sentido.
+      */}
+      <ActionBar label="Continuar" />
     </form>
   </main>
 </Layout>

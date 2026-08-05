@@ -1,0 +1,84 @@
+// ---------------------------------------------------------------------------
+// Block: order-status
+// ---------------------------------------------------------------------------
+// Cierre de una pantalla de resultado: sello + titular + aviso.
+// Spec: bloque gap 24 - circulo 80 radius 40 - labels gap 8, centrados
+//
+// Dos sellos, un solo bloque: el verde con el visto (pedido confirmado) y el
+// dorado con el reloj (pedido recibido, a la espera del comprobante). Cambian el
+// color y el icono; el resto —tamanos, tipos y huecos— es identico.
+// ---------------------------------------------------------------------------
+
+.order-status {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sf-space-6);
+}
+
+// Element: sello. El radius de 40 sobre una caja de 80 es un circulo, asi que se
+// declara como tal: no depende de que el tamano no cambie nunca.
+.order-status__seal {
+  display: inline-flex;
+  flex: 0 0 80px;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: var(--sf-success);
+  color: var(--sf-white);
+}
+
+// Modifier: a la espera. Dorado sobre su propio tinte, como el resto de cajas de
+// icono del proyecto (.payment-option__media).
+.order-status__seal--pending {
+  background-color: var(--sf-gold-tint);
+  color: var(--sf-gold);
+}
+
+.order-status__titles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-2);
+  text-align: center;
+}
+
+// Element: titulo — Inter 600 24/32
+.order-status__title {
+  margin: 0;
+  font-size: var(--sf-font-size-xl);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-xl);
+  color: var(--sf-ink);
+}
+
+// Element: folio — Inter 800 40/40 dorado.
+//
+// Es un numero corto —la numeracion del pedido, no el ULID de `orderNumber`—, asi
+// que cabe de sobra a este tamano y no hace falta preverle un desbordamiento.
+//
+// Los 40 quedan fuera de la escala de tipos (12/14/16/24): es el numero
+// protagonista de la pantalla y no se repite en ningun otro sitio, asi que no
+// gana nada por ser token.
+//
+// La spec da letter-spacing -100%, que es imposible: sobre 40px serian -40px y
+// las cifras se apilarian. Se lee como lo que pide un numero grande, un tracking
+// negativo corto.
+.order-status__folio {
+  margin: 0;
+  font-size: 40px;
+  font-weight: var(--sf-weight-extrabold);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  color: var(--sf-gold);
+}
+
+// Element: aviso — Inter 400 14/20
+.order-status__note {
+  margin: 0;
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-regular);
+  line-height: var(--sf-line-height-base);
+  color: var(--sf-muted);
+}

@@ -1,5 +1,5 @@
 // @ts-check
-import { defineConfig, fontProviders } from 'astro/config';
+import { defineConfig, envField, fontProviders } from 'astro/config';
 
 import vercel from '@astrojs/vercel';
 
@@ -13,6 +13,29 @@ export default defineConfig({
   // exporte `export const prerender = false` para renderizar on-demand
   // (carrito, checkout, cuenta de usuario...).
   output: 'static',
+
+  // Origen de la API de la tienda (Laravel). Solo se consume desde el
+  // servidor, asi que no viaja al cliente.
+  //
+  // Sin valor por defecto a proposito: la propia documentacion de la API avisa
+  // de que su APP_URL vale `http://localhost`, y un fallback equivalente aqui
+  // se colaria en produccion sin que nadie lo notara. Preferimos que el build
+  // falle nombrando la variable que falta.
+  env: {
+    schema: {
+      API_URL: envField.string({ context: 'server', access: 'public' }),
+
+      // Geocodificacion inversa de la ubicacion compartida (/api/geocode).
+      // Opcional: sin ella la tienda funciona igual y la ubicacion se rotula con
+      // sus coordenadas. Secreta y de servidor para que no se gaste la cuota
+      // desde el navegador.
+      GOOGLE_MAPS_API_KEY: envField.string({
+        context: 'server',
+        access: 'secret',
+        optional: true,
+      }),
+    },
+  },
 
   // Precarga los links al pasar el raton: navegacion mas rapida en catalogo.
   prefetch: {
@@ -29,7 +52,10 @@ export default defineConfig({
       provider: fontProviders.google(),
       name: 'Inter',
       cssVariable: '--sf-font-inter',
-      weights: [400, 500, 600, 700],
+      // El 800 lo pide un unico label —el folio de /pedido-confirmado— y suma
+      // dos ficheros al preload de todas las paginas. Si esa factura pesa mas
+      // que el peso exacto, se quita de aqui y el folio cae al 700.
+      weights: [400, 500, 600, 700, 800],
       styles: ['normal'],
       subsets: ['latin', 'latin-ext'],
       fallbacks: ['system-ui', 'sans-serif'],

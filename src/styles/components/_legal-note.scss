@@ -13,3 +13,18 @@
   color: var(--sf-placeholder);
   text-align: center;
 }
+
+// Element: enlace a los terminos. Solo aparece si hay URL configurada; sin ella la
+// frase es texto del mismo aviso, sin subrayar, para no prometer un destino.
+//
+// Subrayado y no dorado: es letra legal, no una accion del flujo, y un dorado aqui
+// competiria con el boton que tiene justo debajo.
+.legal-note__link {
+  color: var(--sf-muted);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+
+  &:hover {
+    color: var(--sf-ink);
+  }
+}
