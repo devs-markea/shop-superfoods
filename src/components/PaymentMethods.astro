@@ -7,7 +7,7 @@ interface Props {
   selected?: PaymentMethod | null;
   /**
    * Modo de entrega. Es lo que decide QUE metodos existen, no solo cual viene
-   * marcado: al recoger, el unico es efectivo.
+   * marcado: al recoger, el unico es efectivo; a domicilio estan los tres.
    */
   deliveryType?: DeliveryType;
 }
@@ -17,7 +17,7 @@ const { selected = 'bank_transfer', deliveryType = 'delivery' } = Astro.props;
 
 const pickup = deliveryType === 'pickup';
 
-// Spec: etiqueta + dos opciones, gap 12 en los dos contenedores.
+// Spec: etiqueta + opciones, gap 12 en los dos contenedores.
 //
 // Los `value` son los del diseno, no los del contrato: los traduce
 // toPaymentMethod() al cerrar el pedido. Cambiarlos aqui obligaria a tocar
@@ -54,14 +54,31 @@ const pickup = deliveryType === 'pickup';
             title="Transferencia bancaria"
             icon="phone"
             note="Transferencia bancaria"
-            checked={selected !== 'mercado_pago'}
+            checked={selected !== 'mercado_pago' && selected !== 'efectivo'}
+          />
+
+          {/*
+            Efectivo a domicilio: se paga al repartidor al recibir el pedido. Va
+            antes de Mercado Pago porque es de los dos metodos que el negocio cobra
+            de verdad hoy; la pasarela sigue pendiente de conectar.
+
+            El pedido no se cierra aqui, igual que en la transferencia: primero se
+            lee en /pago/efectivo como se paga, y alli se confirma.
+          */}
+          <PaymentOption
+            id="payment-cash"
+            value="efectivo"
+            title="Efectivo"
+            icon="cash"
+            note="Pagas al recibir tu pedido"
+            checked={selected === 'efectivo'}
           />
 
           {/*
             Icono provisional: el de Mercado Pago es un logo propio y llegara como
             asset. Cuando este, se anade a BrandIcon.astro y se cambia aqui.
 
-            Seleccionable: cierra el pedido en /pedido-confirmado, sin pasar por los
+            Seleccionable: cierra el pedido en /confirmado, sin pasar por los
             datos de la cuenta. Lo que falta es el cobro real —la pasarela no forma
             parte de las cuatro APIs—, no la pantalla.
           */}

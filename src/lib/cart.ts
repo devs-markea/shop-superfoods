@@ -16,22 +16,22 @@
 // navegador con la API.
 // ---------------------------------------------------------------------------
 
-import { apiFetch, assetUrl, unwrap } from './api.ts';
+import { apiFetch, unwrap } from './api.ts';
 import type { ProductImage } from './catalog.ts';
+import type { CartLine, CartOption, CartPromotion } from './cart-view.ts';
 
-export interface CartItemOption {
-  optionId: string | null;
-  label: string;
-  /** Nombre de la personalizacion a la que pertenece la opcion. */
-  group: string;
-  price: number;
-  quantity: number;
-}
+export type { CartLine, CartOption, CartPromotion };
+
+/** Alias historico: la forma de la opcion es la misma en `items` y en `lines`. */
+export type CartItemOption = CartOption;
 
 export interface CartItem {
   /** cart_items.id — el que viaja en PATCH y DELETE. */
   id: string;
+  /** menus.id — la llave del platillo. No se va nunca de la linea. */
   productId: string;
+  /** menus.slug, para volver a su pagina. null si salio del catalogo. */
+  productSlug: string | null;
   name: string;
   image: ProductImage;
   variantId: string | null;
@@ -43,10 +43,15 @@ export interface CartItem {
   optionsTotal: number;
   /** basePrice + optionsTotal: lo que la interfaz multiplica por cantidad. */
   unitPrice: number;
+  /** = unitPrice. Explicito para no tener que deducirlo. */
+  originalUnitPrice: number;
+  /** = originalUnitPrice x quantity: el importe antes de descontar. */
+  originalLineTotal: number;
   options: CartItemOption[];
-  promotion: { name: string; type: string; source: 'own' | 'category' } | null;
+  promotion: CartPromotion | null;
+  /** Importe descontado EN ESTA LINEA. Puede venir de un grupo. */
   discount: number;
-  /** Unidades gratis por "compra y lleva". */
+  /** Unidades gratis que esta linea aporta a un "compra y lleva". */
   freeQuantity: number;
   lineTotal: number;
 }
@@ -57,7 +62,14 @@ export interface Cart {
   currency: string | null;
   /** Suma de cantidades, no de lineas. */
   itemsCount: number;
+  /**
+   * El ESTADO: una fila de cart_items por entrada, con el id que reciben PATCH
+   * y DELETE. No sirve para pintar —un grupo de "compra y lleva" toma unidades
+   * de varias filas—, pero es de donde sale la cantidad real de cada fila.
+   */
   items: CartItem[];
+  /** La PRESENTACION: lo que se pinta, ya agrupado. Ver src/lib/cart-view.ts. */
+  lines: CartLine[];
   subtotal: number;
   discountTotal: number;
   total: number;
@@ -103,27 +115,10 @@ export async function getCart(token: string): Promise<Cart> {
   return unwrap<Cart>(response, '/api/cart');
 }
 
-/** URL de la foto de la linea, con el placeholder ya resuelto. */
-export function cartItemImageSrc(item: CartItem): string {
-  return assetUrl(item.image.url);
-}
-
-/**
- * Resumen legible de la configuracion de una linea: "Grande · Guacamole x2".
- * Sustituye al campo `customization` que el carrito de maqueta guardaba como
- * texto; ahora se compone de los datos que devuelve la API.
- */
-export function describeSelection(item: CartItem): string {
-  const parts: string[] = [];
-
-  if (item.variantName) parts.push(item.variantName);
-
-  for (const option of item.options) {
-    parts.push(option.quantity > 1 ? `${option.label} x${option.quantity}` : option.label);
-  }
-
-  return parts.join(' · ');
-}
+// El resumen legible de una configuracion ("Grande · Guacamole x2") vive en
+// cart-view.ts: lo necesitan tanto las lineas como las unidades de un grupo, y
+// ese modulo si se puede importar desde el navegador.
+export { describeSelection } from './cart-view.ts';
 
 /** Cuanto falta para el envio gratis. 0 si ya se alcanzo. */
 export function remainingForFreeShipping(total: number, threshold: number): number {

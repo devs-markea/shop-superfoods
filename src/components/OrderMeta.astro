@@ -2,30 +2,93 @@
 import Icon, { type IconName } from './Icon.astro';
 
 interface Props {
-  /** Estimado de entrega. Sin el, no se promete un tiempo. */
-  time?: string;
+  /** Estimado a domicilio. Sin el, no se promete un tiempo. */
+  estimate?: string;
   /** Rotulo de envio. Sin el, no se promete un envio gratis que no existe. */
   shipping?: string;
+  /** Estimado para recoger. Es otra promesa: no se sustituye por la de arriba. */
+  pickup?: string;
+  /** Si la cabecera monto la hoja de ubicacion. Sin ella no hay mapa que abrir. */
+  hasLocation?: boolean;
 }
 
-const { time, shipping } = Astro.props;
+const { estimate, shipping, pickup, hasLocation } = Astro.props;
 
-// Las dos metas son opcionales: cada una aparece solo si el negocio la configuro.
-// Prometer "25-35 min" o "Envio gratis" por defecto es justo lo que no debe hacer
-// una portada — son promesas, y una promesa por descuido se incumple igual.
-const items: Array<{ icon: IconName; label: string }> = [];
+// Las metas de la portada, dos por modo de entrega y en el mismo sitio: el
+// switch de arriba decide cual de los dos pares se ve. Los dos se sirven en el
+// marcado y se turnan en CSS —ver components/_order-meta.scss—, asi que el
+// cambio no espera a ningun JavaScript.
+//
+// Cada meta es opcional por su cuenta: aparece solo si el negocio la configuro.
+// Prometer "25-35 min" o "Envio gratis" por defecto es justo lo que no debe
+// hacer una portada —son promesas, y una promesa por descuido se incumple
+// igual—, y por eso un modo puede quedarse con una sola meta, o con ninguna.
+//
+// `name` es el rotulo que dice que significa el valor, y va encima de el. Solo
+// se lee en desktop: en movil no cabe, y ahi el icono ya lo insinua.
+interface Meta {
+  mode: 'delivery' | 'pickup';
+  icon: IconName;
+  name: string;
+  value: string;
+  /** Si lleva hoja, el valor es un boton que la abre en lugar de texto. */
+  sheet?: string;
+}
 
-if (time) items.push({ icon: 'clock', label: time });
-if (shipping) items.push({ icon: 'truck', label: shipping });
+const items: Meta[] = [];
+
+if (estimate) {
+  items.push({ mode: 'delivery', icon: 'clock', name: 'Tiempo envio', value: estimate });
+}
+
+if (shipping) {
+  items.push({ mode: 'delivery', icon: 'truck', name: 'Costo envio', value: shipping });
+}
+
+if (pickup) {
+  items.push({ mode: 'pickup', icon: 'clock', name: 'Recoleccion', value: pickup });
+}
+
+// La hoja de la ubicacion la monta la cabecera, que ya la necesita para el pin:
+// aqui solo se abre. Sin direccion ni enlace no existe, y entonces el boton
+// tampoco —un "Ver mapa" que abre una hoja vacia es peor que no ofrecerlo—.
+if (hasLocation) {
+  items.push({
+    mode: 'pickup',
+    icon: 'map-pin',
+    name: 'Ubicacion',
+    value: 'Ver mapa',
+    sheet: 'sheet-location',
+  });
+}
 ---
 
 {
   items.length > 0 && (
     <ul class="order-meta list-unstyled">
       {items.map((item) => (
-        <li class="order-meta__item">
+        <li class="order-meta__item" data-mode={item.mode}>
           <Icon name={item.icon} size="sm" class="order-meta__icon" />
-          <span class="order-meta__label">{item.label}</span>
+
+          {/* El rotulo y el valor van juntos porque en desktop se apilan: uno
+              encima del otro, al lado del icono. En movil el rotulo no se pinta
+              y esto se queda en el valor, en la misma fila de siempre. */}
+          <span class="order-meta__text">
+            <span class="order-meta__name">{item.name}</span>
+
+            {item.sheet ? (
+              <button
+                class="order-meta__link btn-plain"
+                type="button"
+                aria-haspopup="dialog"
+                data-sheet={item.sheet}
+              >
+                {item.value}
+              </button>
+            ) : (
+              <span class="order-meta__value">{item.value}</span>
+            )}
+          </span>
         </li>
       ))}
     </ul>

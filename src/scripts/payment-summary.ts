@@ -8,8 +8,9 @@
 //
 //   - transferencia: el pedido NO se crea todavia. Primero hay que ver la cuenta
 //     y confirmar que se pago, asi que solo se guarda la eleccion y se avanza.
-//   - efectivo:      igual, pero lo que hay que ver antes es donde recoger. Es el
-//     unico metodo del pedido para recoger.
+//   - efectivo:      igual, pero lo que hay que ver antes es como se paga. Vale
+//     para los dos modos de entrega —al repartidor o en el local—, y al recoger es
+//     ademas el unico metodo.
 //   - mercado_pago:  no hay pantalla intermedia. El pedido se cierra aqui mismo y
 //     la siguiente pantalla ya es el acuse.
 //
@@ -22,10 +23,10 @@ import { confirmDraft, patchDraft } from '../lib/checkout-draft';
 
 // Metodos que confirman en su propia pantalla, y cual. El pedido se cierra alli:
 // lo que cambia entre las dos es lo que hay que leer antes de confirmar —una cuenta
-// bancaria o una direccion—, no lo que se manda.
+// bancaria o como se entrega el dinero—, no lo que se manda.
 const CONFIRM_SCREEN: Partial<Record<PaymentMethod, string>> = {
-  bank_transfer: '/pago-por-transferencia',
-  efectivo: '/pago-en-efectivo',
+  bank_transfer: '/pago/transferencia',
+  efectivo: '/pago/efectivo',
 };
 
 const form = document.querySelector<HTMLFormElement>('[data-payment-form]');
@@ -96,6 +97,6 @@ if (form) {
     // que ofrece pagarlo desde alli. Ver src/lib/confirmation.ts.
     const gateway = outcome.order.payment?.redirectUrl;
 
-    window.location.assign(gateway || '/pedido-confirmado');
+    window.location.assign(gateway || '/confirmado');
   });
 }

@@ -3,19 +3,31 @@ import { formatPrice } from '../lib/price.ts';
 import type { OrderLine } from '../lib/checkout.ts';
 
 interface Props {
-  /** Lineas del carrito de la sesion. Solo se leen cantidad y nombre. */
+  /** Lineas del carrito de la sesion. Solo se leen cantidad, nombre y promocion. */
   items: OrderLine[];
-  /** Importe a transferir, en MXN. */
+  /** Importe a transferir o a pagar, en MXN. */
   total: number;
+  /** Suma de los productos ANTES de descontar. */
+  subtotal?: number;
+  /** Lo que descuentan las promociones. 0 = no hay fila que pintar. */
+  discount?: number;
+  /** Propina elegida. 0 = no hay fila que pintar. */
+  tip?: number;
 }
 
-const { items, total } = Astro.props;
+const { items, total, subtotal = total, discount = 0, tip = 0 } = Astro.props;
 
 // Recordatorio de lo que se pidio, ya en la pantalla de pago: aqui no se edita
-// nada, por eso las lineas son texto y no <OrderItem>.
+// nada, por eso las lineas son texto y no controles.
 //
 // Spec: contenedor gap 12 - padding 16 - radius 16 - borde 1px
 //       lineas gap 8, 12/16 #6C757D - divisora discontinua - total 14/20
+//
+// El desglose aparece solo cuando hay algo que explicar. Con un descuento o una
+// propina, un unico "Total a pagar" obligaria al comprador a fiarse: la resta
+// no le cuadraria con lo que vio en el pedido. Sin ninguno de los dos, las
+// filas sobran porque el subtotal seria el total repetido.
+const breakdown = discount > 0 || tip > 0;
 ---
 
 <div class="order-detail">
@@ -25,7 +37,14 @@ const { items, total } = Astro.props;
     items.length > 0 ? (
       <ul class="order-detail__items list-unstyled">
         {items.map((item) => (
-          <li class="order-detail__item">{`${item.quantity}× ${item.name}`}</li>
+          <li class="order-detail__item">
+            <span>{`${item.quantity}× ${item.name}`}</span>
+            {item.promotion?.label && (
+              <span class="promo-badge promo-badge--sm">
+                <span class="promo-badge__label">{item.promotion.label}</span>
+              </span>
+            )}
+          </li>
         ))}
       </ul>
     ) : (
@@ -34,6 +53,31 @@ const { items, total } = Astro.props;
   }
 
   <hr class="dashed-divider" />
+
+  {
+    breakdown && (
+      <dl class="order-detail__rows">
+        <div class="order-detail__row">
+          <dt class="order-detail__term">Subtotal</dt>
+          <dd class="order-detail__value">{formatPrice(subtotal)}</dd>
+        </div>
+
+        {discount > 0 && (
+          <div class="order-detail__row order-detail__row--discount">
+            <dt class="order-detail__term">Descuentos</dt>
+            <dd class="order-detail__value">{`− ${formatPrice(discount)}`}</dd>
+          </div>
+        )}
+
+        {tip > 0 && (
+          <div class="order-detail__row">
+            <dt class="order-detail__term">Propina</dt>
+            <dd class="order-detail__value">{formatPrice(tip)}</dd>
+          </div>
+        )}
+      </dl>
+    )
+  }
 
   <div class="order-detail__total">
     <span class="order-detail__total-term">Total a pagar</span>

@@ -63,6 +63,12 @@ export interface CheckoutRequest {
 export interface OrderLine {
   quantity: number;
   name: string;
+  /**
+   * La promocion que la API aplico a la linea, para rotularla en el detalle.
+   * Opcional porque solo la traen las lineas del carrito: el pedido ya creado
+   * congela el nombre de la promocion, no su etiqueta.
+   */
+  promotion?: { label?: string; name?: string } | null;
 }
 
 /**
@@ -150,7 +156,7 @@ export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
   mercado_pago: 'Mercado Pago',
 };
 
-/** Del valor del radio de /resumen-de-pago al que espera la API. */
+/** Del valor del radio de /pago al que espera la API. */
 export function toPaymentMethod(value: string | undefined): PaymentMethod | null {
   if (value === 'transferencia') return 'bank_transfer';
   if (value === 'mercadopago') return 'mercado_pago';

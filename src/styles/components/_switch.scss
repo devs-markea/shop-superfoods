@@ -67,6 +67,10 @@
 }
 
 // --- Desktop -------------------------------------------------------------
+// La pista sigue midiendo lo que le den: en /datos llena la columna de 350 del
+// formulario, como cualquier otro campo. Quien la encoge a sus dos opciones de
+// 136 es la barra de la portada, porque alli comparte linea con las categorias
+// y el ancho es suyo, no del switch. Ver components/_order-bar.scss.
 @include media-breakpoint-up(md) {
   .switch__option {
     padding-inline: var(--sf-space-5);

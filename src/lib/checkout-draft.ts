@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Borrador del pedido: lo que se va reuniendo entre /mi-pedido y el cierre.
+// Borrador del pedido: lo que se va reuniendo entre /carrito y el cierre.
 //
 // Nada viaja en la URL. El borrador vive en una cookie de primera parte que
 // escribe el navegador y lee tambien el servidor: asi cada pantalla puede
@@ -34,7 +34,7 @@ const ORDER_MAX_AGE = 60 * 60 * 24;
 
 export interface CheckoutDraft {
   deliveryType: DeliveryType;
-  /** Se elige en /resumen-de-pago. */
+  /** Se elige en /pago. */
   paymentMethod: PaymentMethod | null;
   tip: number;
   customer: CheckoutCustomer;
@@ -43,7 +43,7 @@ export interface CheckoutDraft {
    * la interfaz: al checkout va `customer.locationUrl`.
    */
   locationLabel: string;
-  /** Comentarios del pedido, capturados en /mi-pedido. Viajan como `notes`. */
+  /** Comentarios del pedido, capturados en /carrito. Viajan como `notes`. */
   comments: string;
   /**
    * Clave de idempotencia de ESTE intento de compra.
@@ -64,6 +64,17 @@ export interface OrderPointer {
   id: string;
   /** El pedido no devuelve el metodo, y la pantalla de cierre lo rotula. */
   method: PaymentMethod;
+  /**
+   * Como se entrega. El pedido si lo devuelve, pero /recibido rotula sin
+   * pedirlo —lo hace tambien cuando la lectura falla o no hay telefono al que
+   * escribir—, y en efectivo la diferencia es toda la pantalla: pagar al
+   * repartidor no es pasar por el local.
+   *
+   * Opcional porque los punteros escritos antes de que el efectivo saliera a
+   * domicilio no lo llevan. Esos eran todos para recoger, asi que su ausencia se
+   * lee como 'pickup' y el acuse de un pedido de ayer sigue diciendo la verdad.
+   */
+  deliveryType?: DeliveryType;
   /**
    * Si el cobro llego a abrirse. Solo tiene sentido en Mercado Pago, donde el
    * checkout puede devolver el pedido creado y la pasarela sin arrancar
@@ -100,6 +111,11 @@ export function parseDraft(raw: string | undefined | null): CheckoutDraft {
     return {
       ...EMPTY_DRAFT,
       ...parsed,
+      // Los dos valores del contrato y ninguno mas —la misma regla que en el
+      // puntero del pedido—. Un modo inventado dejaria el switch de entrega sin
+      // nada marcado, porque ninguna de sus dos opciones seria la elegida, y
+      // viajaria al checkout para volver como un 422.
+      deliveryType: parsed.deliveryType === 'pickup' ? 'pickup' : 'delivery',
       // El cliente nunca se sustituye entero: si la cookie viene a medias, los
       // campos que falten tienen que quedar vacios, no undefined.
       customer: { ...EMPTY_DRAFT.customer, ...parsed.customer },
@@ -121,6 +137,11 @@ export function parseOrderPointer(raw: string | undefined | null): OrderPointer 
     return {
       id: parsed.id,
       method: parsed.method,
+      // Los dos valores del contrato y ninguno mas: un modo inventado en la cookie
+      // no puede colarse hasta la copia de la pantalla de cierre.
+      ...(parsed.deliveryType === 'delivery' || parsed.deliveryType === 'pickup'
+        ? { deliveryType: parsed.deliveryType }
+        : {}),
       // Se copia solo si viene: "no lo se" y "el cobro no arranco" no son lo
       // mismo, y un false inventado convertiria en aviso de impago un pedido
       // de transferencia.
@@ -337,6 +358,7 @@ export async function confirmDraft(method: PaymentMethod): Promise<CheckoutOutco
     saveOrderPointer({
       id: outcome.order.id,
       method,
+      deliveryType: draft.deliveryType,
       // El bloque `payment` solo viaja en Mercado Pago, asi que su ausencia es
       // tambien la de la pregunta: en transferencia y efectivo no hay cobro que
       // arrancar. Con el, lo que decide es la pasarela: sin URL no hubo cobro.

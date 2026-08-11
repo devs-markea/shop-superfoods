@@ -5,7 +5,7 @@
 // Spec: alto 84 - padding 20 - bg #FFFFFF - border-top 1px
 // 84 = 20 + 44 (boton) + 20
 //
-// Con aviso (/pedido-recibido) la barra crece lo que ocupe: min-height y no
+// Con aviso (/recibido) la barra crece lo que ocupe: min-height y no
 // height, asi el 84 sigue siendo el minimo de las demas pantallas.
 // ---------------------------------------------------------------------------
 
@@ -16,7 +16,7 @@
   // contenido largo manda el sticky y queda fija al hacer scroll.
   margin-top: auto;
   z-index: var(--sf-z-navbar);
-  min-height: 84px;
+  min-height: var(--sf-action-bar-height);
   padding: var(--sf-space-5);
   padding-bottom: calc(var(--sf-space-5) + env(safe-area-inset-bottom, 0px));
   border-top: 1px solid var(--sf-border);
@@ -62,6 +62,17 @@
   line-height: var(--sf-line-height-sm);
   color: var(--sf-placeholder);
   text-align: center;
+}
+
+// Apagado de verdad (tienda cerrada): gris, no dorado desvaido. El dorado al 50%
+// del bloque de arriba dice "te falta algo"; esto dice "ahora no se puede", y son
+// dos mensajes distintos que no pueden verse igual. Sin opacidad: el gris ya es el
+// color del estado, y rebajarlo ademas lo dejaria ilegible.
+.action-bar__button:disabled {
+  --bs-btn-disabled-bg: var(--sf-border);
+  --bs-btn-disabled-border-color: var(--sf-border);
+  --bs-btn-disabled-color: var(--sf-placeholder);
+  --bs-btn-disabled-opacity: 1;
 }
 
 // Modifier: enviar por WhatsApp. Unica accion del sistema que no es dorada.

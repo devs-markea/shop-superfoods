@@ -1,0 +1,188 @@
+// ---------------------------------------------------------------------------
+// Block: navbar-desktop
+// ---------------------------------------------------------------------------
+// La barra de DESKTOP: logo - secciones - tienda y carrito.
+// Spec: space-between - padding 16/160 - borde inferior de 1
+//
+// Bloque propio y no un modificador de .navbar: coinciden en el logo y en nada
+// mas. Solo una de las dos se ve, y el breakpoint md es la frontera.
+//
+// Los 160 de sangria de la spec son --sf-gutter-wide, que los pide como maximo y
+// por debajo cae al gutter de la pagina; el contenido se para en el ancho del
+// contenedor para no separarse de la rejilla de platillos. El porque completo
+// esta en _tokens.scss, donde se declara.
+// ---------------------------------------------------------------------------
+
+.navbar-desktop {
+  display: none;
+}
+
+@include media-breakpoint-up(md) {
+  .navbar-desktop {
+    position: sticky;
+    top: 0;
+    z-index: var(--sf-z-navbar);
+    display: block;
+    padding-block: var(--sf-space-4);
+    padding-inline: var(--sf-gutter-wide);
+    background-color: var(--sf-surface);
+    border-bottom: 1px solid var(--sf-border);
+  }
+
+  .navbar-desktop__inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sf-space-6);
+    width: 100%;
+    max-width: var(--sf-container-max);
+    margin-inline: auto;
+  }
+
+  // Element: brand y logo — 28 de alto, el mismo que el carrito, que es el
+  // elemento mas alto de la fila. Con el padding de 16 la barra mide 60.
+  .navbar-desktop__brand {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    transition: opacity var(--sf-transition);
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  .navbar-desktop__logo {
+    width: auto;
+    height: 28px;
+  }
+
+  // Element: sections — los rotulos de estado. Hoy son texto: ver el porque en
+  // el frontmatter de NavbarDesktop.astro.
+  .navbar-desktop__sections {
+    display: flex;
+    align-items: center;
+    gap: var(--sf-space-6);
+  }
+
+  // 15px no esta en la escala tipografica (12/14/16/24) y no la abre: es el
+  // tamano de estos dos rotulos y de nada mas.
+  .navbar-desktop__section {
+    font-size: 15px;
+    font-weight: var(--sf-weight-medium);
+    line-height: 1;
+    color: var(--sf-slate);
+  }
+
+  // Modifier: la seccion en la que estas. El subrayado va con el grosor y el
+  // desplazamiento del navegador: la spec los da en 0%, que dejaria la raya sin
+  // dibujar.
+  .navbar-desktop__section--active {
+    font-weight: var(--sf-weight-semibold);
+    color: var(--sf-gold);
+    text-decoration: underline;
+  }
+
+  // Element: store — las metas de la tienda y el carrito
+  .navbar-desktop__store {
+    display: flex;
+    align-items: center;
+    gap: var(--sf-space-5);
+    min-width: 0;
+  }
+
+  // El icono no lleva clase propia: el tamano lo da .icon y el color lo hereda de
+  // aqui con currentColor, que es justo lo que hace falta para que el hover del
+  // boton se lo lleve tambien.
+  .navbar-desktop__meta {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--sf-space-2);
+    min-width: 0;
+    font-size: var(--sf-font-size-base);
+    font-weight: var(--sf-weight-regular);
+    line-height: 1;
+    color: var(--sf-slate);
+  }
+
+  // El pin y el reloj abren las mismas hojas que en movil, asi que cuando hay hoja
+  // el rotulo es un <button>. Se distingue por la etiqueta y no por un
+  // modificador: la diferencia ya la lleva el marcado, y una clase mas solo podria
+  // contradecirlo.
+  //
+  // No se atenua con opacity como los iconos de la barra de movil: ahi el boton es
+  // solo un icono y aqui lleva texto, que en gris al 70% se lee peor.
+  button.navbar-desktop__meta {
+    transition: color var(--sf-transition);
+
+    &:hover {
+      color: var(--sf-gold);
+    }
+  }
+
+  // El rotulo del pin es la direccion abreviada, que la API admite de hasta 60
+  // caracteres: mas de lo que da la barra. El tope corta antes de que empuje al
+  // carrito, y el `overflow: hidden` es tambien lo que deja al span encogerse por
+  // debajo de su texto —en un flex item la altura minima automatica pasa a 0—, asi
+  // que en una pantalla de md se acorta sola. El texto entero queda en el title.
+  .navbar-desktop__meta-value--truncate {
+    max-width: 320px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  // Element: cart — chip dorado con importe, icono y cantidad
+  .navbar-desktop__cart {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: var(--sf-space-2);
+    padding: var(--sf-space-2) var(--sf-space-4);
+    color: var(--sf-gold);
+    background-color: var(--sf-gold-tint);
+    border-radius: var(--sf-radius-xl);
+    transition: background-color var(--sf-transition);
+
+    &:hover {
+      background-color: var(--sf-gold-edge);
+      color: var(--sf-gold);
+    }
+  }
+
+  .navbar-desktop__cart-total {
+    font-size: var(--sf-font-size-base);
+    font-weight: var(--sf-weight-semibold);
+    line-height: 1;
+  }
+
+  // Contexto de posicion del tamano exacto del icono: la etiqueta se cuelga de
+  // su esquina y no del chip, que es mas ancho por el importe.
+  .navbar-desktop__cart-icon {
+    position: relative;
+    display: inline-flex;
+    flex: 0 0 auto;
+  }
+
+  // 28x28: el unico tamano del sistema que no sale de los tres de .icon, y por
+  // eso se pide aqui en lugar de abrir un modificador para un solo uso.
+  .navbar-desktop__cart-glyph {
+    width: 28px;
+    height: 28px;
+  }
+
+  // La cantidad, colgada de la esquina superior derecha del icono. Los negativos
+  // caben en el padding del chip: no se sale de la pastilla.
+  .navbar-desktop__cart-count {
+    position: absolute;
+    top: -2px;
+    right: -8px;
+    padding: 2px 6px;
+    font-size: 11px;
+    font-weight: var(--sf-weight-bold);
+    line-height: 1;
+    color: var(--sf-white);
+    background-color: var(--sf-gold);
+    border-radius: 10px;
+  }
+}

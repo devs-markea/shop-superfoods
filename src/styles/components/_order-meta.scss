@@ -1,8 +1,23 @@
 // ---------------------------------------------------------------------------
 // Block: order-meta
 // ---------------------------------------------------------------------------
-// Dos pares icono + etiqueta (tiempo de entrega y envio), al ras del gutter.
+// Dos pares icono + etiqueta al ras del gutter. Son dos por MODO DE ENTREGA y
+// ocupan el mismo sitio: a domicilio, el plazo y el costo del envio; para
+// recoger, el plazo de recoleccion y el enlace al mapa.
+//
+// SOLO MOVIL. En desktop la barra se queda en una linea —switch y categorias—
+// y este bloque entero no se pinta; el mapa se sigue abriendo desde el pin de
+// la cabecera, que es de donde cuelga la hoja.
+//
+// El relevo lo hace CSS con :has(), leyendo el radio del switch —el mismo
+// mecanismo de .store-closed—. El estado ya vive en el DOM (ver _switch.scss),
+// asi que no hace falta JavaScript que lo copie a una clase: el par correcto
+// esta pintado antes de que cargue ningun script, y sin :has() se queda el de
+// "A domicilio", que es como llega quien entra por primera vez.
+//
 // Spec: contenedor 178x16 - gap 16 - icono 16 dorado - label Inter 500 12/16
+// min-height en lugar de height para que nada se recorte si el usuario sube el
+// tamano de fuente del sistema.
 // ---------------------------------------------------------------------------
 
 .order-meta {
@@ -10,7 +25,7 @@
   align-items: center;
   justify-content: flex-start;
   gap: var(--sf-space-4);
-  height: 16px;
+  min-height: 16px;
   margin: 0;
 }
 
@@ -24,10 +39,79 @@
   color: var(--sf-gold);
 }
 
-.order-meta__label {
+.order-meta__value {
   font-size: var(--sf-font-size-sm);
   font-weight: var(--sf-weight-medium);
   line-height: var(--sf-line-height-sm);
   color: var(--sf-ink);
   white-space: nowrap;
+}
+
+// Que significa el valor ("Tiempo envio", "Ubicacion"). No se pinta: en movil no
+// cabe —y ahi el icono ya lo insinua—, y en desktop no hay barra donde ponerlo.
+// Sigue en el marcado, dentro de .order-meta__text con su valor, porque es lo
+// que ese valor significa y el dia que la barra tenga sitio se lee sin tocar
+// ningun componente.
+.order-meta__name {
+  display: none;
+}
+
+// "Ver mapa": abre la hoja de ubicacion. Subrayado porque es lo unico de la
+// fila sobre lo que se pulsa —el resto son datos— y el subrayado lo dice sin
+// necesidad de un boton que rompa la altura de 16.
+//
+// El relleno del hover se compensa con margenes negativos: la pastilla crece
+// hacia fuera y el texto se queda donde estaria sin ella, asi que la fila no se
+// mueve al anadirla.
+.order-meta__link {
+  padding: var(--sf-space-1) var(--sf-space-2);
+  margin-block: calc(var(--sf-space-1) * -1);
+  margin-inline: calc(var(--sf-space-2) * -1);
+  border-radius: var(--sf-radius-sm);
+  color: var(--sf-ink);
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-sm);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  transition:
+    background-color var(--sf-transition),
+    color var(--sf-transition);
+
+  &:hover {
+    background-color: var(--sf-gold-tint);
+    color: var(--sf-gold-hover);
+  }
+}
+
+// --- Relevo por modo de entrega ---------------------------------------------
+// Predeterminado: se ve el par de "A domicilio". El de recoger espera oculto en
+// el marcado, no en un segundo viaje al servidor.
+.order-meta__item[data-mode='pickup'] {
+  display: none;
+}
+
+.order-bar__inner:has([name='delivery'][value='recoger']:checked) {
+  .order-meta__item[data-mode='delivery'] {
+    display: none;
+  }
+
+  .order-meta__item[data-mode='pickup'] {
+    display: inline-flex;
+  }
+}
+
+// --- Desktop -------------------------------------------------------------
+// Aqui no se pintan: ni los rotulos ni los datos. La fila que ocupaban la
+// reparten el switch y las categorias, que suben a compartir linea (ver
+// components/_order-bar.scss).
+//
+// Se ocultan enteras y no una a una: son cuatro metas de dos modos, y dejar
+// solo el relevo a medias —el plazo sin su rotulo, el mapa sin el plazo— seria
+// una barra distinta segun el modo en lugar de una barra sin metas.
+@include media-breakpoint-up(md) {
+  .order-meta {
+    display: none;
+  }
 }

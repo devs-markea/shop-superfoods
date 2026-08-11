@@ -1,0 +1,57 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  /** Nombre del platillo. Rotula los dos botones sin ambiguedad. */
+  itemName: string;
+  /** Unidades al abrir la ficha. Una: se entra a pedir este platillo. */
+  quantity?: number;
+}
+
+const { itemName, quantity = 1 } = Astro.props;
+
+// UNIDADES DEL PLATILLO, no de una opcion.
+//
+// Es el contador que acompana a "Agregar" en la ficha de desktop: dice cuantas
+// veces entra al carrito ESTA configuracion. Los contadores de las
+// personalizaciones son otro bloque —.stepper, ver QuantityStepper.astro—: miden
+// otra cosa, viven dentro de un grupo de opciones y no coinciden con este en
+// ninguna medida.
+//
+// De ahi que los ganchos tambien sean otros. `data-quantity-step` no lo recoge el
+// contador de opciones de src/scripts/order-form.ts, que busca `data-step` dentro
+// de un `[data-choice]`: son dos gestos parecidos con dos efectos distintos y
+// mezclarlos subiria una opcion al pedir otra unidad del platillo.
+//
+// Solo se ve en desktop (ver components/_product-counter.scss). En movil la ficha
+// se queda como estaba —barra de accion al fondo y sin contador— y el 1 de aqui
+// es el que viaja en la peticion, igual que antes de que este bloque existiera.
+//
+// El piso es 1 y no 0: de cero unidades no hay nada que agregar, y quitar la
+// ultima es salir de la ficha, no bajar el contador. El techo lo pone
+// order-form.ts, que es quien mueve el numero.
+---
+
+<div class="product-counter" data-quantity-counter>
+  <button
+    class="product-counter__button product-counter__button--minus btn-plain"
+    type="button"
+    aria-label={`Quitar una unidad de ${itemName}`}
+    data-quantity-step="-1"
+    disabled={quantity <= 1}
+  >
+    <!-- La spec pide un rectangulo de 12x2, no un icono de trazo. -->
+    <span class="product-counter__minus"></span>
+  </button>
+
+  <span class="product-counter__value" aria-live="polite" data-quantity-value>{quantity}</span>
+
+  <button
+    class="product-counter__button product-counter__button--plus btn-plain"
+    type="button"
+    aria-label={`Agregar una unidad de ${itemName}`}
+    data-quantity-step="1"
+  >
+    <Icon name="plus" size="sm" class="product-counter__plus" />
+  </button>
+</div>

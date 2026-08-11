@@ -26,6 +26,14 @@ import {
   type OptionRule,
 } from '../lib/options';
 
+/**
+ * Techo del contador de UNIDADES DEL PLATILLO —el de la fila de compra, no el de
+ * una opcion—. Es un tope de forma, del mismo orden que OPTION_MAX_QUANTITY: la
+ * cantidad de la linea la valida el servidor y esto solo evita gastar un viaje en
+ * un numero que ya se ve venir mal.
+ */
+const PRODUCT_MAX_QUANTITY = 99;
+
 interface SelectedOption {
   optionId: string;
   quantity: number;
@@ -136,6 +144,36 @@ function totalOf(selection: Selection): number {
     (sum, option) => sum + option.price * option.quantity,
     selection.variantPrice,
   );
+}
+
+/**
+ * Unidades del platillo que se van a agregar.
+ *
+ * El contador vive en la fila de compra y SOLO SE PINTA EN DESKTOP: en movil no
+ * hay nada que leer, esto devuelve 1 y el pedido entra de uno en uno, igual que
+ * antes de que el contador existiera.
+ *
+ * El numero se lee del marcado —como en los contadores de opciones— y se acota
+ * aqui, que es el unico sitio que lo mueve. El piso es 1: de cero unidades no hay
+ * nada que agregar.
+ */
+function productQuantityOf(form: HTMLFormElement): number {
+  const value = form.querySelector<HTMLElement>('[data-quantity-value]');
+  if (!value) return 1;
+
+  const parsed = Number.parseInt(value.textContent ?? '', 10);
+  return Number.isNaN(parsed) ? 1 : Math.min(PRODUCT_MAX_QUANTITY, Math.max(1, parsed));
+}
+
+/** El piso y el techo del contador del platillo, dibujados en sus dos botones. */
+function applyProductLimits(form: HTMLFormElement): void {
+  const quantity = productQuantityOf(form);
+
+  const minus = form.querySelector<HTMLButtonElement>('[data-quantity-step="-1"]');
+  if (minus) minus.disabled = quantity <= 1;
+
+  const plus = form.querySelector<HTMLButtonElement>('[data-quantity-step="1"]');
+  if (plus) plus.disabled = quantity >= PRODUCT_MAX_QUANTITY;
 }
 
 /**
@@ -339,7 +377,8 @@ async function addToCart(form: HTMLFormElement): Promise<void> {
       headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
       body: JSON.stringify({
         productId,
-        quantity: 1,
+        // Las unidades del contador de la ficha, que en movil son siempre 1.
+        quantity: productQuantityOf(form),
         // priceId es obligatorio si y solo si el platillo tiene variantes; en
         // los de precio unico se manda igual cuando lo conocemos.
         ...(selection.variantId ? { priceId: selection.variantId } : {}),
@@ -351,7 +390,7 @@ async function addToCart(form: HTMLFormElement): Promise<void> {
 
     if (response.ok) {
       // La linea ya esta en el carrito: el pedido es la confirmacion.
-      window.location.assign(form.dataset.redirect || '/mi-pedido');
+      window.location.assign(form.dataset.redirect || '/carrito');
       return;
     }
 
@@ -374,9 +413,17 @@ function initOrderForm(form: HTMLFormElement): void {
 
   const refresh = (): void => {
     for (const group of groupsOf(form)) applyLimits(group);
+    applyProductLimits(form);
 
     if (output && template) {
-      output.textContent = template.replace('{total}', formatPrice(totalOf(readSelection(form))));
+      // Lo que se paga por lo que se agrega: la configuracion elegida POR las
+      // unidades del contador. En movil el contador no se pinta, la cuenta se
+      // multiplica por 1 y el boton dice el mismo importe que decia antes.
+      const unit = totalOf(readSelection(form));
+      output.textContent = template.replace(
+        '{total}',
+        formatPrice(unit * productQuantityOf(form)),
+      );
     }
 
     const problems = problemsOf(form);
@@ -403,6 +450,27 @@ function initOrderForm(form: HTMLFormElement): void {
   form.addEventListener('click', (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
+
+    // Unidades del platillo. Se resuelve antes y sale por su cuenta: lleva otro
+    // gancho —`data-quantity-step`— justo para no confundirse con el contador de
+    // una opcion, que cuenta otra cosa y vive dentro de un grupo.
+    const units = target.closest<HTMLElement>('[data-quantity-step]');
+    if (units) {
+      const value = form.querySelector<HTMLElement>('[data-quantity-value]');
+      if (!value) return;
+
+      // Los dos botones ya llegan deshabilitados en el piso y en el techo, asi
+      // que esto es el cinturon: pasarse solo serviria para cobrar un 422.
+      const delta = Number.parseInt(units.dataset.quantityStep ?? '', 10) || 0;
+      const next = Math.min(
+        PRODUCT_MAX_QUANTITY,
+        Math.max(1, productQuantityOf(form) + delta),
+      );
+
+      value.textContent = String(next);
+      refresh();
+      return;
+    }
 
     const step = target.closest<HTMLElement>('[data-step]');
     if (!step) return;

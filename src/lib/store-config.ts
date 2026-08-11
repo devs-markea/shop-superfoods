@@ -28,13 +28,48 @@ export interface StoreSettings {
     templates?: { paymentProof?: string; orderPlaced?: string };
   };
   bankTransfer?: { holder?: string; bank?: string; clabe?: string };
-  location?: { address?: string; mapsUrl?: string };
+  /**
+   * Tres datos, y ninguno se deriva de otro:
+   *
+   *   address       la completa, escrita para leerse entera. Es la del modal, que
+   *                 tiene el ancho para mostrarla.
+   *   shortAddress  la abreviada, para donde la completa no cabe: el rotulo del
+   *                 pin en la barra de desktop.
+   *   mapsUrl       a donde lleva el boton del modal.
+   *
+   * `shortAddress` NO es `address` recortada y no se sustituye por ella. Truncar
+   * por caracteres no abrevia una direccion: lo que se queda fuera del corte es
+   * justo lo que ubica el local —la colonia, la referencia—, y lo que sobrevive
+   * ("Av. Coba 45, Cen…") no dice a donde ir. Cual es el trozo que identifica el
+   * local es una decision del negocio, y por eso se captura aparte.
+   */
+  location?: { address?: string; shortAddress?: string; mapsUrl?: string };
   delivery?: {
     freeShipping?: { mode: FreeShippingMode; threshold: number | null };
     estimate?: string;
   };
+  /**
+   * Promesa de tiempo para recoger. Bloque propio y no `delivery.pickupEstimate`
+   * porque no es un detalle del envio: son los dos modos de entrega, al mismo
+   * nivel. Lleva una sola clave —donde se recoge ya esta en `location`, y cuando
+   * abre, en el horario—.
+   */
+  pickup?: { estimate?: string };
   tips?: { enabled: boolean; amounts: number[] };
   legal?: { termsUrl?: string };
+  /**
+   * El banner de la portada, en tres piezas sueltas.
+   *
+   * No es una imagen con el texto dentro: un texto quemado en el JPG no se lee
+   * en voz alta, se pixela y obliga a rehacer la foto para corregir una coma.
+   * Aqui el titular y la bajada son texto de verdad y la imagen es solo el
+   * fondo; componerlos —velo incluido— es cosa de la tienda.
+   *
+   * Cada clave sirve sola: el titulo sin foto es una franja de texto y la foto
+   * sin titulo un fondo, y las dos son mejores que no pintar la portada. Sin
+   * ninguna, no hay banner que inventar: la tienda abre en el catalogo.
+   */
+  home?: { banner?: { title?: string; description?: string; image?: string } };
 }
 
 // El horario tiene su propio modulo: la API publica hechos y redactar el estado o
@@ -94,6 +129,7 @@ export async function getStoreConfig(): Promise<StoreSettings> {
 
     location: {
       address: pick(remote.location?.address, fallback.location?.address),
+      shortAddress: pick(remote.location?.shortAddress, fallback.location?.shortAddress),
       mapsUrl: pick(remote.location?.mapsUrl, fallback.location?.mapsUrl),
     },
 
@@ -107,9 +143,28 @@ export async function getStoreConfig(): Promise<StoreSettings> {
       // El estimado si es un hueco: es una promesa escrita, no una decision.
       estimate: pick(remote.delivery?.estimate, fallback.delivery?.estimate),
     },
+
+    // Cada plazo cae a SU respaldo y nunca al del otro modo. Prometer el de
+    // domicilio a quien va a recoger hace esperar de mas; el de recoger a quien
+    // pide a domicilio promete lo que no se puede cumplir. Sin ninguno de los
+    // dos no se promete plazo, y el reloj de ese modo no se pinta.
+    pickup: { estimate: pick(remote.pickup?.estimate, fallback.pickup?.estimate) },
+
     tips: remote.tips ?? fallback.tips,
 
     legal: { termsUrl: pick(remote.legal?.termsUrl, fallback.legal?.termsUrl) },
+
+    // El banner cae al respaldo clave a clave, como la ubicacion: son tres
+    // huecos, no una decision. Lo que no rellena nadie se queda vacio y la
+    // portada pinta lo que quede —o nada—, que es justo lo que pide el
+    // contrato: sin banner no se inventa uno.
+    home: {
+      banner: {
+        title: pick(remote.home?.banner?.title, fallback.home?.banner?.title),
+        description: pick(remote.home?.banner?.description, fallback.home?.banner?.description),
+        image: pick(remote.home?.banner?.image, fallback.home?.banner?.image),
+      },
+    },
   };
 }
 

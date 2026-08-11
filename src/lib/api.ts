@@ -48,6 +48,14 @@ export function endpoint(path: string): string {
 }
 
 /**
+ * Host de la API, sin barra final. Lo necesita el carrito para resolver las
+ * imagenes de las lineas que repinta en el navegador, donde API_URL no existe.
+ */
+export function assetBase(): string {
+  return API_URL.replace(/\/+$/, '');
+}
+
+/**
  * Resuelve una URL de imagen contra el host de la API.
  *
  * `image.url` es absoluta salvo el placeholder de los platillos sin foto, que
