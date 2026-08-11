@@ -2,17 +2,28 @@
 import Layout from '../layouts/Layout.astro';
 import Navbar from '../components/Navbar.astro';
 import OrderBar from '../components/OrderBar.astro';
+import Hero from '../components/Hero.astro';
 import ProductCard from '../components/ProductCard.astro';
-import { getCategories, getProducts, type ProductListItem } from '../lib/catalog.ts';
 import StoreClosedNotice from '../components/StoreClosedNotice.astro';
+import Footer from '../components/Footer.astro';
+import {
+  ALL_CATEGORIES,
+  getCategories,
+  getProducts,
+  type ProductListItem,
+} from '../lib/catalog.ts';
 import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
-import { scheduleLabel } from '../lib/schedule.ts';
+import { getCart } from '../lib/cart.ts';
+import { peekCartToken } from '../lib/cart-session.ts';
+import { isClosed } from '../lib/schedule.ts';
 import { formatPrice } from '../lib/price.ts';
+import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
 
 // On-demand, no prerenderizado: `available` depende del horario de la
 // categoria resuelto en America/Cancun, asi que una pagina generada en el
 // build serviria la disponibilidad congelada del momento del deploy y
-// mostraria como comprable un platillo que ya cerro.
+// mostraria como comprable un platillo que ya cerro. Ademas la barra de pedido
+// lee el modo de entrega de la sesion, que una pagina del build no tiene.
 export const prerender = false;
 
 let products: ProductListItem[] = [];
@@ -30,11 +41,29 @@ try {
 
 const categories = getCategories(products);
 
-// Configuracion y horario van en paralelo con lo que ya se pidio: son dos
-// peticiones publicas y cacheadas, y encadenarlas retrasaria la portada por nada.
-// Ninguna de las dos lanza: sin ellas la cabecera se queda sin sus iconos, pero el
-// catalogo se sirve igual.
-const [store, schedule] = await Promise.all([getStoreConfig(), getStoreSchedule()]);
+// El pie rotula lo que hay de verdad en el catalogo, asi que recibe las
+// categorias sin el chip que no filtra nada: "Todos" es de la barra, no del menu.
+const published = categories.filter((category) => category !== ALL_CATEGORIES);
+
+// Configuracion, horario y carrito van en paralelo con lo que ya se pidio, y
+// encadenarlos retrasaria la portada por nada. Ninguno lanza: sin ellos la
+// cabecera se queda sin sus iconos o sin su importe, pero el catalogo se sirve
+// igual.
+//
+// El carrito lo pide la barra de desktop, que ensena importe y unidades. Solo se
+// pide si la sesion ya tiene token: ver peekCartToken en src/lib/cart-session.ts.
+const cartToken = peekCartToken(Astro.cookies);
+
+const [store, schedule, cart] = await Promise.all([
+  getStoreConfig(),
+  getStoreSchedule(),
+  cartToken
+    ? getCart(cartToken).catch((error) => {
+        console.error('[portada] fallo GET /api/cart', error);
+        return null;
+      })
+    : null,
+]);
 
 // El rotulo de envio lo compone la tienda a partir del modo, porque es un rotulo y
 // los rotulos son suyos. Con `none` no se pinta: prometer un envio gratis que el
@@ -48,59 +77,104 @@ const shippingLabel =
       ? `Envio gratis desde ${formatPrice(freeShipping.threshold)}`
       : undefined;
 
-// El aviso solo aparece con la tienda cerrada de verdad. Con `null` —sin horario, o
-// con uno sin turnos— no se afirma nada: seria anunciar "cerrado" por un descuido
-// del panel en plena hora de venta.
-const closedLabel = schedule?.isOpen === false ? scheduleLabel(schedule) : null;
+// El banner lo escribe el panel, no la portada: es una campana, y cambiar la
+// frase de temporada o la foto no puede exigir un despliegue. Si no hay nada
+// configurado el componente no pinta nada y la tienda abre en el catalogo.
+const banner = store.home?.banner;
+
+// "Ver mapa" abre la hoja de ubicacion que monta la cabecera. Se ofrece con la
+// misma condicion con la que ella la monta —basta uno de los dos datos—, porque
+// sin ninguno la hoja no existe y el boton abriria la nada.
+const hasLocation = Boolean(store.location?.address || store.location?.mapsUrl);
+
+// Con la tienda cerrada la portada se queda en menu: se puede mirar todo, pero no
+// se agrega nada. Lo dice la tarjeta flotante una vez, y las tarjetas de platillo
+// se callan —sin boton y sin etiqueta— en lugar de repetir "Fuera de horario"
+// tantas veces como platillos haya.
+const closed = isClosed(schedule);
+
+// El switch de la barra llega con lo ultimo elegido, aqui o en /datos: es la
+// misma eleccion, guardada en el borrador. Se pinta en el servidor para que las
+// metas correctas —plazo y envio, o recoleccion y mapa— esten ya en su sitio
+// antes de que arranque el JavaScript.
+const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 ---
 
 <Layout title="Shop Superfoods">
-  <Navbar store={store} schedule={schedule} />
+  <Navbar
+    store={store}
+    schedule={schedule}
+    cartTotal={cart?.total ?? 0}
+    cartCount={cart?.itemsCount ?? 0}
+  />
 
-  <main>
-    {closedLabel && <StoreClosedNotice label={closedLabel} />}
+  <!-- flex-grow-1: con el pie debajo, una tienda de dos platillos dejaria la
+       franja blanca del pie flotando y el fondo gris asomando bajo ella. Crece el
+       contenido, no el pie. -->
+  <main class="storefront flex-grow-1">
+    {/* La pila solo existe en desktop —en movil es `display: contents`, ver
+        components/_storefront.scss—, asi que envolver no cambia nada de lo que
+        ya habia: el aviso de tienda cerrada se queda fuera porque flota. */}
+    <div class="storefront__stack">
+      <Hero
+        title={banner?.title}
+        description={banner?.description}
+        image={banner?.image}
+      />
 
-    <OrderBar
-      categories={categories}
-      estimate={store.delivery?.estimate}
-      shipping={shippingLabel}
-    />
+      <OrderBar
+        categories={categories}
+        estimate={store.delivery?.estimate}
+        shipping={shippingLabel}
+        pickup={store.pickup?.estimate}
+        hasLocation={hasLocation}
+        selected={deliveryType}
+      />
 
-    <section class="product-list" aria-label="Productos">
-      <div class="product-list__items">
-        {
-          products.length > 0 ? (
-            // m-0: .row solo resetea los margenes laterales y el superior, asi
-            // que el margin-bottom que el Reboot pone a <ul> sobreviviria.
-            <ul
-              class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-6 list-unstyled m-0"
-              data-product-list
-            >
-              {products.map((product, index) => (
-                // data-category en la celda, no en la tarjeta: es la celda lo
-                // que oculta el filtro.
-                <li class="col" data-category={product.category}>
-                  <ProductCard product={product} eager={index === 0} />
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p class="product-list__notice">
-              {unreachable
-                ? 'No pudimos cargar el menu en este momento. Vuelve a intentarlo en unos minutos.'
-                : 'Todavia no hay platillos publicados.'}
-            </p>
-          )
-        }
-      </div>
-    </section>
+      <section class="product-list" aria-label="Productos">
+        <div class="product-list__items">
+          <h2 class="product-list__title">Nuestros Platillos</h2>
+
+          {
+            products.length > 0 ? (
+              // m-0: .row solo resetea los margenes laterales y el superior, asi
+              // que el margin-bottom que el Reboot pone a <ul> sobreviviria.
+              <ul
+                class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-6 list-unstyled m-0"
+                data-product-list
+              >
+                {products.map((product, index) => (
+                  // data-category en la celda, no en la tarjeta: es la celda lo
+                  // que oculta el filtro.
+                  <li class="col" data-category={product.category}>
+                    <ProductCard product={product} eager={index === 0} storeClosed={closed} />
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p class="product-list__notice">
+                {unreachable
+                  ? 'No pudimos cargar el menu en este momento. Vuelve a intentarlo en unos minutos.'
+                  : 'Todavia no hay platillos publicados.'}
+              </p>
+            )
+          }
+        </div>
+      </section>
+    </div>
+
+    {/* La hoja del horario que abre su boton la monta la cabecera, que ya la
+        necesita para el reloj. */}
+    {closed && schedule && <StoreClosedNotice schedule={schedule} />}
   </main>
+
+  <Footer store={store} categories={published} />
 </Layout>
 
 <script>
-  import '../scripts/bootstrap';
   import '../scripts/category-nav';
   import '../scripts/category-filter';
+  import '../scripts/delivery-mode';
   import '../scripts/add-button';
   import '../scripts/sheet';
 </script>

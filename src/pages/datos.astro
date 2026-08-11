@@ -14,6 +14,11 @@ import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
 // domicilio" y pedir de nuevo una direccion que el pedido no necesita.
 export const prerender = false;
 
+// El modo llega elegido de antes: del switch del listado —donde es un atajo para
+// no repetir la eleccion— o de esta misma pantalla. Es la misma eleccion en el
+// mismo sitio, el borrador, y viaja en su cookie: /carrito no tiene que reenviar
+// nada por el camino. Sin borrador que leer —primera visita, o caducado— manda el
+// defecto de EMPTY_DRAFT, que es a domicilio.
 const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 
 // Al recoger, donde entregar deja de existir: el pedido se recoge en el local.
@@ -26,7 +31,7 @@ const pickup = deliveryType === 'pickup';
   title="Datos de entrega — Shop Superfoods"
   description="Indica donde y como quieres recibir tu pedido."
 >
-  <ScreenHeader title="Datos de entrega" backHref="/mi-pedido" />
+  <ScreenHeader title="Datos de entrega" backHref="/carrito" />
 
   <!-- La cadena flex (page > main > form) deja la barra de accion al fondo de
        la pantalla aunque el formulario sea corto. -->

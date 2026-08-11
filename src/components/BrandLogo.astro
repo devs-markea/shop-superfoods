@@ -1,0 +1,32 @@
+---
+import { Image } from 'astro:assets';
+import logo from '../assets/logo-superfoods.webp';
+
+interface Props {
+  class?: string;
+}
+
+const { class: className } = Astro.props;
+
+// El logo, en un solo sitio.
+//
+// Las dos barras lo pintan con el MISMO width/height a proposito: las dos van
+// en el marcado y solo el breakpoint decide cual se ve, asi que pedir dos
+// tamanos distintos serviria dos archivos y el navegador se descargaria los
+// dos. Con una sola transformacion hay una sola URL —una peticion, y la segunda
+// ya esta en cache— y la altura final la pone el CSS de cada barra.
+//
+// 162x28 es la proporcion del archivo (783x135). El original venia de 1080x1080
+// con el logo flotando en el centro: recortado al contenido, la altura de la
+// barra la decide el CSS y no el margen transparente de la exportacion.
+---
+
+<Image
+  class={className}
+  src={logo}
+  width={162}
+  height={28}
+  densities={[1, 2]}
+  alt="Markea Super Foods"
+  loading="eager"
+/>

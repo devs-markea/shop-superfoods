@@ -30,6 +30,10 @@
 // Element: una linea de texto del detalle ("1× Tacos de Pastor"). Tambien
 // rotula el pedido vacio, que es la misma linea sin lineas que listar.
 .order-detail__item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sf-space-2);
   margin: 0;
   font-size: var(--sf-font-size-sm);
   font-weight: var(--sf-weight-medium);
@@ -37,8 +41,45 @@
   color: var(--sf-muted);
 }
 
+// Element: el desglose. Aparece solo cuando hay algo que explicar —un descuento
+// o una propina—: si no, sus filas serian el total repetido.
+.order-detail__rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-1);
+  margin: 0;
+}
+
+.order-detail__row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--sf-space-3);
+}
+
+.order-detail__term {
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-muted);
+}
+
+.order-detail__value {
+  margin: 0;
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.order-detail__row--discount .order-detail__value {
+  color: var(--sf-success);
+}
+
 // La divisora discontinua es .dashed-divider: la comparte con el resumen de
-// /pedido-confirmado.
+// /confirmado.
 
 // Element: fila del total
 .order-detail__total {

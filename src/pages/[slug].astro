@@ -1,0 +1,305 @@
+---
+import Layout from '../layouts/Layout.astro';
+import NavbarDesktop from '../components/NavbarDesktop.astro';
+import ScheduleSheet from '../components/ScheduleSheet.astro';
+import LocationSheet from '../components/LocationSheet.astro';
+import ProductHero from '../components/ProductHero.astro';
+import OptionGroup from '../components/OptionGroup.astro';
+import PromoBadge from '../components/PromoBadge.astro';
+import ProductCounter from '../components/ProductCounter.astro';
+import ActionBar from '../components/ActionBar.astro';
+import Footer from '../components/Footer.astro';
+import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
+import { getCart } from '../lib/cart.ts';
+import { peekCartToken } from '../lib/cart-session.ts';
+import { isClosed } from '../lib/schedule.ts';
+import {
+  ALL_CATEGORIES,
+  defaultVariant,
+  getCategories,
+  getProduct,
+  getProducts,
+  initialTotal,
+  promotionView,
+  toOptionGroups,
+  variantPrice,
+  type ProductDetail,
+} from '../lib/catalog.ts';
+
+// Los tres controles —radio, checkbox y contador de cantidad— llegan con la
+// misma forma: control, required, min, max, maxPerOption, defaultOptionId y
+// options. La API ya resolvio de que depende cada uno, asi que aqui no se
+// deriva nada; un solo <OptionGroup> ramifica por `control` y
+// src/scripts/order-form.ts se encarga del total, de los dos topes —opciones
+// distintas y unidades por opcion— y de bloquear la compra mientras falte un
+// minimo.
+
+// DOS PANTALLAS, UN MARCADO
+//
+// En movil la ficha es la de siempre: foto a sangre con el control de volver
+// encima, informacion, opciones y la barra de accion fija al fondo.
+//
+// En desktop crece por arriba y por abajo —la misma barra y el mismo pie que la
+// portada— y por dentro se parte en dos columnas: la foto a la izquierda, y a la
+// derecha la informacion, la seleccion y la fila de compra, donde el boton pasa a
+// convivir con un contador de unidades. Nada de eso duplica marcado: son los
+// mismos elementos recolocados por CSS (ver components/_product-page.scss), asi
+// que hay un solo boton de agregar y un solo formulario que enviar.
+
+// On-demand por el mismo motivo que la portada: `available` depende del horario
+// de la categoria. Y ya no se puede prerenderizar de todas formas, porque
+// getStaticPaths tendria que pedir el catalogo entero durante el build.
+export const prerender = false;
+
+// LA RUTA COMODIN DE LA TIENDA
+//
+// La ficha cuelga de la raiz, asi que este archivo recoge todo lo que no case
+// con una pagina propia: `/carrito`, `/datos`, `/pago`, `/confirmado` y
+// `/recibido` siguen siendo suyas —en Astro una ruta estatica gana siempre a
+// `[slug]`—, pero cualquier otra cosa aterriza aqui y sale por el 404 de abajo.
+//
+// El segmento se pasa a la API tal cual: es `menus.slug` en los dos lados —la
+// URL de la tienda y `GET /api/products/{slug}`—, asi que no hay traduccion que
+// hacer. Pedirla por id ya no resuelve nada, y de ahi que el `data-product-id`
+// del formulario sea lo unico que sigue viajando por id: ese es para comprar.
+const { slug = '' } = Astro.params;
+
+// Todo lo que no es la ficha se pide A LA VEZ que ella: son independientes y
+// encadenarlas retrasaria la pantalla por nada.
+//
+//   configuracion  las metas de la barra de desktop y los datos del pie
+//   horario        el reloj de la barra, y si la tienda esta cerrada
+//   carrito        el importe y las unidades del chip del pedido
+//   catalogo       las categorias que rotula el pie
+//
+// Ninguna lanza —las dos de la tienda devuelven respaldo o null, y las otras dos
+// traen su propio catch—, asi que las promesas pueden esperar aqui sin try.
+const cartToken = peekCartToken(Astro.cookies);
+
+const storePending = getStoreConfig();
+const schedulePending = getStoreSchedule();
+
+// Solo si la sesion ya tiene token: `GET /api/cart` crea el carrito si no existe,
+// y abrir uno por visita para leer un cero que ya se sabia no le sirve a nadie.
+// Ver peekCartToken en src/lib/cart-session.ts.
+const cartPending = cartToken
+  ? getCart(cartToken).catch((error) => {
+      console.error('[detalle] fallo GET /api/cart', error);
+      return null;
+    })
+  : null;
+
+// El pie rotula hasta tres categorias publicadas, y las categorias solo se pueden
+// sacar del catalogo: no hay endpoint que las liste. Si falla, el pie se queda con
+// "Menu completo" en lugar de tumbar la ficha —son tres rotulos de un pie, no el
+// contenido de la pantalla—.
+const categoriesPending = getProducts()
+  .then((items) => getCategories(items).filter((category) => category !== ALL_CATEGORIES))
+  .catch((error) => {
+    console.error('[detalle] fallo el catalogo del pie', error);
+    return [] as string[];
+  });
+
+let product: ProductDetail | null = null;
+let unreachable = false;
+
+try {
+  product = await getProduct(slug);
+} catch (error) {
+  console.error('[detalle] fallo la ficha de "%s"', slug, error);
+  unreachable = true;
+}
+
+if (!product) {
+  // 404 tambien para lo despublicado, lo que no tiene categoria y el enlace que
+  // el administrador reescribio —el anterior no redirige—: desde fuera no debe
+  // poder distinguirse que existe pero no esta en la tienda.
+  Astro.response.status = unreachable ? 503 : 404;
+}
+
+const groups = product ? toOptionGroups(product) : [];
+const variant = product ? defaultVariant(product) : undefined;
+
+// Total de UNA unidad: es con lo que se abre la ficha y con lo que arranca el
+// contador. A partir de ahi lo recalcula order-form.ts, que multiplica por las
+// unidades que se elijan.
+const total = product ? initialTotal(product) : 0;
+
+// La etiqueta de la promocion, y solo la etiqueta: el tachado y el precio final
+// van POR VARIANTE dentro del selector, que es donde el comprador elige, y el
+// importe que se paga lo remata el boton de agregar. Repetir aqui ese par seria
+// decir tres veces lo mismo en una pantalla.
+const promo = product ? promotionView(product) : null;
+
+const UNAVAILABLE_NOTICE: Record<string, string> = {
+  no_price: 'Este platillo todavia no tiene precio, asi que no se puede pedir.',
+  out_of_schedule: 'Fuera del horario de su categoria. Vuelve mas tarde.',
+};
+
+const unavailableNotice =
+  !product || product.available
+    ? null
+    : (UNAVAILABLE_NOTICE[product.unavailableReason ?? ''] ?? 'No se puede pedir ahora mismo.');
+
+const title = product ? `${product.name} — Shop Superfoods` : 'Platillo no encontrado';
+
+const [store, schedule, cart, categories] = await Promise.all([
+  storePending,
+  schedulePending,
+  cartPending,
+  categoriesPending,
+]);
+
+// Las dos condiciones se calculan aqui, en el mismo sitio que monta las hojas: si
+// las dedujera la barra por su cuenta, podria ofrecer un boton para una hoja que
+// esta pagina no monto. Es lo mismo que hace <Navbar> en la portada.
+const address = store.location?.address;
+const mapsUrl = store.location?.mapsUrl;
+const hasLocation = Boolean(address || mapsUrl);
+const hasSchedule = Boolean(schedule && schedule.days.length > 0);
+
+// Con la tienda cerrada la ficha se queda en ficha: se lee entera —foto, precio,
+// personalizaciones— y desaparece la fila de compra. Aqui no se repite la tarjeta
+// de tienda cerrada: se llega desde la portada, que ya lo dijo, y el aviso taparia
+// justo el contenido que se viene a ver.
+const closed = isClosed(schedule);
+---
+
+<Layout title={title} description={product?.description}>
+  {/* Solo la barra de desktop: en movil la cabecera de esta pantalla es la foto,
+      con su control de volver, y dos cabeceras seguidas serian una de mas. */}
+  <NavbarDesktop
+    shortAddress={store.location?.shortAddress}
+    estimate={store.delivery?.estimate}
+    hasLocation={hasLocation}
+    hasSchedule={hasSchedule}
+    cartTotal={cart?.total ?? 0}
+    cartCount={cart?.itemsCount ?? 0}
+  />
+
+  <main class="product-page d-flex flex-column flex-grow-1">
+    {
+      product ? (
+        // La rejilla solo existe en desktop —en movil es `display: contents`, ver
+        // components/_product-page.scss—, asi que envolver no cambia nada de lo
+        // que ya habia.
+        <div class="product-page__grid">
+          <ProductHero product={product} />
+
+          <form
+            class="product-page__panel d-flex flex-column flex-grow-1"
+            method="post"
+            data-order-form
+            data-endpoint="/api/cart/items"
+            data-redirect="/carrito"
+            data-product-id={product.id}
+            data-variant-id={product.hasVariants ? undefined : variant?.id}
+            data-base-price={variantPrice(variant) ?? product.basePrice}
+          >
+            <div class="product-detail">
+              <div class="product-detail__intro">
+                {/* La etiqueta va en la fila del nombre, no debajo: es lo que
+                    dice de que va este platillo hoy, y separada del titulo se
+                    lee como un dato suelto. Si no cabe, envuelve. */}
+                <div class="product-detail__heading">
+                  <h1 class="product-detail__title">{product.name}</h1>
+
+                  {promo && (
+                    <PromoBadge
+                      label={promo.detailLabel}
+                      name={promo.name}
+                      class="product-detail__promo"
+                    />
+                  )}
+                </div>
+
+                {product.description && (
+                  <p class="product-detail__description">{product.description}</p>
+                )}
+              </div>
+
+              {groups.map((group) => (
+                <>
+                  <hr class="product-detail__divider" />
+                  <OptionGroup group={group} />
+                </>
+              ))}
+            </div>
+
+            {unavailableNotice ? (
+              <p class="product-detail__notice">{unavailableNotice}</p>
+            ) : (
+              // Doble uso, y en este orden: mientras falte un minimo dice cual
+              // es —si no, el boton apagado no explicaria nada—, y despues del
+              // envio recoge lo que no cabe junto a un grupo concreto.
+              <p
+                class="product-detail__notice product-detail__notice--error"
+                role="alert"
+                hidden
+                data-form-error
+              />
+            )}
+
+            {/* La fila de compra. En movil no es una fila: el envoltorio no pinta
+                nada y el boton sigue siendo la barra fija del fondo, con el
+                contador oculto —de uno en uno, como hasta ahora—. */}
+            {closed ? null : (
+              <div class="product-page__buy">
+                {product.available ? (
+                  <>
+                    <ProductCounter itemName={product.name} />
+                    <ActionBar label="Agregar — {total}" total={total} />
+                  </>
+                ) : (
+                  <ActionBar label="Volver al menu" href="/" />
+                )}
+              </div>
+            )}
+          </form>
+        </div>
+      ) : (
+        // Este bloque es ademas el 404 de la tienda: al colgar la ficha de la
+        // raiz, cualquier direccion que no sea una pantalla del pedido acaba
+        // aqui. Se rotula como platillo porque es lo que se pide por esta ruta el
+        // 99% de las veces, y la salida —volver al menu— vale igual para los dos
+        // casos.
+        //
+        // Sin rejilla: no hay dos columnas que repartir, solo un aviso y su
+        // salida. La fila de compra si se reutiliza, para que en desktop el boton
+        // no se quede en una barra fija a lo ancho de la pantalla.
+        <>
+          <div class="product-detail">
+            <div class="product-detail__intro">
+              <h1 class="product-detail__title">
+                {unreachable ? 'No pudimos cargar el platillo' : 'Platillo no encontrado'}
+              </h1>
+              <p class="product-detail__description">
+                {unreachable
+                  ? 'La tienda no responde en este momento. Intentalo de nuevo en unos minutos.'
+                  : 'Puede que ya no este en el menu.'}
+              </p>
+            </div>
+          </div>
+
+          <div class="product-page__buy">
+            <ActionBar label="Volver al menu" href="/" />
+          </div>
+        </>
+      )
+    }
+  </main>
+
+  {/* Las dos hojas que abren el pin y el reloj de la barra. Las monta esta pagina
+      —igual que <Navbar> las monta en la portada— para que sus rotulos sean
+      botones y no texto quieto: la barra es la misma en las dos pantallas y tiene
+      que hacer lo mismo en las dos. */}
+  {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
+  {hasLocation && <LocationSheet address={address} mapsUrl={mapsUrl} />}
+
+  <Footer store={store} categories={categories} />
+</Layout>
+
+<script>
+  import '../scripts/order-form';
+  import '../scripts/sheet';
+</script>

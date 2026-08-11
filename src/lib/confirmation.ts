@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Que dice el acuse, segun lo que de verdad paso con el pago.
 //
-// /pedido-confirmado es la pantalla de vuelta de Mercado Pago, y ahi el pedido
+// /confirmado es la pantalla de vuelta de Mercado Pago, y ahi el pedido
 // puede estar en media docena de situaciones distintas: pagado, esperando que el
 // webhook confirme, rechazado por falta de fondos, cancelado por el comprador,
 // creado sin que la pasarela llegara a abrirse... Cada una necesita otro titular,
@@ -126,10 +126,10 @@ export function confirmationWithoutOrder(): ConfirmationView {
  *
  * Es un ultimo recurso: la API no devuelve el metodo, asi que lo unico firme es el
  * bloque `payment`, que solo viaja en Mercado Pago. Entre los otros dos se elige
- * por el modo de entrega, que si viaja: al recoger se paga en efectivo y a
- * domicilio, por transferencia. Es lo que ofrece hoy la tienda, no una regla de la
- * API -que acepta las seis combinaciones-, asi que puede errar el rotulo de un
- * pedido raro. Con la cookie en pie nunca se usa.
+ * por el modo de entrega, que si viaja: al recoger el efectivo es el unico metodo
+ * que ofrece la tienda. A domicilio caben los dos y nada los distingue, asi que se
+ * elige transferencia, la que viene marcada de entrada en el resumen; el rotulo de
+ * un efectivo a domicilio puede salir mal. Con la cookie en pie nunca se usa.
  */
 export function inferMethod(order: StoreOrder | null): PaymentMethod {
   if (order?.payment) return 'mercado_pago';
@@ -229,7 +229,7 @@ export function resolveConfirmation(
 
   // --- Transferencia y efectivo ------------------------------------------
   //
-  // No pasan por aqui en su flujo normal -cierran en /pedido-recibido-, pero se
+  // No pasan por aqui en su flujo normal -cierran en /recibido-, pero se
   // llega releyendo la pantalla: una transferencia ya confirmada por la tienda
   // acaba en este acuse, y de un pedido en efectivo se puede volver por el
   // historial.

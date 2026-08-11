@@ -1,15 +1,26 @@
 ---
 import Icon from './Icon.astro';
+import PromoBadge from './PromoBadge.astro';
 import { formatPrice } from '../lib/price.ts';
-import { productHref, productImageSrc, type ProductListItem } from '../lib/catalog.ts';
+import {
+  productHref,
+  productImageSrc,
+  promotionView,
+  type ProductListItem,
+} from '../lib/catalog.ts';
 
 interface Props {
   product: ProductListItem;
   /** La primera tarjeta no se carga en diferido: entra en el primer viewport. */
   eager?: boolean;
+  /**
+   * La tienda esta cerrada: nada es comprable, y la etiqueta del motivo se calla
+   * porque ya lo dice la tarjeta de tienda cerrada.
+   */
+  storeClosed?: boolean;
 }
 
-const { product, eager = false } = Astro.props;
+const { product, eager = false, storeClosed = false } = Astro.props;
 
 // El contrato distingue por que no se puede comprar, asi que el aviso tambien.
 // Record<string, string> y no Record<UnavailableReason, string>: si el backend
@@ -20,14 +31,36 @@ const UNAVAILABLE_LABEL: Record<string, string> = {
   out_of_schedule: 'Fuera de horario',
 };
 
-const notice = product.available
-  ? null
-  : (UNAVAILABLE_LABEL[product.unavailableReason ?? ''] ?? 'No disponible');
+// Con la tienda cerrada no hay platillo comprable, diga lo que diga el catalogo:
+// la tarjeta se apaga igual que un no disponible cualquiera —atenuada y sin boton—
+// y sigue llevando a su ficha, que se puede leer entera.
+const orderable = product.available && !storeClosed;
+
+// Lo unico que se calla con la tienda cerrada es la etiqueta del motivo: repetir
+// "Fuera de horario" en cada platillo convertiria el menu en una lista de
+// negativas, y eso ya lo dice una sola vez la tarjeta de tienda cerrada.
+const notice =
+  storeClosed || product.available
+    ? null
+    : (UNAVAILABLE_LABEL[product.unavailableReason ?? ''] ?? 'No disponible');
+
+// Los cuatro elementos de la spec, en este orden: insignia, precio tachado,
+// precio final y etiqueta de ahorro. Los tres ultimos solo cuando la promocion
+// baja de verdad el precio de la variante de referencia —la mas barata, la
+// misma que sustenta el "desde" de la tarjeta—.
+const promo = promotionView(product);
+
+// El nombre se recorta a 24 caracteres. En una tarjeta de 128 con la foto de 80
+// el titulo dispone de una sola linea, y ahora la comparte con la insignia de la
+// promocion: sin recorte, un nombre largo la empujaria fuera. El nombre entero
+// sigue accesible en el `title` del enlace y en la ficha.
+const NAME_MAX = 24;
+
+const displayName =
+  product.name.length > NAME_MAX ? `${product.name.slice(0, NAME_MAX).trimEnd()}...` : product.name;
 ---
 
-<article
-  class:list={['product-card', 'card', !product.available && 'product-card--unavailable']}
->
+<article class:list={['product-card', 'card', !orderable && 'product-card--unavailable']}>
   <div class="product-card__media">
     <img
       class="product-card__image"
@@ -43,20 +76,62 @@ const notice = product.available
   <div class="product-card__body">
     <h3 class="product-card__title">
       <!-- stretched-link: toda la tarjeta es clicable, sin anidar el boton.
-           Los no disponibles tambien enlazan: el detalle existe. -->
-      <a class="stretched-link text-reset" href={productHref(product)}>{product.name}</a>
+           Los no disponibles tambien enlazan: el detalle existe.
+           El title lleva el nombre entero: es lo que recupera lo que corta el
+           recorte. -->
+      <a class="stretched-link text-reset" href={productHref(product)} title={product.name}>
+        {displayName}
+      </a>
+
+      <!-- Al final del nombre: la insignia se lee como parte del platillo, no
+           como una marca sobre la foto. Que el nombre venga recortado a 24 es
+           lo que le deja sitio en la misma linea. -->
+      {promo && <PromoBadge label={promo.label} name={promo.name} class="product-card__promo" />}
     </h3>
 
     <!-- La API manda cadena vacia cuando no hay descripcion -->
     {product.description && <p class="product-card__description">{product.description}</p>}
 
     <div class="product-card__footer">
-      <span class="product-card__price">{formatPrice(product.basePrice)}</span>
+      <div class="product-card__pricing">
+        <span class="product-card__prices">
+          {/* "Desde": el importe es el de la variante mas barata, y en la
+              tarjeta ancha de desktop cabe decirlo. En movil no se pinta —el
+              pie no tiene ese ancho— y el "desde" se sigue leyendo en la
+              ficha. */}
+          <span class="product-card__from">Desde</span>
 
+          {
+            promo?.original !== undefined && promo?.original !== null && (
+              <s class="price-was">{formatPrice(promo.original)}</s>
+            )
+          }
+          <span class="product-card__price">{formatPrice(promo?.price ?? product.basePrice)}</span>
+        </span>
+
+        <!-- Debajo del par de precios, no al lado: el ahorro es la conclusion
+             de esos dos importes, y en el pie no cabria junto a ellos y al
+             boton. Aqui tambien cae la aclaracion del descuento que no alcanza
+             a todas las variantes, que sin ella dejaria sin explicar un precio
+             que no baja. -->
+        {
+          promo && (promo.savings > 0 || promo.note) && (
+            <p class="product-card__deal">
+              {promo.savings > 0 && (
+                <span class="promo-save badge">{`Ahorra ${formatPrice(promo.savings)}`}</span>
+              )}
+              {promo.note && <span class="promo-note">{promo.note}</span>}
+            </p>
+          )
+        }
+      </div>
+
+      {/* Con la tienda cerrada el pie se queda solo con el precio: sin boton, que no
+          llevaria a ninguna parte, y sin etiqueta, que repetiria lo ya dicho. */}
       {
         notice ? (
           <span class="tag tag--optional badge">{notice}</span>
-        ) : (
+        ) : !orderable ? null : (
           // position-relative saca el boton por encima del stretched-link
           <button
             class="product-card__add btn-plain position-relative"

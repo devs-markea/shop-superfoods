@@ -40,16 +40,15 @@
 @import 'bootstrap/scss/card'; // .card — tarjeta de producto
 @import 'bootstrap/scss/badge'; // .badge — base del bloque .tag
 @import 'bootstrap/scss/navbar';
-@import 'bootstrap/scss/offcanvas'; // cajon del menu
-@import 'bootstrap/scss/close'; // boton de cierre del offcanvas
 
 // 6. Helpers concretos (en vez de la carpeta entera)
 @import 'bootstrap/scss/helpers/visually-hidden';
 @import 'bootstrap/scss/helpers/stretched-link';
 @import 'bootstrap/scss/helpers/text-truncation';
 
-// 7. Componentes sin usar todavia. Si activas alguno, importa tambien su JS
-//    en src/scripts/bootstrap.ts cuando lo necesite.
+// 7. Componentes sin usar todavia. Si activas alguno que necesite JS, importalo
+//    en el script de la pantalla que lo use (como hace delivery-form.ts con el
+//    dropdown) y declaralo en vite.optimizeDeps.include de astro.config.mjs.
 // @import 'bootstrap/scss/tables';
 // @import 'bootstrap/scss/button-group'; // el switch no lo usa: cuadra las esquinas internas
 // @import 'bootstrap/scss/forms/input-group';
@@ -66,6 +65,8 @@
 // @import 'bootstrap/scss/carousel';
 // @import 'bootstrap/scss/spinners';
 // @import 'bootstrap/scss/placeholders';
+// @import 'bootstrap/scss/offcanvas'; // lo usaba el cajon del menu, ya retirado
+// @import 'bootstrap/scss/close'; // solo lo usaba la cabecera de ese cajon
 
 // 8. API de utilidades: SIEMPRE al final, genera las clases utilitarias
 @import 'bootstrap/scss/utilities/api';
@@ -80,17 +81,21 @@
 @import 'components/base';
 @import 'components/icon';
 @import 'components/tag';
+@import 'components/promo'; // insignia, tachado y ahorro: tarjeta, ficha y pedido
 @import 'components/section-label'; // etiqueta de grupo, compartida
 @import 'components/dashed-divider'; // divisora 4/2, compartida
 @import 'components/copy-button'; // copiar al portapapeles, compartido
 @import 'components/form-error'; // aviso de campo que falta, compartido
+@import 'components/store-closed'; // tienda cerrada: portada y pedido
 
 // Vista de listado
-@import 'components/navbar';
+@import 'components/storefront'; // armazon de la portada: solo desktop
+@import 'components/hero'; // panel de bienvenida: solo desktop
+@import 'components/navbar'; // barra de movil
+@import 'components/navbar-desktop'; // la releva de md hacia arriba
 @import 'components/sheet'; // hojas modales de la barra superior
 @import 'components/schedule';
 @import 'components/location-sheet';
-@import 'components/store-closed';
 @import 'components/order-bar';
 @import 'components/switch';
 @import 'components/order-meta';
@@ -98,6 +103,7 @@
 @import 'components/chip';
 @import 'components/product-list';
 @import 'components/product-card';
+@import 'components/footer'; // pie de la portada, solo desktop
 
 // Vista de detalle
 @import 'components/product-hero';
@@ -105,6 +111,10 @@
 @import 'components/option-group';
 @import 'components/option';
 @import 'components/action-bar';
+@import 'components/product-counter'; // unidades del platillo: solo desktop
+// Armazon de la ficha en desktop. Al final del grupo porque es quien recoloca las
+// piezas de arriba —entre ellas la barra de accion— y asi sus reglas cierran.
+@import 'components/product-page';
 
 // Compartido por las pantallas con barra superior
 @import 'components/topbar';
@@ -128,8 +138,11 @@
 @import 'components/summary';
 @import 'components/legal-note';
 
-// Pantallas de confirmacion: transferencia (cuenta) y efectivo (donde recoger)
+// Pantallas de confirmacion: transferencia (cuenta) y efectivo (metodo de pago)
 @import 'components/bank-account';
+@import 'components/payment-method';
+// Donde recoger: hoy no lo pinta ninguna pantalla —el efectivo dejo de mostrarlo—,
+// pero el componente sigue en pie. Si no vuelve, se borran los dos.
 @import 'components/pickup-location';
 @import 'components/info-note';
 @import 'components/order-detail';

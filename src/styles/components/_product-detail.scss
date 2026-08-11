@@ -24,6 +24,18 @@
   gap: var(--sf-space-3);
 }
 
+// Element: heading — nombre del platillo y, a su lado, la etiqueta de la
+// promocion. Envuelve en lugar de encoger: el titulo es de 24/32 y una etiqueta
+// larga ("Precio especial de $150.00") no cabe junto a un nombre largo en un
+// movil. Al envolver, la etiqueta cae bajo el nombre y alineada con el, que es
+// donde sigue leyendose como suya.
+.product-detail__heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sf-space-3);
+}
+
 .product-detail__title {
   margin: 0;
   font-size: var(--sf-font-size-xl);
@@ -38,6 +50,20 @@
   font-weight: var(--sf-weight-regular);
   line-height: var(--sf-line-height-base);
   color: var(--sf-muted);
+}
+
+// Element: promo — la etiqueta de la promocion, junto al nombre.
+//
+// Es lo unico que se pinta aqui de la promocion, a proposito: el tachado y el
+// precio final van POR VARIANTE en el selector, que es donde se elige, y el
+// importe que se paga lo remata la barra de accion. Un tercer sitio con los
+// mismos dos numeros solo repetiria.
+//
+// La insignia de la rejilla lleva un atajo ("15%") y aqui el rotulo entero
+// ("Descuento de 15%"), asi que necesita algo mas de aire a los lados.
+.product-detail__promo {
+  flex: 0 0 auto;
+  padding-inline: var(--sf-space-3);
 }
 
 // Element: aviso de la ficha — motivo de no disponible, o el error que
@@ -67,4 +93,23 @@
   border: 0;
   opacity: 1;
   background-color: var(--sf-border);
+}
+
+// --- Desktop -------------------------------------------------------------
+// El aire alrededor pasa a ser de la columna que lo contiene (ver
+// components/_product-page.scss). Aqui se queda el gap de 24 —como se reparte por
+// dentro— y el tope de 720, que dentro de la columna de la ficha no llega a actuar
+// nunca y sigue haciendo su trabajo en el 404, que no tiene columna.
+@include media-breakpoint-up(md) {
+  .product-detail {
+    padding: 0;
+  }
+
+  // El aviso ya no vive sobre un boton centrado de 350, sino en una columna: se
+  // alinea con el texto que tiene encima y ocupa lo que ella.
+  .product-detail__notice {
+    max-width: none;
+    padding-inline: 0;
+    text-align: left;
+  }
 }

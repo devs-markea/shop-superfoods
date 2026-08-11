@@ -1,0 +1,176 @@
+---
+import Layout from '../layouts/Layout.astro';
+import TopBar from '../components/TopBar.astro';
+import ShippingProgress from '../components/ShippingProgress.astro';
+import OrderComments from '../components/OrderComments.astro';
+import ActionBar from '../components/ActionBar.astro';
+import ScheduleSheet from '../components/ScheduleSheet.astro';
+import StoreClosedNotice from '../components/StoreClosedNotice.astro';
+import {
+  getCart,
+  remainingForFreeShipping,
+  shippingProgress,
+  type Cart,
+} from '../lib/cart.ts';
+import { imageResolver, renderLines } from '../lib/cart-view.ts';
+import { assetBase } from '../lib/api.ts';
+import { resolveCartToken } from '../lib/cart-session.ts';
+import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
+import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
+import { isClosed } from '../lib/schedule.ts';
+import { formatPrice } from '../lib/price.ts';
+
+// El carrito es de esta sesion: no hay nada que prerenderizar.
+export const prerender = false;
+
+let cart: Cart | null = null;
+let unreachable = false;
+
+try {
+  // resolveCartToken emite la cookie si es la primera visita, asi que llegar
+  // aqui directo (sin pasar por una ficha) tambien deja sesion abierta.
+  cart = await getCart(resolveCartToken(Astro.cookies));
+} catch (error) {
+  console.error('[pedido] fallo GET /api/cart', error);
+  unreachable = true;
+}
+
+const total = cart?.total ?? 0;
+const discountTotal = cart?.discountTotal ?? 0;
+const subtotal = cart?.subtotal ?? 0;
+
+// Se pinta `lines`, no `items`: un grupo de "compra y lleva" toma unidades de
+// varias filas, asi que la fila deja de ser la unidad de presentacion. El
+// mismo renderizador lo reutiliza src/scripts/order-summary.ts en cada
+// respuesta de la API, para que servidor y navegador no puedan divergir.
+const lines = cart?.lines ?? [];
+const base = assetBase();
+const linesHtml = cart ? renderLines(cart, imageResolver(base)) : '';
+
+// Los comentarios ya escritos: se guardan en el borrador del pedido, asi que
+// volver aqui desde el pago no los pierde.
+//
+// En el mismo borrador viaja el modo de entrega que se eligio en el listado, pero
+// esta pantalla no lo usa ni lo reenvia: la cookie la lee el servidor en cada
+// peticion, asi que /datos la recibe entera sin que el carrito tenga que pasarle
+// nada. Un dato copiado aqui solo podria contradecir al original.
+const { comments } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+
+// El envio gratis lo decide el negocio, y son tres respuestas distintas:
+//
+//   threshold  hay meta que alcanzar -> se pinta la barra
+//   always     ya es gratis           -> no hay nada que avanzar
+//   none       no hay envio gratis    -> no se promete lo que no existe
+//
+// El umbral viaja en data-threshold para que el script recalcule el avance con el
+// total que devuelve cada operacion de carrito.
+const [store, schedule] = await Promise.all([getStoreConfig(), getStoreSchedule()]);
+
+const { freeShipping } = store.delivery ?? {};
+const threshold = freeShipping?.mode === 'threshold' ? (freeShipping.threshold ?? 0) : 0;
+const showProgress = threshold > 0;
+
+// Ultima pantalla donde el aviso sirve de algo: aqui todavia hay una decision que
+// tomar —seguir o no—, y de aqui en adelante ya no. El pedido no se pierde: sigue
+// en la sesion, y continuar vuelve a estar disponible cuando la tienda abra.
+const closed = isClosed(schedule);
+---
+
+<Layout title="Mi pedido — Shop Superfoods" description="Revisa tu pedido antes de pagar.">
+  <TopBar title="Mi pedido" total={total} />
+
+  <!-- La cadena flex (page > main > form) deja la barra de accion al fondo de
+       la pantalla aunque el pedido tenga pocas lineas. -->
+  <main class="d-flex flex-column flex-grow-1">
+    <!-- El formulario envuelve tambien la barra de accion: "Continuar" envia
+         el pedido junto con los comentarios. -->
+    <form class="d-flex flex-column flex-grow-1" action="#" method="post">
+      <div
+        class="screen-body"
+        data-order-summary
+        data-threshold={threshold}
+        data-asset-base={base}
+      >
+        {
+          showProgress && (
+            <ShippingProgress
+              remaining={remainingForFreeShipping(total, threshold)}
+              progress={shippingProgress(total, threshold)}
+            />
+          )
+        }
+
+        <!-- set:html y no un componente por linea: ver la cabecera de
+             src/lib/cart-view.ts. Los grupos se rehacen enteros en cada cambio,
+             asi que la lista se sustituye completa con el mismo marcado. -->
+        <ul
+          class:list={['order-list', 'list-unstyled', lines.length === 0 && 'd-none']}
+          data-order-list
+          set:html={linesHtml}
+        />
+
+        <p class:list={['text-secondary', 'text-center', 'm-0', lines.length > 0 && 'd-none']} data-empty>
+          {unreachable ? 'No pudimos cargar tu pedido. Intentalo de nuevo.' : 'Tu pedido esta vacio.'}
+        </p>
+
+        <!-- Lo rellena el script cuando la API rechaza un cambio. -->
+        <p class="order-list__error" role="alert" hidden data-cart-error></p>
+
+        <!-- Solo con descuento: sin el, el subtotal seria el total repetido.
+             Es lo que cierra la cuenta de una promocion —cuanto costaba, cuanto
+             se descuenta— porque el total vive arriba, en la barra. -->
+        <dl
+          class:list={['order-totals', discountTotal <= 0 && 'd-none']}
+          data-order-totals
+        >
+          <div class="order-totals__row">
+            <dt class="order-totals__term">Subtotal</dt>
+            <dd class="order-totals__value" data-order-subtotal>{formatPrice(subtotal)}</dd>
+          </div>
+          <div class="order-totals__row order-totals__row--discount">
+            <dt class="order-totals__term">Descuentos</dt>
+            <dd class="order-totals__value" data-order-discount>
+              {`− ${formatPrice(discountTotal)}`}
+            </dd>
+          </div>
+        </dl>
+
+        <hr class="screen-body__divider" />
+
+        <OrderComments value={comments} />
+      </div>
+
+      <!-- Tres casos, y el ultimo es el que no pinta barra:
+           · con lineas          -> Continuar, apagado en gris si la tienda cerro
+           · sin lineas, abierta -> Ver el menu, que es lo unico que queda por hacer
+           · sin lineas, cerrada -> nada. Un pedido vacio con la tienda cerrada no
+             tiene ninguna accion que ofrecer, y la tarjeta flotante ya dice por que
+             y lleva al horario: una barra debajo solo competiria con ella. -->
+      {
+        lines.length > 0 ? (
+          <ActionBar label="Continuar" href="/datos" disabled={closed} />
+        ) : closed ? null : (
+          <ActionBar label="Ver el menu" href="/" />
+        )
+      }
+    </form>
+  </main>
+
+  {/* La hoja del horario la monta esta pantalla: no tiene cabecera con reloj, asi
+      que el boton de la tarjeta se quedaria sin nada que abrir. */}
+  {
+    closed && schedule && (
+      <>
+        <StoreClosedNotice schedule={schedule} />
+        {schedule.days.length > 0 && <ScheduleSheet schedule={schedule} />}
+      </>
+    )
+  }
+</Layout>
+
+<script>
+  import '../scripts/order-summary';
+  import '../scripts/auto-grow';
+  // Abre la hoja del horario desde la tarjeta de tienda cerrada.
+  import '../scripts/sheet';
+</script>

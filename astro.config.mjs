@@ -52,7 +52,7 @@ export default defineConfig({
       provider: fontProviders.google(),
       name: 'Inter',
       cssVariable: '--sf-font-inter',
-      // El 800 lo pide un unico label —el folio de /pedido-confirmado— y suma
+      // El 800 lo pide un unico label —el folio de /confirmado— y suma
       // dos ficheros al preload de todas las paginas. Si esa factura pesa mas
       // que el peso exacto, se quita de aqui y el folio cae al 700.
       weights: [400, 500, 600, 700, 800],
@@ -68,12 +68,12 @@ export default defineConfig({
     // vez que se pide la pagina que lo importa: reoptimiza, cambia el
     // browserHash y las URLs de deps ya servidas pasan a devolver 504. Como
     // estos imports abren la cadena de modulos de cada pagina, ese 504 se lleva
-    // por delante TODO el JS de la vista sin dejar rastro en consola: la
-    // hamburguesa deja de abrir el menu, el carrusel de categorias no arrastra
-    // y el boton de agregar no anima, hasta reiniciar el servidor de dev.
-    // Declarados, se empaquetan al arrancar y el hash ya no se mueve.
+    // por delante TODO el JS de la vista sin dejar rastro en consola: el
+    // selector de pais deja de desplegarse, el carrusel de categorias no
+    // arrastra y el boton de agregar no anima, hasta reiniciar el servidor de
+    // dev. Declarados, se empaquetan al arrancar y el hash ya no se mueve.
     optimizeDeps: {
-      include: ['bootstrap/js/dist/offcanvas.js', 'bootstrap/js/dist/dropdown.js'],
+      include: ['bootstrap/js/dist/dropdown.js'],
     },
 
     css: {

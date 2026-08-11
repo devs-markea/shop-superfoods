@@ -5,8 +5,8 @@
 // Nada de esto viaja en la URL: ver src/lib/checkout-draft.ts.
 //
 // El modo de entrega es lo primero que se decide porque manda sobre el resto del
-// flujo: a domicilio hay que decir donde entregar y se paga por adelantado; al
-// recoger no hay direccion que dar y se paga en efectivo en el local.
+// flujo: a domicilio hay que decir donde entregar y hay tres formas de pagar; al
+// recoger no hay direccion que dar y el efectivo es la unica.
 //
 // Pendiente: precargar el formulario con GET /api/customer cuando la sesion ya
 // haya cerrado un pedido ("¿enviamos a la misma direccion?").
@@ -17,6 +17,7 @@
 import 'bootstrap/js/dist/dropdown.js';
 
 import { draftGaps, listGaps, patchDraft, phoneDigits } from '../lib/checkout-draft';
+import { bindDeliverySwitch, checkedDeliveryType } from '../lib/delivery-switch';
 import type { CheckoutCustomer, DeliveryType } from '../lib/checkout';
 
 const form = document.querySelector<HTMLFormElement>('[data-delivery-form]');
@@ -67,16 +68,17 @@ if (form) {
   // Se oculta y no solo se deja opcional: un campo visible es un campo que alguien
   // va a rellenar, y una direccion de entrega en un pedido que nadie va a llevar
   // solo puede confundir a quien lo prepara.
+  //
+  // Es el mismo switch del listado y la misma eleccion: al llegar aqui ya viene
+  // marcada, y cambiarla aqui la guarda —esta pantalla es la que manda, pero
+  // volver al menu no puede ensenar un modo distinto del que se acaba de elegir—.
+  // De eso se encarga bindDeliverySwitch, que ademas repone el modo guardado
+  // cuando la pestana vuelve a la vista y cae al defecto si ya caduco.
   const addressBlock = form.querySelector<HTMLElement>('[data-address-block]');
   const addressNames = ['neighborhood', 'street', 'number'];
 
-  const deliveryType = (): DeliveryType =>
-    form.querySelector<HTMLInputElement>('[name="delivery"]:checked')?.value === 'recoger'
-      ? 'pickup'
-      : 'delivery';
-
-  const syncDeliveryMode = (): void => {
-    const home = deliveryType() === 'delivery';
+  bindDeliverySwitch(form, (type: DeliveryType) => {
+    const home = type === 'delivery';
 
     if (addressBlock) addressBlock.hidden = !home;
 
@@ -86,10 +88,7 @@ if (form) {
       const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`);
       if (field) field.required = home;
     }
-  };
-
-  form.addEventListener('change', syncDeliveryMode);
-  syncDeliveryMode();
+  });
 
   // --- Ubicacion ---
   const shareButton = form.querySelector<HTMLButtonElement>('[data-share-location]');
@@ -233,7 +232,11 @@ if (form) {
     // Al recoger solo viaja el contacto: la direccion no se pidio, y lo que quede
     // escrito en los campos ocultos es de una eleccion anterior. Lo que el
     // borrador siga recordando lo descarta toCheckoutRequest() al cerrar.
-    const home = deliveryType() === 'delivery';
+    //
+    // El modo se lee del switch, no de lo que se guardo al tocarlo: es lo que el
+    // comprador tiene delante al pulsar "Continuar".
+    const mode = checkedDeliveryType(form);
+    const home = mode === 'delivery';
 
     const customer: CheckoutCustomer = {
       name: value('name'),
@@ -251,7 +254,7 @@ if (form) {
     };
 
     const draft = patchDraft({
-      deliveryType: home ? 'delivery' : 'pickup',
+      deliveryType: mode,
       customer,
       locationLabel: home ? (locationLabel?.textContent?.trim() ?? '') : '',
     });
@@ -266,6 +269,6 @@ if (form) {
     }
 
     showError(null);
-    window.location.assign('/resumen-de-pago');
+    window.location.assign('/pago');
   });
 }

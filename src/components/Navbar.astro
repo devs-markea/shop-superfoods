@@ -1,8 +1,7 @@
 ---
-import { Image } from 'astro:assets';
-import logo from '../assets/logo-superfoods.png';
+import BrandLogo from './BrandLogo.astro';
 import Icon from './Icon.astro';
-import MenuDrawer from './MenuDrawer.astro';
+import NavbarDesktop from './NavbarDesktop.astro';
 import ScheduleSheet from './ScheduleSheet.astro';
 import LocationSheet from './LocationSheet.astro';
 import type { StoreSchedule, StoreSettings } from '../lib/store-config.ts';
@@ -10,20 +9,34 @@ import type { StoreSchedule, StoreSettings } from '../lib/store-config.ts';
 interface Props {
   store: StoreSettings;
   schedule: StoreSchedule | null;
+  /** Total del carrito de la sesion. Solo lo pinta la barra de desktop. */
+  cartTotal?: number;
+  /** Unidades en el carrito. Idem: la etiqueta sobre el icono es de desktop. */
+  cartCount?: number;
 }
 
-const { store, schedule } = Astro.props;
+const { store, schedule, cartTotal = 0, cartCount = 0 } = Astro.props;
 
-// 5 elementos: hamburguesa (izq) - logo (centro) - 3 iconos (der).
-// La hamburguesa abre el offcanvas de Bootstrap via data API, sin JS propio.
+// La cabecera del listado son DOS barras, no una barra que se adapta: en movil
+// manda .navbar —logo y iconos— y de md hacia arriba la releva .navbar-desktop,
+// con rotulos de seccion, las metas de la tienda y el carrito. Los elementos no
+// coinciden en casi nada, asi que cada una es su propio bloque y el breakpoint
+// decide cual se ve (ver components/_navbar.scss).
 //
-// Los iconos de la derecha existen solo si tienen algo que ensenar: un icono que
-// abre una hoja vacia es peor que un icono que no esta. Quien decide es el dato,
-// no la pantalla.
+// Barra de movil: logo (izq) - iconos (der). El logo abre a la izquierda, a la
+// misma sangria que el switch de la barra de abajo: ya no hay hamburguesa que lo
+// empuje al centro.
+//
+// Los iconos existen solo si tienen algo que ensenar: un icono que abre una hoja
+// vacia es peor que un icono que no esta. Quien decide es el dato, no la
+// pantalla.
 const address = store.location?.address;
 const mapsUrl = store.location?.mapsUrl;
 
-// Ubicacion: basta con uno de los dos. Con direccion se lee, con enlace se abre.
+// Ubicacion: basta con uno de los dos para que la hoja exista. Con direccion se
+// lee, con enlace se abre. La abreviada no cuenta aqui —no es contenido de la
+// hoja, que muestra la completa— y por eso una tienda que solo la tenga rotula el
+// pin de desktop sin ofrecer nada que abrir.
 const hasLocation = Boolean(address || mapsUrl);
 
 // Horario: hace falta algo que ensenar. Sin horario predeterminado —o con uno sin
@@ -34,31 +47,11 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 
 <header class="navbar">
   <div class="navbar__inner">
-    <div class="navbar__side navbar__side--start">
-      <button
-        class="navbar__action btn-plain"
-        type="button"
-        aria-label="Abrir menu"
-        data-bs-toggle="offcanvas"
-        data-bs-target="#menuDrawer"
-        aria-controls="menuDrawer"
-      >
-        <Icon name="menu" class="navbar__icon" />
-      </button>
-    </div>
-
     <a class="navbar__brand" href="/">
-      <Image
-        class="navbar__logo"
-        src={logo}
-        width={120}
-        height={24}
-        alt="Superfoods"
-        loading="eager"
-      />
+      <BrandLogo class="navbar__logo" />
     </a>
 
-    <div class="navbar__side navbar__side--end">
+    <div class="navbar__actions">
       {
         hasSchedule && (
           <button
@@ -87,15 +80,26 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
         )
       }
 
-      {/* Pendiente: compartir necesita el dominio real (`publicUrl`). */}
-      <button class="navbar__action btn-plain" type="button" aria-label="Compartir tienda">
-        <Icon name="share" class="navbar__icon" />
-      </button>
+      {/* Compartir no se pinta: sigue pendiente del dominio real (`publicUrl`),
+          y un icono que no comparte nada no gana su sitio en una barra de 48. */}
     </div>
   </div>
 </header>
 
-<MenuDrawer />
+{/* Las dos condiciones viajan a la barra de desktop porque alli deciden lo mismo
+    que aqui: si el rotulo abre una hoja o se queda en texto. Las calcula esta
+    cabecera, que es tambien quien monta las hojas: si las dedujera cada barra por
+    su cuenta, una podria ofrecer un boton para una hoja que la otra no montó. */}
+<NavbarDesktop
+  shortAddress={store.location?.shortAddress}
+  estimate={store.delivery?.estimate}
+  hasLocation={hasLocation}
+  hasSchedule={hasSchedule}
+  cartTotal={cartTotal}
+  cartCount={cartCount}
+/>
 
+{/* Las dos hojas las monta esta cabecera para las dos barras y para la barra de
+    pedido, que abre la ubicacion desde su "Ver mapa". */}
 {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
 {hasLocation && <LocationSheet address={address} mapsUrl={mapsUrl} />}

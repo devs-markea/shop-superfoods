@@ -4,7 +4,6 @@ import BackHeader from '../components/BackHeader.astro';
 import OrderStatus from '../components/OrderStatus.astro';
 import Steps from '../components/Steps.astro';
 import ClabeCard from '../components/ClabeCard.astro';
-import PickupLocation from '../components/PickupLocation.astro';
 import ActionBar from '../components/ActionBar.astro';
 import { getOrder } from '../lib/orders.ts';
 import { resolveCartToken } from '../lib/cart-session.ts';
@@ -24,13 +23,19 @@ const phone = store.whatsapp?.phone ?? '';
 // El pedido esta hecho y esperando el cobro, pero el cobro no se parece:
 //
 //   transferencia  el dinero ya salio y hay que mandar el comprobante
-//   efectivo       el dinero se entrega en el local, al recoger
+//   efectivo       el dinero se entrega en mano: al repartidor o en el local
 //
 // Asi que el metodo decide la pantalla entera —pasos, tarjeta y aviso—, y sale del
 // puntero, que es lo unico que queda del cierre. Sin puntero se rotula el flujo de
 // transferencia, que es el que trae aqui a quien vuelve por el historial.
 const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
 const cash = pointer?.method === 'efectivo';
+
+// En efectivo, el modo de entrega parte otra vez la copia: al recoger hay que ir al
+// local, a domicilio solo hay que esperar con el dinero preparado. Sin el dato manda
+// recoger: es de un puntero anterior a que el efectivo saliera a domicilio, cuando
+// era lo unico que habia.
+const cashPickup = cash && pointer?.deliveryType !== 'delivery';
 
 // El pedido solo se lee si hay a quien escribir: sin telefono configurado el boton
 // no navega, y entonces no hay nada que rellenar.
@@ -65,25 +70,32 @@ if (phone && pointer) {
   }
 }
 
-// La copia de los dos cierres, junta: se lee de un tiron en que se diferencian.
+// La copia de los tres cierres, junta: se lee de un tiron en que se diferencian.
 //
-// Al recoger no hay pasos que dar: el pedido ya esta hecho y lo que queda —esperar
-// el aviso, pasar por el local, pagar alli— cabe en el aviso del sello y en el de la
-// barra. Una tarjeta numerada para eso convertiria en tramite lo que no lo es. La
-// transferencia si los lleva, porque ahi el comprador tiene trabajo pendiente: pagar
-// y mandar el comprobante, en ese orden.
+// En efectivo no hay pasos que dar, ni al recoger ni a domicilio: el pedido ya esta
+// hecho y lo que queda —esperar el aviso y pagar al recibirlo— cabe en el aviso del
+// sello y en el de la barra. Una tarjeta numerada para eso convertiria en tramite lo
+// que no lo es. La transferencia si los lleva, porque ahi el comprador tiene trabajo
+// pendiente: pagar y mandar el comprobante, en ese orden.
 const copy: {
   description: string;
   note: string;
   steps: string[] | null;
   barNote: string;
 } = cash
-  ? {
-      description: 'Recoge tu pedido en el local y pagalo en efectivo.',
-      note: 'Te avisaremos por WhatsApp cuando tu pedido este listo para recoger.',
-      steps: null,
-      barNote: 'Pagaras en efectivo al recoger tu pedido',
-    }
+  ? cashPickup
+    ? {
+        description: 'Recoge tu pedido en el local y pagalo en efectivo.',
+        note: 'Te avisaremos por WhatsApp cuando tu pedido este listo para recoger.',
+        steps: null,
+        barNote: 'Pagaras en efectivo al recoger tu pedido',
+      }
+    : {
+        description: 'Paga en efectivo al recibir tu pedido.',
+        note: 'Te avisaremos por WhatsApp cuando tu pedido vaya en camino.',
+        steps: null,
+        barNote: 'Pagaras en efectivo al recibir tu pedido',
+      }
   : {
       description: 'Envia tu comprobante de transferencia para confirmar el pedido.',
       note: 'Envia tu comprobante por WhatsApp para que podamos confirmar tu pedido.',
@@ -108,8 +120,8 @@ const copy: {
   <main class="d-flex flex-column flex-grow-1">
     <div class="screen-body screen-body--confirmation">
       {/*
-        El sello es el mismo en los dos: el pedido esta recibido, no cobrado. Con
-        transferencia falta el comprobante y con efectivo falta recogerlo.
+        El sello es el mismo en los tres: el pedido esta recibido, no cobrado. Con
+        transferencia falta el comprobante y con efectivo falta entregar el dinero.
       */}
       <OrderStatus state="pending" title="Pedido recibido" note={copy.note} />
 
@@ -117,19 +129,15 @@ const copy: {
 
       {/*
         El dato que hace falta para completar el pago, sin volver atras: la cuenta
-        de destino en la transferencia, el local en el efectivo.
+        de destino de la transferencia. Sin CLABE configurada no hay nada que copiar
+        y la tarjeta no se pinta.
 
-        Sin CLABE configurada no hay nada que copiar y la tarjeta no se pinta. La de
-        recoger si se pinta siempre: aunque falte la direccion, el pedido se recoge
-        igual y la tienda dira donde.
+        En efectivo no se pinta ninguna tarjeta, tampoco al recoger: el dinero se
+        entrega en mano y no queda ningun dato que consultar aqui.
       */}
       {
-        cash ? (
-          <PickupLocation address={store.location?.address} mapsUrl={store.location?.mapsUrl} />
-        ) : (
-          store.bankTransfer?.clabe && (
-            <ClabeCard bank={store.bankTransfer.bank} clabe={store.bankTransfer.clabe} />
-          )
+        !cash && store.bankTransfer?.clabe && (
+          <ClabeCard bank={store.bankTransfer.bank} clabe={store.bankTransfer.clabe} />
         )
       }
     </div>

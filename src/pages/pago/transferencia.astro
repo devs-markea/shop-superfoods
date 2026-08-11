@@ -1,15 +1,15 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import ScreenHeader from '../components/ScreenHeader.astro';
-import Icon from '../components/Icon.astro';
-import BankAccount from '../components/BankAccount.astro';
-import OrderDetail from '../components/OrderDetail.astro';
-import ActionBar from '../components/ActionBar.astro';
-import { getCart } from '../lib/cart.ts';
-import { resolveCartToken } from '../lib/cart-session.ts';
-import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
-import { getStoreConfig } from '../lib/store-config.ts';
-import type { OrderLine } from '../lib/checkout.ts';
+import Layout from '../../layouts/Layout.astro';
+import ScreenHeader from '../../components/ScreenHeader.astro';
+import Icon from '../../components/Icon.astro';
+import BankAccount from '../../components/BankAccount.astro';
+import OrderDetail from '../../components/OrderDetail.astro';
+import ActionBar from '../../components/ActionBar.astro';
+import { getCart } from '../../lib/cart.ts';
+import { resolveCartToken } from '../../lib/cart-session.ts';
+import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
+import { getStoreConfig } from '../../lib/store-config.ts';
+import type { OrderLine } from '../../lib/checkout.ts';
 
 // El carrito de la sesion manda sobre cualquier valor de ejemplo.
 export const prerender = false;
@@ -18,11 +18,17 @@ export const prerender = false;
 // el carrito, que sigue en pie.
 let items: OrderLine[] = [];
 let products = 0;
+// Antes de descontar, y lo que descuentan las promociones. Con ellos el
+// comprador puede cuadrar la resta en lugar de fiarse del importe final.
+let subtotal = 0;
+let discount = 0;
 
 try {
   const cart = await getCart(resolveCartToken(Astro.cookies));
   items = cart.items;
   products = cart.total;
+  subtotal = cart.subtotal;
+  discount = cart.discountTotal;
 } catch (error) {
   console.error('[transferencia] fallo GET /api/cart', error);
 }
@@ -42,7 +48,7 @@ const { bankTransfer } = await getStoreConfig();
   title="Pago por transferencia — Shop Superfoods"
   description="Datos bancarios para completar tu pedido."
 >
-  <ScreenHeader title="Pago por transferencia" backHref="/resumen-de-pago" />
+  <ScreenHeader title="Pago por transferencia" backHref="/pago" />
 
   <!-- La cadena flex (page > main > form) deja la barra de accion al fondo de
        la pantalla aunque el contenido no llegue a llenarla. -->
@@ -57,7 +63,7 @@ const { bankTransfer } = await getStoreConfig();
       method="post"
       data-confirm-form
       data-method="bank_transfer"
-      data-next="/pedido-recibido"
+      data-next="/recibido"
     >
       <div class="screen-body">
         <BankAccount
@@ -74,7 +80,13 @@ const { bankTransfer } = await getStoreConfig();
           </p>
         </div>
 
-        <OrderDetail items={items} total={total} />
+        <OrderDetail
+          items={items}
+          total={total}
+          subtotal={subtotal}
+          discount={discount}
+          tip={tip}
+        />
 
         {/* Lo rellena el script si el checkout rechaza el pedido. */}
         <p class="form-error" role="alert" hidden data-checkout-error></p>
@@ -86,6 +98,6 @@ const { bankTransfer } = await getStoreConfig();
 </Layout>
 
 <script>
-  import '../scripts/copy-button';
-  import '../scripts/confirm-order';
+  import '../../scripts/copy-button';
+  import '../../scripts/confirm-order';
 </script>

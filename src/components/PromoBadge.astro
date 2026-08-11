@@ -1,0 +1,25 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  /** "15%" · "$50" · "2x1". La compone el backend, no la tienda. */
+  label: string;
+  /**
+   * Nombre de la promocion. No se pinta: va al title para quien se pare encima,
+   * porque la insignia tiene que caber en la esquina de una foto de 80.
+   */
+  name?: string;
+  class?: string;
+}
+
+const { label, name, class: className } = Astro.props;
+
+// La referencia del panel es una etiqueta dorada con el icono de precio. Se
+// conserva el icono —es lo que dice "esto es una oferta" sin leer— y se cambia
+// el texto: alli rotula "Descuento activo", aqui el label ya dice cuanto.
+---
+
+<span class:list={['promo-badge', className]} title={name}>
+  <Icon name="tag" size="sm" />
+  <span class="promo-badge__label">{label}</span>
+</span>

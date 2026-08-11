@@ -20,7 +20,7 @@ $sf-gold: #d5aa53;
 $sf-gold-hover: #c49a45;
 $sf-gold-tint: rgba(213, 170, 83, 0.1);
 // Filo dorado, mas presente que el tinte: la franja de 4 que marca la tarjeta de
-// pasos en /pedido-recibido. Se deriva de $sf-gold para no repetir el hex.
+// pasos en /recibido. Se deriva de $sf-gold para no repetir el hex.
 $sf-gold-edge: rgba($sf-gold, 0.25);
 $sf-gradient-hero: linear-gradient(180deg, #f5a623 0%, #d5aa53 100%);
 
@@ -32,14 +32,23 @@ $sf-indigo: #4f46e5;
 $sf-whatsapp: #25d366;
 $sf-whatsapp-hover: #1fb855;
 
-// Verde de confirmacion (sello de /pedido-confirmado). No es el de WhatsApp:
+// Verde de confirmacion (sello de /confirmado). No es el de WhatsApp:
 // aquel identifica un canal, este dice que algo salio bien.
 $sf-success: #3aa678;
+
+// Fondo de la etiqueta de ahorro. El verde de las promociones es senaletica
+// —"esto te cuesta menos"— y por eso se conserva del panel, a diferencia del
+// dorado del precio final, que si es tipografia de cada tienda.
+$sf-success-tint: rgba($sf-success, 0.12);
 
 // --- Color: neutros ---
 $sf-ink: #141821;
 $sf-ink-soft: #616673;
 $sf-muted: #6c757d;
+// Gris de la barra de desktop: los rotulos de seccion apagados y las metas de la
+// tienda. Viene asi del diseno y no se apoya en $sf-muted ni en $sf-ink-soft: es
+// mas frio y mas oscuro que los dos, y esa barra es la unica que lo usa.
+$sf-slate: #4a5568;
 $sf-border: #eaecf0;
 $sf-white: #ffffff;
 $sf-body-bg: #f8f9fb;
@@ -53,6 +62,11 @@ $sf-space-4: 16px;
 $sf-space-5: 20px;
 $sf-space-6: 24px;
 $sf-space-8: 32px;
+// Solo desktop: el aire de la portada —lo que abre <main> arriba y abajo, y el
+// relleno del panel de bienvenida—. No entra en $spacers: no hay ninguna
+// utilidad p-12 que pintar, y generarla para dos usos engorda el CSS de todas
+// las pantallas.
+$sf-space-12: 48px;
 
 // --- Radios ---
 $sf-radius-sm: 8px;
@@ -72,9 +86,13 @@ $sf-shadow-card-hover: 0 4px 12px 0 rgba(0, 0, 0, 0.08);
 $sf-gutter-x: $sf-space-5;
 $sf-gutter-x-desktop: $sf-space-8;
 $sf-container-max: 1140px;
+// Solo la barra de movil: la de desktop no declara alto, lo da su padding.
 $sf-navbar-height: 48px;
-$sf-navbar-height-desktop: 64px;
 $sf-switch-width: 350px;
+// Alto minimo de la barra de accion: 20 + 44 (boton) + 20. Es un token y no un
+// numero suelto porque el aviso flotante de tienda cerrada se apoya encima, y
+// los dos valores tienen que moverse juntos.
+$sf-action-bar-height: 84px;
 
 // --- Motion ---
 $sf-transition: 160ms ease;
@@ -208,10 +226,6 @@ $navbar-padding-x: 0;
 $navbar-light-color: $sf-muted;
 $navbar-light-hover-color: $sf-ink;
 $navbar-light-active-color: $sf-ink;
-$navbar-toggler-focus-width: 0;
-$navbar-toggler-padding-y: 0;
-$navbar-toggler-padding-x: 0;
-$navbar-toggler-border-radius: $sf-radius-sm;
 
 // --- Badge: base del bloque .tag (alto 24, pill, Inter 600 12/16) ---
 $badge-font-size: $font-size-sm;
@@ -256,10 +270,3 @@ $dropdown-item-padding-x: $sf-space-3;
 $dropdown-link-hover-bg: $sf-body-bg;
 $dropdown-link-active-color: $sf-ink;
 $dropdown-link-active-bg: $sf-gold-tint;
-
-// --- Offcanvas: cajon del menu ---
-$offcanvas-horizontal-width: 280px;
-$offcanvas-bg-color: $sf-white;
-$offcanvas-border-width: 0;
-$offcanvas-padding-y: $sf-space-4;
-$offcanvas-padding-x: $sf-gutter-x;

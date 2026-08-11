@@ -52,6 +52,12 @@ function choiceLabel(label: string, price: number): string {
   return price > 0 ? `${label} + ${formatPrice(price)}` : label;
 }
 
+// El precio que CUENTA para el total: el descontado cuando la promocion alcanza
+// a esa variante. El de lista se sigue pintando, tachado a su izquierda. En las
+// personalizaciones finalPrice es siempre null, asi que esto no las toca.
+const effectivePrice = (choice: { price: number; finalPrice: number | null }) =>
+  choice.finalPrice ?? choice.price;
+
 // El tag del encabezado ya dice "Opcional": no se repite debajo.
 const hint = ruleLabel(rule);
 const showHint = hint !== OPTIONAL_LABEL;
@@ -97,7 +103,7 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
               class="option option--quantity"
               data-choice
               data-option-id={choice.id}
-              data-price={choice.price}
+              data-price={effectivePrice(choice)}
             >
               <span class="option__label">{choiceLabel(choice.label, choice.price)}</span>
 
@@ -128,9 +134,22 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
                   disabled={inert}
                   data-choice
                   data-option-id={choice.id}
-                  data-price={choice.price}
+                  data-price={effectivePrice(choice)}
                 />
-                <span class="option__label">{choiceLabel(choice.label, choice.price)}</span>
+
+                {/* La variante con descuento parte la etiqueta en tres: nombre,
+                    precio de lista tachado y precio final. El resto —incluidas
+                    las variantes que la promocion no alcanza— sigue siendo una
+                    sola cadena. */}
+                {choice.finalPrice === null ? (
+                  <span class="option__label">{choiceLabel(choice.label, choice.price)}</span>
+                ) : (
+                  <span class="option__label">
+                    {`${choice.label || VARIANT_FALLBACK_LABEL} — `}
+                    <s class="price-was">{formatPrice(choice.price)}</s>{' '}
+                    <span class="option__price-final">{formatPrice(choice.finalPrice)}</span>
+                  </span>
+                )}
               </label>
             );
           })

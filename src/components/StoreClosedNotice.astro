@@ -1,27 +1,71 @@
 ---
 import Icon from './Icon.astro';
+import { nextOpeningDay, type StoreSchedule } from '../lib/schedule.ts';
 
 interface Props {
-  /** Estado ya redactado: "Cerrado · Abre manana a las 09:00". */
-  label: string;
+  schedule: StoreSchedule;
 }
 
-const { label } = Astro.props;
+const { schedule } = Astro.props;
 
-// Aviso de que la tienda esta cerrada, en la portada.
+// Aviso de tienda cerrada: la tarjeta que explica por que no se puede pedir.
 //
-// Lo pinta la pagina solo cuando el horario dice `isOpen: false`. Con `null` —no
-// hay horario, o lo hay sin turnos— no aparece: anunciar "cerrado" por un descuido
-// del panel espanta compradores en plena hora de venta.
+// Lo pinta la pantalla que lo necesita —la portada y el pedido—, nunca el layout:
+// del pedido en adelante el flujo ya no se puede continuar, asi que repetir el
+// aviso alli seria decir dos veces lo mismo en pantallas donde ya no hay nada que
+// decidir. Quien lo pinte comprueba `isClosed(schedule)` antes.
 //
-// Reusa .info-note, la caja de aviso del proyecto, con el reloj en lugar del icono
-// de informacion: es el mismo icono que abre el horario en la cabecera, asi que
-// quien quiera el detalle sabe donde mirar.
+// Flota sobre el contenido y no ocupa hueco en el flujo: aparecer no recoloca la
+// pantalla que hay debajo. La posicion la resuelve el bloque, en
+// src/styles/components/_store-closed.scss.
+//
+// Tres frases y una salida, en este orden:
+//
+//   1. cuando se vuelve            (negro, es el dato que se busca)
+//   2. que se puede hacer mientras (gris, es la consecuencia)
+//   3. que dia abre                (negro, desambigua el "a las 09:00" de arriba)
+//   4. el horario completo         (boton, abre la hoja del reloj)
+//
+// El boton abre la MISMA hoja que el reloj de la cabecera (`sheet-schedule`), asi
+// que el horario completo se lee en un solo sitio. Quien monte esta tarjeta se
+// asegura de que esa hoja este en la pagina: en la portada la pone la cabecera, y
+// en el pedido, que no la tiene, la monta la propia pantalla.
+const openingTime = schedule.opensAt?.time ?? null;
+const openingDay = nextOpeningDay(schedule);
+
+// Sin proxima apertura —cerrada sin ningun turno por delante— no se promete una
+// hora que no existe: queda el que y el mientras tanto, sin el cuando.
+const title = openingTime ? `Regresamos a las ${openingTime}` : 'Estamos cerrados';
+const opening = openingTime && openingDay ? `Abrimos ${openingDay} a las ${openingTime}` : null;
+
+// Sin dias que ensenar, la hoja del horario abriria en blanco: mejor sin boton.
+const hasSchedule = schedule.days.length > 0;
 ---
 
-<div class="store-closed">
-  <div class="store-closed__inner info-note" role="status">
-    <Icon name="clock" size="sm" />
-    <p class="info-note__text">{label}</p>
+<aside class="store-closed" aria-label="Tienda cerrada">
+  <div class="store-closed__card" role="status">
+    <p class="store-closed__title">
+      <Icon name="clock" size="sm" />
+      <span>{title}</span>
+    </p>
+
+    <p class="store-closed__text">
+      Los pedidos estan deshabilitados. Solo podras ver el menu.
+    </p>
+
+    {opening && <p class="store-closed__opening">{opening}</p>}
+
+    {
+      hasSchedule && (
+        <button
+          class="store-closed__action btn-plain"
+          type="button"
+          aria-haspopup="dialog"
+          data-sheet="sheet-schedule"
+        >
+          Ver horarios
+        </button>
+      )
+    }
   </div>
-</div>
+</aside>

@@ -10,9 +10,11 @@ interface Props {
 
 const { address, mapsUrl } = Astro.props;
 
-// Donde recoger el pedido: la contraparte de <BankAccount> en el flujo de efectivo.
-// Ocupa el mismo sitio de la pantalla y se lee igual —etiqueta y dato—, pero aqui
-// no hay nada que copiar y pegar: se abre el mapa.
+// Donde recoger el pedido. Se lee como una fila de <BankAccount> —etiqueta y
+// dato—, pero aqui no hay nada que copiar y pegar: se abre el mapa.
+//
+// Hoy no lo pinta ninguna pantalla: el flujo de efectivo dejo de mostrar la
+// direccion del local, ni al pagar ni en el acuse. Se conserva por si vuelve.
 //
 // Los dos datos llegan de GET /api/store y sirven por separado, como en la hoja de
 // la barra superior: de un enlace de Maps no sale una direccion legible

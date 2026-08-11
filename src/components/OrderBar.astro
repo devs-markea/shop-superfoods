@@ -2,22 +2,39 @@
 import DeliverySwitch from './DeliverySwitch.astro';
 import OrderMeta from './OrderMeta.astro';
 import CategoryNav from './CategoryNav.astro';
+import type { DeliveryType } from '../lib/checkout.ts';
 
 interface Props {
   categories: readonly string[];
-  /** Estimado de entrega configurado. */
+  /** Estimado a domicilio configurado. */
   estimate?: string;
   /** Rotulo de envio ya resuelto por la pagina. */
   shipping?: string;
+  /** Estimado para recoger configurado. */
+  pickup?: string;
+  /** Si hay ubicacion que ensenar: decide el boton "Ver mapa". */
+  hasLocation?: boolean;
+  /**
+   * Modo de entrega ya elegido, que la pagina saca del borrador. Decide la marca
+   * del switch y, con ella, cual de los dos pares de metas se lee: el relevo lo
+   * hace CSS leyendo el radio marcado (ver components/_order-meta.scss), asi que
+   * la barra llega correcta sin esperar a ningun JavaScript.
+   */
+  selected?: DeliveryType;
 }
 
-const { categories, estimate, shipping } = Astro.props;
+const { categories, estimate, shipping, pickup, hasLocation, selected } = Astro.props;
 ---
 
 <section class="order-bar" aria-label="Opciones de entrega">
   <div class="order-bar__inner">
-    <DeliverySwitch />
-    <OrderMeta time={estimate} shipping={shipping} />
+    <DeliverySwitch selected={selected} />
+    <OrderMeta
+      estimate={estimate}
+      shipping={shipping}
+      pickup={pickup}
+      hasLocation={hasLocation}
+    />
     <CategoryNav categories={categories} />
   </div>
 </section>

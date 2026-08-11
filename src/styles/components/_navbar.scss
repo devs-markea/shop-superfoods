@@ -1,11 +1,14 @@
 // ---------------------------------------------------------------------------
 // Block: navbar  (sobre .navbar de Bootstrap)
 // ---------------------------------------------------------------------------
-// 5 elementos: hamburguesa (izq) - logo (centro) - 3 iconos (der)
+// La barra de MOVIL. 2 zonas: logo (izq) - iconos (der)
 // Spec mobile: height 48 - padding 12/20 - space-between
 //
-// Se usa .navbar de Bootstrap por el sticky y el fondo; el reparto en tres
-// zonas es propio, porque Bootstrap no tiene un patron de logo centrado.
+// Se usa .navbar de Bootstrap por el sticky y el fondo; el reparto es propio.
+//
+// De md hacia arriba esta barra desaparece y la releva .navbar-desktop, que no
+// es una variante de esta sino otro bloque: otros elementos y otro reparto. Ver
+// components/_navbar-desktop.scss.
 // ---------------------------------------------------------------------------
 
 .navbar {
@@ -28,22 +31,10 @@
   margin-inline: auto;
 }
 
-// Element: navbar__side
-// Los dos laterales ocupan el mismo ancho para que el logo quede opticamente
-// centrado aunque haya 1 icono a un lado y 3 al otro.
-.navbar__side {
+// Element: navbar__actions — los iconos de la derecha
+.navbar__actions {
   display: flex;
-  flex: 1 1 0;
   align-items: center;
-  min-width: 0;
-}
-
-.navbar__side--start {
-  justify-content: flex-start;
-}
-
-.navbar__side--end {
-  justify-content: flex-end;
   gap: var(--sf-space-4);
 }
 
@@ -89,20 +80,17 @@
   }
 }
 
-// Element: navbar__logo — 120x24
+// Element: navbar__logo — 24 de alto, el ancho lo da la proporcion del archivo
 .navbar__logo {
   width: auto;
   height: 24px;
 }
 
 // --- Desktop -------------------------------------------------------------
+// Releva .navbar-desktop. Se apaga con display y no con una utilidad en el
+// marcado para que el bloque siga decidiendo donde vive.
 @include media-breakpoint-up(md) {
   .navbar {
-    padding: var(--sf-space-5) var(--sf-gutter-x);
-    border-bottom: 1px solid var(--sf-border);
-  }
-
-  .navbar__side--end {
-    gap: var(--sf-space-5);
+    display: none;
   }
 }

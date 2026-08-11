@@ -2,11 +2,11 @@
 // Block: screen-body
 // ---------------------------------------------------------------------------
 // Columna de contenido de una pantalla, debajo de su barra superior.
-// Spec (identica en /mi-pedido y /datos-de-entrega): gap 24 - padding 20
+// Spec (identica en /carrito y /datos): gap 24 - padding 20
 //
 // El 390 de las specs es el ancho del artboard movil, no una restriccion: el
 // bloque ocupa el ancho disponible y se limita a 390 solo para que en desktop
-// la columna no se estire. Los altos fijos (568 en /mi-pedido) se omiten a
+// la columna no se estire. Los altos fijos (568 en /carrito) se omiten a
 // proposito: el contenido crece.
 // ---------------------------------------------------------------------------
 

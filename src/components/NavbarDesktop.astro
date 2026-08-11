@@ -1,0 +1,200 @@
+---
+import Icon, { type IconName } from './Icon.astro';
+import BrandLogo from './BrandLogo.astro';
+import { formatPrice } from '../lib/price.ts';
+
+interface Props {
+  /**
+   * La direccion ABREVIADA. Es la que cabe en una barra, y la unica que se rotula
+   * aqui: la completa es del modal. Sin ella el pin rotula la accion, no el dato.
+   */
+  shortAddress?: string;
+  /** Plazo a domicilio configurado. Sin el, no se promete un tiempo. */
+  estimate?: string;
+  /** Si la cabecera monto la hoja de ubicacion. Sin ella no hay nada que abrir. */
+  hasLocation?: boolean;
+  /** Si la cabecera monto la hoja del horario. Idem. */
+  hasSchedule?: boolean;
+  /** Total del carrito de la sesion. */
+  cartTotal: number;
+  /** Unidades en el carrito. En 0 el chip va sin etiqueta. */
+  cartCount: number;
+}
+
+const { shortAddress, estimate, hasLocation, hasSchedule, cartTotal, cartCount } =
+  Astro.props;
+
+// Barra de desktop. Tres elementos: logo - secciones - tienda y carrito.
+//
+// No es una variante de .navbar: son otros elementos, otro reparto y otro alto,
+// asi que es otro bloque. La monta <Navbar>, que es quien decide cual de las dos
+// se ve segun el breakpoint.
+//
+// LOS ROTULOS DE SECCION SON DE MOMENTO SOLO VISUALES
+// "Menu" es la portada y "Mi pedido" el resto de las pantallas, pero la parte
+// logica esta pendiente: hoy la barra solo la monta la portada, asi que el activo
+// va fijo en "Menu". Por eso son <span> y no enlaces —un rotulo que no navega y
+// no marca donde estas no es un enlace todavia— y por eso el grupo no es un
+// <nav>: un landmark de navegacion sin nada que navegar solo estorba a quien
+// llega con lector de pantalla.
+const sections = [
+  { label: 'Menu', active: true },
+  { label: 'Mi pedido', active: false },
+];
+
+// Las metas de la tienda: pin y reloj, cada uno con su rotulo.
+//
+// Abren las MISMAS hojas que los iconos de la barra de movil —las monta <Navbar>
+// una sola vez para las dos—, asi que aqui no hay JavaScript nuevo: basta el
+// `data-sheet` que ya escucha src/scripts/sheet.ts.
+//
+// Con hoja el rotulo es un boton; sin hoja se queda en texto, porque un boton que
+// no abre nada es peor que un dato quieto. Los dos casos existen: se puede tener
+// plazo de envio configurado y ningun turno de horario.
+//
+// El plazo no depende del switch de la barra de abajo: se lee directo de la
+// configuracion. En movil los dos plazos se turnan —domicilio y recoger— porque
+// comparten sitio con el switch que los elige; esta barra no tiene switch, asi
+// que afirma uno solo y es el de domicilio.
+interface Meta {
+  icon: IconName;
+  /** Lo que se lee. */
+  label: string;
+  /** La hoja que abre. `null` deja el rotulo en texto. */
+  sheet: string | null;
+  /** Que es. Va en el nombre accesible del boton, detras del rotulo. */
+  name: string;
+  /** Cinturon: la abreviada admite hasta 60 caracteres y la barra no da tantos. */
+  truncate: boolean;
+}
+
+const metas: Meta[] = [];
+
+// El pin rotula la direccion ABREVIADA y nunca la completa. No es que no quepa:
+// es que no es la misma cosa. Recortar la larga por caracteres deja fuera justo lo
+// que ubica el local —la colonia, la referencia— y lo que sobrevive no dice a
+// donde ir; cual es el trozo que identifica la tienda lo decide el negocio, y por
+// eso viaja aparte. Sin abreviada no hay direccion en la barra: se rotula la
+// accion —el mismo "Ver mapa" de las metas de la barra de pedido— y no un recorte
+// de la otra.
+//
+// Los dos datos son independientes, asi que se dan las cuatro combinaciones y cada
+// una tiene su forma:
+//
+//   abreviada + hoja   boton con la direccion
+//   solo abreviada     texto con la direccion: no hay hoja que abrir
+//   solo hoja          boton "Ver mapa"
+//   ninguna            no se pinta pin
+if (shortAddress || hasLocation) {
+  metas.push({
+    icon: 'map-pin',
+    label: shortAddress || 'Ver mapa',
+    sheet: hasLocation ? 'sheet-location' : null,
+    name: 'Ubicacion de la tienda',
+    truncate: true,
+  });
+}
+
+// El reloj se pinta si hay algo que decir —el plazo— o algo que abrir —el
+// horario—. Sin plazo pero con turnos, rotula el horario, que es lo que abre.
+if (estimate || hasSchedule) {
+  metas.push({
+    icon: 'clock',
+    label: estimate || 'Horario',
+    sheet: hasSchedule ? 'sheet-schedule' : null,
+    name: 'Horario de la tienda',
+    truncate: false,
+  });
+}
+
+// El chip es la unica via al pedido que queda en la portada de desktop, asi que
+// enlaza. El importe y las unidades vienen del carrito de la sesion, que pide la
+// pagina: sin sesion abierta llegan en cero y la etiqueta no se pinta.
+const cartLabel =
+  cartCount > 0
+    ? `Mi pedido: ${cartCount} ${cartCount === 1 ? 'articulo' : 'articulos'}, ${formatPrice(cartTotal)}`
+    : 'Mi pedido, vacio';
+---
+
+<header class="navbar-desktop">
+  <div class="navbar-desktop__inner">
+    <a class="navbar-desktop__brand" href="/">
+      <BrandLogo class="navbar-desktop__logo" />
+    </a>
+
+    <div class="navbar-desktop__sections">
+      {
+        sections.map((section) => (
+          <span
+            class:list={[
+              'navbar-desktop__section',
+              section.active && 'navbar-desktop__section--active',
+            ]}
+          >
+            {section.label}
+          </span>
+        ))
+      }
+    </div>
+
+    <div class="navbar-desktop__store">
+      {
+        metas.map((meta) => {
+          // Boton cuando hay hoja, texto cuando no: es la misma pieza con dos
+          // envoltorios, asi que se elige la etiqueta y el contenido se escribe
+          // una vez.
+          const Wrapper = meta.sheet ? 'button' : 'span';
+
+          // El nombre accesible lleva el rotulo DELANTE, no en su lugar: quien
+          // navega por voz pide el boton por lo que ve ("25-35 min"), y lo que
+          // hace al pulsarlo no se lee en el rotulo.
+          const opener = meta.sheet
+            ? {
+                type: 'button' as const,
+                'aria-label': `${meta.label}. ${meta.name}`,
+                'aria-haspopup': 'dialog' as const,
+                'data-sheet': meta.sheet,
+              }
+            : {};
+
+          return (
+            <Wrapper
+              class:list={['navbar-desktop__meta', meta.sheet && 'btn-plain']}
+              {...opener}
+            >
+              <Icon name={meta.icon} />
+
+              <span
+                class:list={[
+                  'navbar-desktop__meta-value',
+                  meta.truncate && 'navbar-desktop__meta-value--truncate',
+                ]}
+                title={meta.truncate ? meta.label : undefined}
+              >
+                {meta.label}
+              </span>
+            </Wrapper>
+          );
+        })
+      }
+
+      <a class="navbar-desktop__cart" href="/carrito" aria-label={cartLabel}>
+        <span class="navbar-desktop__cart-total">{formatPrice(cartTotal)}</span>
+
+        {/* Contexto de posicion del tamano exacto del icono: la etiqueta se
+            cuelga de su esquina, no del chip. */}
+        <span class="navbar-desktop__cart-icon">
+          <Icon name="shopping-cart" class="navbar-desktop__cart-glyph" />
+
+          {
+            cartCount > 0 && (
+              <span class="navbar-desktop__cart-count" aria-hidden="true">
+                {cartCount}
+              </span>
+            )
+          }
+        </span>
+      </a>
+    </div>
+  </div>
+</header>

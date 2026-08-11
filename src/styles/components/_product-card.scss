@@ -51,12 +51,38 @@
   min-height: 96px;
 }
 
+// Element: title — nombre y, al final, la insignia de la promocion. En fila:
+// el nombre llega ya recortado a 24 caracteres desde el componente, asi que
+// nunca empuja la insignia a una segunda linea. El min-width: 0 es lo que
+// permite que el enlace se recorte tambien por CSS en las pantallas mas
+// estrechas, donde 24 caracteres todavia no caben.
 .product-card__title {
+  display: flex;
+  align-items: center;
+  gap: var(--sf-space-2);
   margin: 0;
+  min-width: 0;
   font-size: var(--sf-font-size-base);
   font-weight: var(--sf-weight-semibold);
   line-height: var(--sf-line-height-base);
   color: var(--sf-ink);
+
+  > a {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+// Element: insignia de promocion — "15%", "2x1". En la fila del nombre pero
+// empujada al fondo derecho: asi cae siempre en el mismo sitio, lo mida lo que
+// mida el platillo, y la columna de insignias se lee de un vistazo por la
+// rejilla. Con un nombre largo el margen automatico no tiene hueco que repartir
+// y la etiqueta queda pegada al recorte, que es donde acaba el titulo.
+.product-card__promo {
+  flex: 0 0 auto;
+  margin-inline-start: auto;
 }
 
 .product-card__description {
@@ -72,7 +98,7 @@
   color: var(--sf-muted);
 }
 
-// Element: footer — precio a la izquierda, "+" al fondo derecha
+// Element: footer — precios a la izquierda, "+" al fondo derecha
 .product-card__footer {
   display: flex;
   align-items: center;
@@ -80,6 +106,41 @@
   gap: var(--sf-space-3);
   margin-top: auto;
   min-height: 28px;
+}
+
+// Element: pricing — la columna de importes. Dos filas cuando hay promocion:
+// el par de precios y, debajo, lo que ese par significa.
+.product-card__pricing {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-1);
+  min-width: 0;
+}
+
+// Element: prices — el par tachado + final. Con promocion lleva los dos; sin
+// ella, solo el precio de lista, que es el mismo elemento.
+.product-card__prices {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sf-space-2);
+  min-width: 0;
+}
+
+// Element: deal — etiqueta de ahorro y aclaracion, bajo los dos precios: es la
+// conclusion de ese par, no un dato al lado. Envuelve porque el boton "+" le
+// deja unos 160 de ancho.
+.product-card__deal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sf-space-2);
+  margin: 0;
+}
+
+// Element: from — el "Desde" que precede al importe. Solo desktop: en el pie de
+// la tarjeta estrecha compite con el precio, que es lo que se viene a leer.
+.product-card__from {
+  display: none;
 }
 
 .product-card__price {
@@ -119,7 +180,7 @@
   .product-card__media,
   .product-card__title,
   .product-card__description,
-  .product-card__price {
+  .product-card__pricing {
     opacity: 0.55;
   }
 
@@ -142,5 +203,70 @@
   }
   100% {
     transform: scale(1);
+  }
+}
+
+// --- Desktop -------------------------------------------------------------
+// La tarjeta se pone de pie: la foto arriba, a todo lo ancho, y la ficha debajo.
+// El ancho lo reparte la rejilla (3 columnas con 24 de gutter), asi que aqui no
+// se fija: lo que se fija es el alto de cada parte.
+//
+// Spec: 357x330 - foto 180 - cuerpo 150 (padding 20, gap 12) - radius 16
+// 180 + 150 = 330
+@include media-breakpoint-up(md) {
+  .product-card {
+    flex-direction: column;
+    gap: 0;
+    min-height: 330px;
+    // El relleno pasa al cuerpo: la foto llega hasta los bordes.
+    padding: 0;
+  }
+
+  // La foto ya no es una miniatura al lado del texto, sino la cabecera de la
+  // tarjeta. Redondea solo por arriba, que es donde toca el borde del panel.
+  .product-card__media {
+    flex: 0 0 180px;
+    width: 100%;
+    height: 180px;
+    border-radius: var(--sf-radius-lg) var(--sf-radius-lg) 0 0;
+  }
+
+  .product-card__body {
+    gap: var(--sf-space-3);
+    min-height: 150px;
+    padding: var(--sf-space-5);
+  }
+
+  // 18 no esta en la escala de tokens: es el unico nombre de este tamano del
+  // diseno, y anadir un token para una regla lo unico que hace es dar un nombre
+  // mas que recordar.
+  .product-card__title {
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  // La descripcion NO baja a interlineado 100%: recorta a dos lineas, y a 1 las
+  // dos se tocarian. El resto de la ficha si va a 100% porque es de una linea.
+  .product-card__description {
+    line-height: var(--sf-line-height-base);
+  }
+
+  .product-card__from,
+  .product-card__price {
+    font-size: var(--sf-font-size-lg);
+    font-weight: var(--sf-weight-bold);
+    line-height: 1;
+    color: var(--sf-gold);
+  }
+
+  .product-card__from {
+    display: inline;
+  }
+
+  .product-card__add {
+    flex-basis: 32px;
+    width: 32px;
+    height: 32px;
+    border-radius: 16px;
   }
 }

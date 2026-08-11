@@ -3,10 +3,10 @@
 // ---------------------------------------------------------------------------
 // Barra superior con control de vuelta y titulo. Dos variantes:
 //
-//  - Base (/mi-pedido): height 48, con total a la derecha. El titulo queda
+//  - Base (/carrito): height 48, con total a la derecha. El titulo queda
 //    "centro entre los elementos, no del layout": space-between puro, sin
 //    compensar, asi que lo colocan sus vecinos.
-//  - --tall (/datos-de-entrega): height 124, sin total y con el titulo
+//  - --tall (/datos): height 124, sin total y con el titulo
 //    centrado en el ancho real de la barra.
 //
 // Spec de ambas: space-between - padding 12/20
@@ -57,7 +57,7 @@
   min-height: 124px;
 }
 
-// Modifier: barra sin titulo (/pedido-confirmado), donde el titular es el
+// Modifier: barra sin titulo (/confirmado), donde el titular es el
 // contenido y la barra solo lleva el control de vuelta.
 // Spec: height 64 - padding 12/20 - control de 40. Los 64 son exactos:
 // 12 + 40 + 12.

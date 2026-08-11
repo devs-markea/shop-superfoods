@@ -1,0 +1,35 @@
+// ---------------------------------------------------------------------------
+// Block: storefront
+// ---------------------------------------------------------------------------
+// El armazon de la portada, y solo de la portada.
+//
+// En movil no existe: las piezas —barra de pedido y rejilla— se apilan solas y
+// cada una trae su propio gutter y su propio aire, como hasta ahora. En desktop
+// aparece y manda: <main> abre 48 arriba y abajo, y la pila reparte 32 entre el
+// panel de bienvenida, la barra y la lista.
+//
+// Por eso el aire vertical se le quita ahi a la barra y a la lista (ver
+// components/_order-bar.scss y components/_product-list.scss): en desktop lo
+// pone el hueco de la pila, en un solo sitio, y no la suma de los margenes de
+// cada bloque.
+// ---------------------------------------------------------------------------
+
+// display: contents: en movil el envoltorio no pinta ni ocupa nada, asi que sus
+// hijos siguen siendo hijos de <main> a efectos de layout y la pantalla se ve
+// exactamente igual que si no estuviera.
+.storefront__stack {
+  display: contents;
+}
+
+// --- Desktop -------------------------------------------------------------
+@include media-breakpoint-up(md) {
+  .storefront {
+    padding-block: var(--sf-space-12);
+  }
+
+  .storefront__stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sf-space-8);
+  }
+}
