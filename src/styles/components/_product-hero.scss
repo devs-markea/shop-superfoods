@@ -45,7 +45,29 @@
 
 // --- Desktop -------------------------------------------------------------
 @include media-breakpoint-up(md) {
+  // Ya no va a sangre: la foto vive dentro de la columna de la ficha (ver
+  // components/_product-page.scss) y ahi es una superficie mas, con las esquinas
+  // de 16 del resto del sistema.
   .product-hero {
     height: 360px;
+    border-radius: var(--sf-radius-lg);
+  }
+
+  // El control de volver se acerca a la esquina: con la foto redondeada y el
+  // gutter de 32, los 32 de sangria lo dejaban flotando lejos del borde.
+  .product-hero__back {
+    left: var(--sf-space-4);
+  }
+}
+
+// Los 520x480 de la spec de desktop, de lg: es donde la foto cabe al lado del
+// texto (ver components/_product-page.scss). El ancho se pide como BASE y no como
+// medida fija porque entre lg y xl el contenido no llega a los 1120 del lienzo, y
+// entonces la foto cede lo justo para no estrechar la columna de opciones. El
+// recorte lo sigue resolviendo el object-fit de la imagen.
+@include media-breakpoint-up(lg) {
+  .product-hero {
+    flex: 0 1 520px;
+    height: 480px;
   }
 }

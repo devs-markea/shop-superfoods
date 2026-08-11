@@ -1,0 +1,191 @@
+// ---------------------------------------------------------------------------
+// Block: footer
+// ---------------------------------------------------------------------------
+// Pie de pagina, SOLO desktop. Spec: padding 48/160/32, gap 32, fondo blanco.
+//
+// En movil no existe. No es una decision de estilo: la spec lo pide asi, y en una
+// pantalla de 375 las dos columnas se apilarian en una torre de enlaces que nadie
+// pidio, debajo de una rejilla que ya se lee scrolleando.
+//
+// El `color: #FFFFFF` de la spec es el FONDO. Cada rotulo trae su propio color
+// —#6C757D, #D5AA53, #9CA3AF—, asi que no queda texto al que ese blanco pueda
+// referirse; sobre el fondo gris de la pagina el pie es una superficie, como la
+// barra de arriba. Es la misma clase de desliz que ya documenta el README en tres
+// specs, ahi al reves.
+//
+// Los 160 de sangria son --sf-gutter-wide, compartida con .navbar-desktop: se
+// piden como maximo y el contenido para en el ancho del contenedor. Ver
+// _tokens.scss.
+// ---------------------------------------------------------------------------
+
+.footer {
+  display: none;
+}
+
+@include media-breakpoint-up(md) {
+  .footer {
+    display: block;
+    // 48 arriba y 32 abajo. Los 48 no estan en la escala del sistema —32 es el
+    // ultimo escalon— y se escriben sumando dos que si estan, para no abrir un
+    // token que usaria un solo bloque.
+    padding: calc(var(--sf-space-8) + var(--sf-space-4)) var(--sf-gutter-wide)
+      var(--sf-space-8);
+    background-color: var(--sf-surface);
+  }
+
+  .footer__inner {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sf-space-8);
+    width: 100%;
+    max-width: var(--sf-container-max);
+    margin-inline: auto;
+  }
+
+  // Element: top — la marca a la izquierda y la columna de enlaces a la derecha
+  .footer__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--sf-space-8);
+  }
+
+  .footer__brand {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sf-space-4);
+    // El parrafo no se estira a lo ancho del pie: a 1120 saldrian lineas de 150
+    // caracteres, ilegibles. Se corta donde el diseno lo corta, antes de la
+    // columna de enlaces.
+    max-width: 420px;
+  }
+
+  // La caja del logo es la de la spec —160x36— y el logo va dentro a 160 de
+  // ancho: el archivo tiene proporcion 5.8:1, asi que a 160 mide 27.6 de alto y
+  // los 36 son el alto del marco, con el logo centrado. Las dos medidas de la
+  // spec no pueden cumplirse a la vez sin deformarlo, y de las dos la que se ve
+  // es el ancho.
+  .footer__brand-link {
+    display: flex;
+    align-items: center;
+    align-self: flex-start;
+    height: 36px;
+    transition: opacity var(--sf-transition);
+
+    &:hover {
+      opacity: 0.8;
+    }
+  }
+
+  .footer__logo {
+    width: 160px;
+    height: auto;
+  }
+
+  // 22 de interlineado: es un parrafo, el unico del sistema, y por eso no sale de
+  // la escala de --sf-line-height-*.
+  .footer__about {
+    margin: 0;
+    font-size: var(--sf-font-size-base);
+    font-weight: var(--sf-weight-regular);
+    line-height: 22px;
+    color: var(--sf-muted);
+  }
+
+  // Element: nav — "Descubre" y su lista
+  .footer__nav {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: var(--sf-space-3);
+  }
+
+  // La spec pide letter-spacing 100%, que en Inter 14 son 14px por letra:
+  // "D E S C U B R E" ocuparia 180 y dejaria de leerse como una palabra. Se usa
+  // 0.1em, el tracking con el que se compone un rotulo en versales, que es lo que
+  // el valor queria decir.
+  .footer__heading {
+    margin: 0;
+    font-size: var(--sf-font-size-base);
+    font-weight: var(--sf-weight-semibold);
+    line-height: 1;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sf-gold);
+  }
+
+  .footer__links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sf-space-3);
+    margin: 0;
+  }
+
+  // Un <a> y un <span> comparten clase: solo "Menu completo" navega, y los dos
+  // tienen que pesar lo mismo mientras el filtro por URL no exista.
+  .footer__link {
+    font-size: var(--sf-font-size-base);
+    font-weight: var(--sf-weight-regular);
+    line-height: 1;
+    color: var(--sf-muted);
+  }
+
+  a.footer__link {
+    transition: color var(--sf-transition);
+
+    &:hover {
+      color: var(--sf-gold);
+    }
+  }
+
+  // Element: divider — la linea de 1 de la spec (height 0 + borde)
+  .footer__divider {
+    height: 0;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--sf-border);
+    opacity: 1;
+  }
+
+  // Element: bottom — derechos a la izquierda, redes a la derecha
+  .footer__bottom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--sf-space-4);
+  }
+
+  // 13px: el cuerpo menor del pie. No esta en la escala (12/14/16/24) y no la
+  // abre, igual que el 15 de los rotulos de la barra de desktop.
+  .footer__copyright {
+    margin: 0;
+    font-size: 13px;
+    font-weight: var(--sf-weight-regular);
+    line-height: 1;
+    color: var(--sf-placeholder);
+  }
+
+  .footer__social {
+    display: flex;
+    align-items: center;
+    gap: var(--sf-space-4);
+    margin: 0;
+  }
+
+  // Igual que .footer__link: Facebook e Instagram son texto hasta que la tienda
+  // publique sus perfiles, y no pueden verse distintos de WhatsApp, que si lo es.
+  .footer__social-link {
+    font-size: 13px;
+    font-weight: var(--sf-weight-regular);
+    line-height: 1;
+    color: var(--sf-placeholder);
+  }
+
+  a.footer__social-link {
+    transition: color var(--sf-transition);
+
+    &:hover {
+      color: var(--sf-gold);
+    }
+  }
+}

@@ -13,14 +13,6 @@
 .order-item {
   display: flex;
   gap: var(--sf-space-3);
-  transition: opacity var(--sf-transition);
-}
-
-// La linea espera respuesta de la API: se atenua y no acepta mas clics, para
-// que dos pulsaciones seguidas no manden dos cantidades distintas.
-.order-item[data-busy] {
-  opacity: 0.5;
-  pointer-events: none;
 }
 
 // Element: media — 70x70 anclada arriba
@@ -65,12 +57,30 @@
   min-width: 0;
 }
 
+// Element: title — nombre y, a su lado, la insignia de la promocion. El enlace
+// se recorta antes de empujarla: la fila comparte ancho con el importe de la
+// derecha, y en un movil no caben un nombre largo y una etiqueta.
 .order-item__title {
+  display: flex;
+  align-items: center;
+  gap: var(--sf-space-2);
   margin: 0;
+  min-width: 0;
   font-size: var(--sf-font-size-base);
   font-weight: var(--sf-weight-semibold);
   line-height: var(--sf-line-height-base);
   color: var(--sf-ink);
+
+  > a {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+.order-item__badge {
+  flex: 0 0 auto;
 }
 
 // La personalizacion no trae spec tipografica: se usa el patron de texto
@@ -83,10 +93,10 @@
   color: var(--sf-muted);
 }
 
-// Element: promo — nombre de la promocion que la API aplico a la linea.
-// Fuera de la spec: sin esto el descuento aparece en el importe sin explicar
-// de donde sale.
-.order-item__promo {
+// Element: aviso de la linea. El de un "compra y lleva" incompleto va en dorado
+// —es una oportunidad, no un dato—; el que explica que el resto de la fila ya
+// esta en la promocion, en gris.
+.order-item__hint {
   margin: 0;
   font-size: var(--sf-font-size-sm);
   font-weight: var(--sf-weight-medium);
@@ -94,6 +104,14 @@
   color: var(--sf-gold);
 }
 
+.order-item__hint--muted {
+  color: var(--sf-muted);
+}
+
+// Element: price — lo que se paga por la linea. Es el unico importe de la
+// esquina: el precio de lista se compara abajo, junto a la papelera, donde hay
+// sitio de sobra para los dos.
+//
 // Spec: #141821. A diferencia de .product-card__price (dorado), aqui el precio
 // va en tinta: el dorado queda para el total del pedido y el aviso de envio.
 .order-item__price {
@@ -105,12 +123,35 @@
   white-space: nowrap;
 }
 
-// Element: fila inferior — borrar a la izquierda, cantidad a la derecha
+// Element: pricing — el par de lista y final, solo cuando hay descuento. Ocupa
+// el hueco que quedaba entre la papelera y el contador.
+.order-item__pricing {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--sf-space-2);
+  min-width: 0;
+}
+
+.order-item__pricing-final {
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-semibold);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-gold);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+// Element: fila inferior — papelera, el par de precios y, al fondo, la cantidad.
+// El contador se empuja con margen automatico en lugar de con space-between: asi
+// queda a la derecha lleve la fila dos elementos o tres.
 .order-item__actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
   gap: var(--sf-space-3);
+
+  .stepper {
+    margin-inline-start: auto;
+  }
 }
 
 .order-item__remove {

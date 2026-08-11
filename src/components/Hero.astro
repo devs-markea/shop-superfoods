@@ -1,0 +1,50 @@
+---
+interface Props {
+  /** Titular del banner, maximo 80. */
+  title?: string;
+  /** Linea de apoyo, maximo 180. */
+  description?: string;
+  /**
+   * Fondo del banner. URL ABSOLUTA, ya resuelta por el backend: no se concatena
+   * con ninguna base, que cambia entre local, staging y produccion.
+   */
+  image?: string;
+}
+
+const { title, description, image } = Astro.props;
+
+// Panel de bienvenida de la portada. SOLO DESKTOP: en movil no se pinta —lo
+// oculta components/_hero.scss— porque ahi la primera pantalla es del catalogo y
+// un panel de este tamano la empujaria entera fuera de la vista.
+//
+// Lo escribe el panel de la tienda (`home.banner` de GET /api/store) y no el
+// codigo: es una campana, y cambiarla no puede exigir un despliegue.
+//
+// Las tres piezas sirven por separado, asi que se comprueban por separado: con
+// texto y sin foto queda una franja de texto, con foto y sin texto un fondo, y
+// sin nada de lo tres no hay banner que inventar —la portada abre en el
+// catalogo—.
+const hasText = Boolean(title || description);
+
+// La URL acaba dentro de un `url()` en el atributo style, asi que se filtra
+// antes: solo http(s), y citada con comillas para que un parentesis o un punto y
+// coma en la ruta no cierren la declaracion y abran otra.
+const photo = image && /^https?:\/\//i.test(image) ? image : undefined;
+
+const style = photo ? `--sf-hero-photo: url(${JSON.stringify(photo)})` : undefined;
+---
+
+{
+  (hasText || photo) && (
+    <section class="hero" aria-label="Bienvenida">
+      <div class="hero__panel" style={style}>
+        {hasText && (
+          <div class="hero__text">
+            {title && <h1 class="hero__title">{title}</h1>}
+            {description && <p class="hero__subtitle">{description}</p>}
+          </div>
+        )}
+      </div>
+    </section>
+  )
+}

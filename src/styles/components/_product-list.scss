@@ -18,6 +18,20 @@
   margin-inline: auto;
 }
 
+// Element: title — "Nuestros Platillos", encima de la rejilla. Solo desktop: en
+// movil la barra de categorias, que va justo encima, ya dice que se esta
+// mirando, y el titulo se comeria la unica pantalla que tiene el catalogo.
+.product-list__title {
+  display: none;
+  margin: 0;
+  font-size: var(--sf-font-size-xl);
+  font-weight: var(--sf-weight-bold);
+  // 100% del tamano: es un titulo de una linea y el interlineado de la escala
+  // (32 sobre 24) le sobra por arriba y por abajo.
+  line-height: 1;
+  color: var(--sf-ink);
+}
+
 // Element: notice — ocupa el sitio de la rejilla cuando no hay nada que
 // pintar: catalogo vacio (200 con lista vacia) o API inalcanzable.
 .product-list__notice {
@@ -29,8 +43,22 @@
   text-align: center;
 }
 
+// --- Desktop -------------------------------------------------------------
 @include media-breakpoint-up(md) {
+  // Sin aire propio: el que la separa de la barra lo pone la pila de la portada
+  // (ver components/_storefront.scss), y el de abajo, el padding de <main>.
   .product-list {
-    padding-block: var(--sf-space-6);
+    padding-block: 0;
+  }
+
+  // La lista pasa a ser dos piezas con 24 entre ellas: el titulo y la rejilla.
+  .product-list__items {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sf-space-6);
+  }
+
+  .product-list__title {
+    display: block;
   }
 }

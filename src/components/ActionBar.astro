@@ -19,9 +19,24 @@ interface Props {
   variant?: 'primary' | 'whatsapp';
   /** Aviso corto bajo el boton, centrado. */
   note?: string;
+  /**
+   * Apagado de verdad: ni navega ni envia, y se pinta gris. Para lo que ahora no
+   * existe —continuar con la tienda cerrada—, no para lo que falta por rellenar:
+   * de eso se encarga el aria-disabled del script, que si emite click y puede
+   * contar que falta.
+   */
+  disabled?: boolean;
 }
 
-const { label, total, href, icon, variant = 'primary', note } = Astro.props;
+const {
+  label,
+  total,
+  href,
+  icon,
+  variant = 'primary',
+  note,
+  disabled = false,
+} = Astro.props;
 
 // La copia vive en el marcado, no en el script.
 const hasTotal = total !== undefined && label.includes('{total}');
@@ -39,7 +54,15 @@ const buttonClass = [
 
 <div class="action-bar">
   {
-    href ? (
+    disabled ? (
+      // <button disabled> y no un <a> apagado: un enlace sin href sigue siendo
+      // enfocable y anunciable como destino, y este control no lleva a ninguna
+      // parte. `type="button"` para que no envie el formulario que lo envuelve.
+      <button class={buttonClass} type="button" disabled>
+        {icon && <BrandIcon name={icon} />}
+        <span>{text}</span>
+      </button>
+    ) : href ? (
       <a class={buttonClass} href={href}>
         {icon && <BrandIcon name={icon} />}
         <span>{text}</span>

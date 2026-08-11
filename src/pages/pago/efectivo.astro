@@ -1,0 +1,119 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import ScreenHeader from '../../components/ScreenHeader.astro';
+import Icon from '../../components/Icon.astro';
+import PaymentMethodCard from '../../components/PaymentMethodCard.astro';
+import OrderDetail from '../../components/OrderDetail.astro';
+import ActionBar from '../../components/ActionBar.astro';
+import { getCart } from '../../lib/cart.ts';
+import { resolveCartToken } from '../../lib/cart-session.ts';
+import { DRAFT_COOKIE, draftGaps, parseDraft } from '../../lib/checkout-draft.ts';
+import type { OrderLine } from '../../lib/checkout.ts';
+
+// El carrito de la sesion manda sobre cualquier valor de ejemplo.
+export const prerender = false;
+
+const draft = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+
+// El efectivo ya no es solo del pedido para recoger: a domicilio se le paga al
+// repartidor. Asi que lo que hay que comprobar no es el modo de entrega, sino que
+// siga habiendo con que cerrar el pedido —el borrador caduca a las dos horas—:
+// sin nombre, telefono o direccion, "Confirmar pedido" solo podria fallar. Se
+// vuelve a los datos de entrega, que es donde se rellenan.
+if (draftGaps(draft).length > 0) {
+  return Astro.redirect('/datos');
+}
+
+// El modo de entrega ya no decide si esta pantalla existe, pero si lo que promete:
+// al recoger no hay reparto que cotizar.
+const pickup = draft.deliveryType === 'pickup';
+
+// El pedido todavia no existe: se crea al confirmar. Asi que lo que se lista es
+// el carrito, que sigue en pie.
+let items: OrderLine[] = [];
+let products = 0;
+// Antes de descontar, y lo que descuentan las promociones. Con ellos el
+// comprador puede cuadrar la resta en lugar de fiarse del importe final.
+let subtotal = 0;
+let discount = 0;
+
+try {
+  const cart = await getCart(resolveCartToken(Astro.cookies));
+  items = cart.items;
+  products = cart.total;
+  subtotal = cart.subtotal;
+  discount = cart.discountTotal;
+} catch (error) {
+  console.error('[efectivo] fallo GET /api/cart', error);
+}
+
+// La propina viene del borrador, no de la URL: la cookie la lee tambien el
+// servidor, asi que el total se pinta ya completo y no baila al arrancar el JS.
+//
+// Al recoger este es el total definitivo: es lo que se va a pagar en el local. A
+// domicilio es un minimo, porque el envio sigue sin cotizar —el backend lo congela
+// en 0—, igual que en la transferencia.
+const total = products + draft.tip;
+
+// Y por eso el aviso solo habla del envio cuando lo hay: prometer un costo por
+// confirmar en un pedido que se recoge anunciaria un cobro que no va a llegar.
+const infoNote = pickup
+  ? 'Se recomienda preparar el monto exacto para facilitar la entrega.'
+  : 'Se recomienda preparar el monto exacto para facilitar la entrega. El costo de envio exacto se confirmara al finalizar tu pedido.';
+---
+
+<Layout
+  title="Pago en efectivo — Shop Superfoods"
+  description="Confirma tu pedido y pagalo en efectivo al recibirlo."
+>
+  <ScreenHeader title="Pago en efectivo" backHref="/pago" />
+
+  <!-- La cadena flex (page > main > form) deja la barra de accion al fondo de
+       la pantalla aunque el contenido no llegue a llenarla. -->
+  <main class="d-flex flex-column flex-grow-1">
+    {/*
+      Mismo cierre que la transferencia y por eso el mismo script: lo que cambia es
+      lo que hay que leer antes de confirmar —como se paga en lugar de a que cuenta
+      pagar—, no lo que se manda.
+    */}
+    <form
+      class="d-flex flex-column flex-grow-1"
+      action="#"
+      method="post"
+      data-confirm-form
+      data-method="efectivo"
+      data-next="/recibido"
+    >
+      <div class="screen-body">
+        <PaymentMethodCard
+          icon="cash"
+          title="Pago contra entrega"
+          note="Efectivo en mano"
+          description="Realiza tu pago directamente al repartidor al recibir tu pedido en tu domicilio, o en caja al recoger en sucursal."
+        />
+
+        <div class="info-note">
+          <Icon name="info" size="sm" />
+          <p class="info-note__text">{infoNote}</p>
+        </div>
+
+        <OrderDetail
+          items={items}
+          total={total}
+          subtotal={subtotal}
+          discount={discount}
+          tip={draft.tip}
+        />
+
+        {/* Lo rellena el script si el checkout rechaza el pedido. */}
+        <p class="form-error" role="alert" hidden data-checkout-error></p>
+      </div>
+
+      <ActionBar label="Confirmar pedido" />
+    </form>
+  </main>
+</Layout>
+
+<script>
+  import '../../scripts/confirm-order';
+</script>

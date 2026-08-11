@@ -1,0 +1,115 @@
+---
+import BrandLogo from './BrandLogo.astro';
+import { whatsAppUrl } from '../lib/whatsapp.ts';
+import { storeYear } from '../lib/schedule.ts';
+import type { StoreSettings } from '../lib/store-config.ts';
+
+interface Props {
+  store: StoreSettings;
+  /** Las categorias publicadas, ya sin el chip "Todos" que pone la interfaz. */
+  categories: readonly string[];
+}
+
+const { store, categories } = Astro.props;
+
+// Pie de pagina, SOLO desktop: en movil no se pinta (ver _footer.scss). Tres
+// franjas separadas por 32: marca y enlaces, la divisoria, y el aviso de derechos
+// con las redes.
+//
+// El nombre no se escribe a mano en ningun sitio de aqui: lo pone la tienda. Sin
+// el, la frase de presentacion se cae entera antes que quedarse sin sujeto —y el
+// aviso de derechos sigue en pie, que para eso basta el ano—.
+const name = store.name;
+
+const about = name
+  ? `${name} ofrece la mejor comida mexicana tradicional preparada con ingredientes de la mas alta calidad y un sabor inigualable.`
+  : null;
+
+const copyright = name
+  ? `© ${storeYear()} ${name}. Todos los derechos reservados.`
+  : `© ${storeYear()}. Todos los derechos reservados.`;
+
+// "Descubre" no lista los platillos de la spec —"Tacos al Pastor", "Burritos
+// Gigantes", "Bebidas Artesanales"—: son de la maqueta, y este catalogo vende
+// otras cosas. Rotular en el pie un platillo que la tienda no sirve es la misma
+// mentira que prometer un envio gratis que el negocio apago. Se pintan las
+// categorias PUBLICADAS, que es lo que hay de verdad que descubrir, y hasta tres:
+// la columna es un resumen, no un indice.
+//
+// Todavia no navegan. El filtro de la portada son los chips de la barra —radios
+// name="category", ver src/scripts/category-filter.ts— y no hay forma de marcar
+// uno desde una URL, asi que un enlace aqui no filtraria nada. Enlaza solo "Menu
+// completo", que es la portada y si tiene direccion.
+const discover = categories.slice(0, 3);
+
+// Las redes: de las tres, solo WhatsApp tiene dato. Facebook e Instagram no se
+// pueden enlazar —`GET /api/store` no publica sus perfiles— y se quedan en texto
+// en lugar de fingir un enlace a "#": la misma regla que el resto de la tienda,
+// sin dato se degrada en vez de mentir.
+const phone = store.whatsapp?.phone;
+
+const socials: Array<{ label: string; href: string | null }> = [
+  { label: 'Facebook', href: null },
+  { label: 'Instagram', href: null },
+  { label: 'WhatsApp', href: phone ? whatsAppUrl(phone) : null },
+];
+---
+
+<footer class="footer">
+  <div class="footer__inner">
+    <div class="footer__top">
+      <div class="footer__brand">
+        <a class="footer__brand-link" href="/">
+          <BrandLogo class="footer__logo" />
+        </a>
+
+        {about && <p class="footer__about">{about}</p>}
+      </div>
+
+      <nav class="footer__nav" aria-labelledby="footer-discover">
+        <h2 class="footer__heading" id="footer-discover">Descubre</h2>
+
+        <ul class="footer__links list-unstyled">
+          <li>
+            <a class="footer__link" href="/">Menu completo</a>
+          </li>
+
+          {
+            discover.map((category) => (
+              <li>
+                <span class="footer__link">{category}</span>
+              </li>
+            ))
+          }
+        </ul>
+      </nav>
+    </div>
+
+    <hr class="footer__divider" />
+
+    <div class="footer__bottom">
+      <p class="footer__copyright">{copyright}</p>
+
+      <ul class="footer__social list-unstyled">
+        {
+          socials.map((social) => (
+            <li>
+              {social.href ? (
+                <a
+                  class="footer__social-link"
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener"
+                >
+                  {social.label}
+                </a>
+              ) : (
+                <span class="footer__social-link">{social.label}</span>
+              )}
+            </li>
+          ))
+        }
+      </ul>
+    </div>
+  </div>
+</footer>

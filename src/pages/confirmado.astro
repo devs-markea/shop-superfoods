@@ -30,7 +30,7 @@ const token = resolveCartToken(Astro.cookies);
 // pago por bueno.
 const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
 
-// Mercado Pago devuelve al comprador a /pedido-confirmado?order={id}. Ese id vale
+// Mercado Pago devuelve al comprador a /confirmado?order={id}. Ese id vale
 // como respaldo si la cookie se perdio —leerlo no abre nada ajeno: la API acota
 // los pedidos a la sesion y responde 404 si es de otra—, pero NADA MAS de la URL
 // se usa: los parametros los pone el cliente y no son de fiar. El estado del pago

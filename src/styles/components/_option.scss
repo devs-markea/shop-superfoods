@@ -51,6 +51,15 @@
   }
 }
 
+// Element: precio final de una variante con descuento. El de lista queda a su
+// izquierda con .price-was, tachado. Va en dorado —el color del precio en el
+// catalogo— para que se lea como el importe que cuenta, no como una segunda
+// cifra al lado de otra.
+.option__price-final {
+  color: var(--sf-gold);
+  font-weight: var(--sf-weight-semibold);
+}
+
 // Element: importe — cantidad x precio de la opcion. Solo lo dibuja el control
 // de cantidad, que es el unico donde el precio se multiplica por algo distinto
 // de 0 o 1. El margen automatico lo pega al stepper.

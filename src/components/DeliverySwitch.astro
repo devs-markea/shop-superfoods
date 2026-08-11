@@ -1,10 +1,12 @@
 ---
 import type { DeliveryType } from '../lib/checkout.ts';
+import { DELIVERY_FIELD, SWITCH_VALUE } from '../lib/delivery-switch.ts';
 
 interface Props {
   /**
-   * Modo ya elegido, para cuando se vuelve atras desde el pago. Sin el manda "a
-   * domicilio", que es como llega quien entra por primera vez.
+   * Modo ya elegido. Lo trae el borrador: lo que se marco en el listado, o lo que
+   * quedo al pasar por aqui antes de ir al pago. Sin el manda "a domicilio", que
+   * es como llega quien entra por primera vez.
    */
   selected?: DeliveryType;
 }
@@ -15,27 +17,26 @@ const { selected = 'delivery' } = Astro.props;
 // Dos radios con .btn-check: seleccion unica sin JavaScript, navegable con
 // flechas y serializable en un formulario.
 //
-// Los `value` son los del diseno, no los del contrato: los traduce el script de
-// /datos-de-entrega al guardar el borrador.
-const options = [
-  { id: 'delivery-home', value: 'domicilio', label: 'A domicilio' },
-  { id: 'delivery-pickup', value: 'recoger', label: 'Para recoger' },
+// Los `value` son los del diseno, no los del contrato. La traduccion vive en
+// src/lib/delivery-switch.ts, que es tambien quien guarda la eleccion en el
+// borrador: aqui solo se pinta la que llega.
+const options: { id: string; mode: DeliveryType; label: string }[] = [
+  { id: 'delivery-home', mode: 'delivery', label: 'A domicilio' },
+  { id: 'delivery-pickup', mode: 'pickup', label: 'Para recoger' },
 ];
-
-const checked = selected === 'pickup' ? 'recoger' : 'domicilio';
 ---
 
-<div class="switch" role="group" aria-label="Modo de entrega">
+<div class="switch" role="group" aria-label="Modo de entrega" data-delivery-switch>
   {
     options.map((option) => (
       <>
         <input
           class="btn-check"
           type="radio"
-          name="delivery"
+          name={DELIVERY_FIELD}
           id={option.id}
-          value={option.value}
-          checked={option.value === checked}
+          value={SWITCH_VALUE[option.mode]}
+          checked={option.mode === selected}
           autocomplete="off"
         />
         <label class="switch__option btn" for={option.id}>

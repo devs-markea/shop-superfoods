@@ -46,3 +46,16 @@ export function resolveCartToken(cookies: AstroCookies): string {
 
   return token;
 }
+
+/**
+ * El token que ya tiene la sesion. `null` si no hay: aqui no se emite ninguno.
+ *
+ * Es lo que necesita una pantalla que solo quiere ENSENAR el carrito, como la
+ * portada en su barra de desktop. Con resolveCartToken cada visita abriria
+ * sesion, y `GET /api/cart` crea el carrito si no existe: una tienda recien
+ * publicada acumularia un carrito vacio por visitante y por rastreador para leer
+ * un cero que ya se sabia. Quien no tiene cookie no tiene pedido.
+ */
+export function peekCartToken(cookies: AstroCookies): string | null {
+  return cookies.get(COOKIE_NAME)?.value ?? null;
+}

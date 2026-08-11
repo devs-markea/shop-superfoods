@@ -17,6 +17,21 @@ const STORE_TIME_ZONE = 'America/Cancun';
 /** Lunes = 1 … domingo = 7, como ISO-8601. */
 const WEEKDAYS = ['lunes', 'martes', 'miercoles', 'jueves', 'viernes', 'sabado', 'domingo'];
 
+/**
+ * El ano EN LA TIENDA. Lo pide el aviso de derechos del pie, que no puede
+ * escribirse a mano: envejeceria solo y nadie se acuerda de un numero que solo
+ * miente una vez al ano.
+ *
+ * Vive aqui porque aqui vive la zona de la tienda. El servidor corre en UTC, asi
+ * que las primeras cinco horas del 1 de enero adelantarian un ano que en Cancun
+ * todavia no empezo.
+ */
+export function storeYear(now: Date = new Date()): number {
+  return Number(
+    new Intl.DateTimeFormat('en-CA', { timeZone: STORE_TIME_ZONE, year: 'numeric' }).format(now),
+  );
+}
+
 export interface ScheduleShift {
   start: string;
   end: string;
@@ -101,6 +116,36 @@ function storeMinutesOfDay(now: Date): number {
 }
 
 /**
+ * La tienda esta cerrada AHORA MISMO.
+ *
+ * `null` —sin horario, o con uno sin turnos— no es cerrado: es "no se sabe", y de
+ * eso no se deduce nada. Lo consultan las pantallas para apagar el pedido, asi que
+ * la pregunta se responde en un solo sitio.
+ */
+export function isClosed(schedule: StoreSchedule | null | undefined): boolean {
+  return schedule?.isOpen === false;
+}
+
+/**
+ * Cuando vuelve a abrir, en palabras: "hoy", "manana", "el lunes". `null` si no
+ * hay proxima apertura —abierta ahora, o sin ningun turno configurado—.
+ *
+ * Los minutos deciden el dia, no el nombre: un turno del mismo dia de la semana
+ * puede caer dentro de siete dias.
+ */
+export function nextOpeningDay(schedule: StoreSchedule, now = new Date()): string | null {
+  const { opensAt } = schedule;
+  if (!opensAt) return null;
+
+  const offset = Math.floor((storeMinutesOfDay(now) + opensAt.inMinutes) / 1440);
+
+  if (offset === 0) return 'hoy';
+  if (offset === 1) return 'manana';
+
+  return `el ${WEEKDAYS[opensAt.dayOfWeek - 1] ?? 'proximo dia'}`;
+}
+
+/**
  * El estado en una frase. `null` cuando no se sabe: entonces no se afirma nada.
  *
  *   Abierto hasta las 23:00
@@ -123,18 +168,7 @@ export function scheduleLabel(schedule: StoreSchedule, now = new Date()): string
   const { opensAt } = schedule;
   if (!opensAt) return 'Cerrado';
 
-  // Los minutos deciden el dia, no el nombre: un turno del mismo dia de la semana
-  // puede caer dentro de siete dias.
-  const offset = Math.floor((storeMinutesOfDay(now) + opensAt.inMinutes) / 1440);
-
-  const when =
-    offset === 0
-      ? 'hoy'
-      : offset === 1
-        ? 'manana'
-        : `el ${WEEKDAYS[opensAt.dayOfWeek - 1] ?? 'proximo dia'}`;
-
-  return `Cerrado · Abre ${when} a las ${opensAt.time}`;
+  return `Cerrado · Abre ${nextOpeningDay(schedule, now)} a las ${opensAt.time}`;
 }
 
 /**

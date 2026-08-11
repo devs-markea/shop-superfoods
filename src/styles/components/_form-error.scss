@@ -2,7 +2,7 @@
 // Block: form-error
 // ---------------------------------------------------------------------------
 // Aviso de que falta algo antes de poder continuar, o de que la API rechazo el
-// pedido. Sale en /datos-de-entrega, /resumen-de-pago y /pago-por-transferencia.
+// pedido. Sale en /datos, /pago y /pago/transferencia.
 //
 // El color es el mismo que ya usa el error del carrito (`.order-list__error`),
 // que es lo unico parecido a un color de error que tiene el proyecto: las specs

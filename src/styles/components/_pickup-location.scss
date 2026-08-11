@@ -1,9 +1,8 @@
 // ---------------------------------------------------------------------------
 // Block: pickup-location
 // ---------------------------------------------------------------------------
-// Tarjeta con el local donde se recoge el pedido. Es la contraparte de
-// .bank-account en el flujo de efectivo, y comparte sus medidas: ocupa el mismo
-// sitio de la pantalla y se lee igual.
+// Tarjeta con el local donde se recoge el pedido, en /recibido. Comparte
+// las medidas de .bank-account: las dos son la tarjeta de datos de su pantalla.
 //
 // Sin spec de Figma. Tarjeta: gap 16 - padding 20 - radius 20 - bg #FFFFFF -
 // sombra de tarjeta. Boton: el de compartir ubicacion (44 de alto, borde dorado),

@@ -31,20 +31,26 @@ export function fillMessage(template: string, values: MessageValues): string {
 }
 
 /**
- * Enlace a un chat de WhatsApp con el mensaje ya escrito.
+ * Enlace a un chat de WhatsApp, con el mensaje ya escrito si se le pasa uno.
  *
  * Devuelve null si no hay telefono configurado, y quien llama decide que hacer con
  * eso: hoy las pantallas de cierre dejan el boton inerte en lugar de mandar a
  * nadie a un chat vacio.
  *
+ * Sin mensaje el chat se abre en blanco, que es lo que quiere el enlace del pie:
+ * ahi no hay pedido del que hablar todavia, y `?text=` vacio solo seria ruido en
+ * la URL.
+ *
  * wa.me exige el numero en E.164 SIN el `+` ni separadores, asi que se limpia
  * aqui: `+52 998 123 4567` y `529981234567` valen igual.
  */
-export function whatsAppUrl(phone: string, message: string): string | null {
+export function whatsAppUrl(phone: string, message = ''): string | null {
   const digits = normalizePhone(phone);
   if (!digits) return null;
 
-  return `https://wa.me/${digits}?text=${encodeURIComponent(message)}`;
+  const chat = `https://wa.me/${digits}`;
+
+  return message ? `${chat}?text=${encodeURIComponent(message)}` : chat;
 }
 
 /**

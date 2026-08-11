@@ -44,10 +44,14 @@ export const storeFallback: StoreSettings = {
     // equivocada aqui mandaria al comprador al local de otro. Si algun dia hace
     // falta respaldo, va la direccion real de la tienda.
     //
-    // Los dos sirven por separado: con direccion el modal se abre sin boton, con
-    // enlace el boton lleva a Maps sin direccion que leer. Sin ninguno de los
-    // dos, el icono de ubicacion no aparece.
+    // Los tres sirven por separado: con direccion el modal se abre sin boton, con
+    // enlace el boton lleva a Maps sin direccion que leer, y la abreviada rotula
+    // el pin de la barra aunque no haya ninguna de las otras dos. Sin direccion ni
+    // enlace, el modal no existe y el icono no lo ofrece.
     address: '',
+    // La ABREVIADA, maximo 60. No es la de arriba recortada: es el trozo que el
+    // negocio elige para decir donde esta, y se escribe a mano igual que ella.
+    shortAddress: '',
     mapsUrl: '',
   },
 
@@ -55,7 +59,15 @@ export const storeFallback: StoreSettings = {
     // Modos: 'none' (nunca), 'always' (siempre) o 'threshold' (a partir de un
     // importe). Con 'threshold' hay que poner tambien el importe.
     freeShipping: { mode: 'threshold', threshold: 400 },
+    // Desde que se hace el pedido hasta que llega a la puerta, traslado incluido.
     estimate: '25-35 min',
+  },
+
+  pickup: {
+    // En cuanto esta listo en el mostrador. Es OTRA promesa: aqui no hay
+    // traslado, asi que suele ser menos que la de arriba. No se copia de
+    // `delivery.estimate` ni al reves —quien viene al local esperaria de mas—.
+    estimate: '10-15 min',
   },
 
   tips: { enabled: true, amounts: [0, 15, 30] },
@@ -63,5 +75,25 @@ export const storeFallback: StoreSettings = {
   legal: {
     // Sin ella, "Terminos y condiciones" se rotula pero no enlaza.
     termsUrl: '',
+  },
+
+  home: {
+    // El banner de la portada. Vacio a proposito: es una campana, y la campana
+    // la escribe el panel —cambia con la temporada, con la promocion o con la
+    // foto nueva—. Un titular de respaldo seguiria anunciando en enero lo que se
+    // escribio en agosto.
+    //
+    // Las tres claves sirven por separado: con titulo se pinta una franja de
+    // texto, con imagen un fondo, y con las dos el banner entero. Sin ninguna no
+    // hay banner y la portada abre directamente en el catalogo.
+    banner: {
+      // Maximo 80.
+      title: '',
+      // Maximo 180.
+      description: '',
+      // URL ABSOLUTA (https://...). No se concatena con ninguna base: el backend
+      // ya compone el dominio, que cambia entre local, staging y produccion.
+      image: '',
+    },
   },
 };

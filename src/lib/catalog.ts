@@ -1,20 +1,28 @@
 // ---------------------------------------------------------------------------
 // APIs 1 y 2 — Catalogo y detalle del platillo.
 //
-//   GET /api/products        -> listado de la portada
-//   GET /api/products/{id}   -> ficha con variantes y personalizaciones
+//   GET /api/products         -> listado de la portada
+//   GET /api/products/{slug}  -> ficha con variantes y personalizaciones
 //
 // El backend llama Menu a esta entidad y el front la llama Product: es solo
-// vocabulario, la llave es `menus.id` en los dos lados.
+// vocabulario, la misma fila de `menus` en los dos lados.
 //
-// Identificador: v1 enruta por id porque la columna slug no existe todavia.
-// Todo lo que construye URLs pasa por productHref(), y todo lo que lee la URL
-// pasa el parametro tal cual a la API. El dia que el backend acepte slug
-// —§12 del contrato dice que lo aceptara ADEMAS del id, en la misma ruta— basta
-// con que el payload traiga `slug` para que las URLs cambien solas.
+// DOS IDENTIFICADORES CON DOS TRABAJOS
+//
+//   slug  RUTEA. La URL de la tienda —`/{slug}`— y la ruta de la ficha en la
+//         API. Lo escribe el administrador, asi que PUEDE CAMBIAR: si lo hace,
+//         el enlace anterior responde 404 y no hay redireccion.
+//   id    COMPRA. Es el `productId` que viaja a POST /api/cart/items, y nunca
+//         cambia.
+//
+// De ahi la regla del contrato: el slug es para la barra de direcciones y el id
+// para el estado que tiene que sobrevivir a un cambio de enlace. Ninguno
+// sustituye al otro —pedir la ficha por id responde 404 desde el 2026-08-10—,
+// asi que aqui no hay respaldo de uno por el otro en ningun sentido.
 // ---------------------------------------------------------------------------
 
 import { ApiError, apiGet, assetUrl } from './api.ts';
+import { formatPrice } from './price.ts';
 import type { OptionControl } from './options.ts';
 
 export interface ProductImage {
@@ -25,9 +33,61 @@ export interface ProductImage {
 /** Por que un platillo publicado no se puede comprar ahora mismo. */
 export type UnavailableReason = 'no_price' | 'out_of_schedule';
 
-export interface ProductListItem {
-  /** menus.id — llave estable: enruta al detalle y viaja al carrito. */
+// ---------------------------------------------------------------------------
+// Promociones
+//
+// La API entrega los importes YA RESUELTOS. `value` es el numero crudo que
+// configuro el administrador y viaja solo para componer etiquetas: no sirve
+// para calcular, porque en `special` significa el precio final y no el ahorro.
+// Aqui no se calcula ningun descuento; se decide que se pinta y ya.
+// ---------------------------------------------------------------------------
+
+export interface PromotionDiscount {
+  kind: 'percentage' | 'fixed' | 'special';
+  /** Crudo, SOLO para etiquetas propias. Nunca para calcular. */
+  value: number;
+  /** La variante de referencia: la mas barata, la misma de `basePrice`. */
+  variantId: string;
+  /** Precio de lista de esa variante. Es lo que se pinta tachado. */
+  originalPrice: number;
+  finalPrice: number;
+  savings: number;
+  /** Cuantas variantes bajan de precio, de cuantas tiene el platillo. */
+  variantsAffected: number;
+  variantsTotal: number;
+}
+
+export interface PromotionBuyGet {
+  /** Tamano del grupo. */
+  buy: number;
+  /** Unidades que se cobran. */
+  get: number;
+  /** buy - get. */
+  free: number;
+}
+
+export interface Promotion {
   id: string;
+  name: string;
+  type: 'discount' | 'buy_get';
+  /** `own` = del platillo · `category` = heredada de su categoria. */
+  source: 'own' | 'category';
+  /** "15%" · "$50" · "2x1". Ya compuesta por el backend. */
+  label: string;
+  /** null cuando type === 'buy_get'. */
+  discount: PromotionDiscount | null;
+  /** null cuando type === 'discount'. */
+  buyGet: PromotionBuyGet | null;
+}
+
+export interface ProductListItem {
+  /** menus.id — la llave estable, la que viaja al carrito. Nunca cambia. */
+  id: string;
+  /**
+   * menus.slug — como se nombra el platillo en la URL: `/{slug}`. Obligatorio
+   * (`NOT NULL` y `UNIQUE`), asi que no hay tarjeta sin enlace. Ver productHref().
+   */
+  slug: string;
   name: string;
   /** Cadena vacia cuando el platillo no tiene descripcion. */
   description: string;
@@ -40,11 +100,12 @@ export interface ProductListItem {
   available: boolean;
   unavailableReason: UnavailableReason | null;
   /**
-   * v1 no lo manda: la columna no existe todavia en el backend. Declarado
-   * opcional para que el dia que la API lo incluya las URLs pasen a usarlo sin
-   * tocar el marcado.
+   * null tiene CUATRO motivos indistinguibles a proposito: no hay promocion,
+   * esta desactivada, esta fuera de vigencia, o no baja el precio de ninguna
+   * variante. Por eso la tarjeta se resuelve con un `if` y nunca puede tachar
+   * un precio por encima de otro mayor.
    */
-  slug?: string;
+  promotion: Promotion | null;
 }
 
 /** Chip que no filtra nada. Lo pone la interfaz, no viene del catalogo. */
@@ -70,9 +131,16 @@ export function getCategories(items: ProductListItem[]): string[] {
   return [ALL_CATEGORIES, ...new Set(items.map((item) => item.category))];
 }
 
-/** Ruta del detalle. Por slug cuando la API lo mande; hoy, por id. */
-export function productHref(item: Pick<ProductListItem, 'id' | 'slug'>): string {
-  return `/producto/${item.slug ?? item.id}`;
+/**
+ * Ruta del detalle. Cuelga de la raiz —`/{slug}`—, asi que compite con las
+ * pantallas del pedido (`/carrito`, `/datos`, `/pago`...): en Astro las rutas
+ * estaticas ganan a `[slug]`, y por eso un platillo no puede tapar ninguna.
+ *
+ * Solo el slug: el id no es respaldo de nada aqui, porque `/{id}` no resuelve
+ * ninguna ficha —ni en esta ruta ni en la de la API—.
+ */
+export function productHref(item: Pick<ProductListItem, 'slug'>): string {
+  return `/${encodeURIComponent(item.slug)}`;
 }
 
 /** URL lista para el `src`, con el placeholder ya resuelto. */
@@ -88,8 +156,22 @@ export function productImageSrc(item: { image: ProductImage }): string {
 export interface Variant {
   id: string;
   name: string;
-  /** Precio absoluto de la variante, en MXN. */
+  /** Precio de LISTA de la variante, en MXN. No cambia con la promocion. */
   price: number;
+  /**
+   * Precio con la promocion aplicada. null = esta variante NO baja de precio, y
+   * entonces no se tacha nada: un precio especial puede alcanzar a unas
+   * variantes y a otras no, y en "compra y lleva" llegan todas en null porque
+   * la oferta se resuelve por unidades en el carrito.
+   */
+  finalPrice: number | null;
+  savings: number | null;
+}
+
+/** Lo que cuesta de verdad la variante: el descontado si lo hay. */
+export function variantPrice(variant: Variant | undefined): number | undefined {
+  if (!variant) return undefined;
+  return variant.finalPrice ?? variant.price;
 }
 
 export interface CustomizationOption {
@@ -124,7 +206,13 @@ export interface Customization {
 }
 
 export interface ProductDetail {
+  /** menus.id — la llave estable, la que va al carrito. */
   id: string;
+  /**
+   * menus.slug, en su forma CANONICA: la ficha se pidio por enlace y este es el
+   * enlace con el que la tienda la guarda.
+   */
+  slug: string;
   name: string;
   description: string;
   category: string;
@@ -136,19 +224,29 @@ export interface ProductDetail {
   defaultVariantId: string | null;
   variants: Variant[];
   customizations: Customization[];
-  slug?: string;
+  /** La misma forma que en el listado. Aqui rotula el bloque de la ficha. */
+  promotion: Promotion | null;
 }
 
 /**
- * Ficha del platillo. `handle` es lo que venga en la URL: hoy siempre un id,
- * manana puede ser un slug sin que este codigo cambie.
- *
- * Devuelve null cuando la API responde 404 — inexistente, despublicado o sin
- * categoria, que desde fuera son indistinguibles a proposito.
+ * La ruta de la ficha en la API. Es el mismo slug de la URL de la tienda y va en
+ * la propia ruta del recurso, asi que lo que se lee de `Astro.params` se pasa sin
+ * traducir. Unico sitio del front que compone esta ruta.
  */
-export async function getProduct(handle: string): Promise<ProductDetail | null> {
+function productPath(slug: string): string {
+  return `/api/products/${encodeURIComponent(slug)}`;
+}
+
+/**
+ * Ficha del platillo por su enlace. `slug` es lo que venia en `/{slug}`.
+ *
+ * Devuelve null cuando la API responde 404, que son cuatro casos indistinguibles
+ * a proposito: el enlace no existe, el administrador lo reescribio —el anterior
+ * no redirige—, el platillo esta despublicado, o no tiene categoria.
+ */
+export async function getProduct(slug: string): Promise<ProductDetail | null> {
   try {
-    return await apiGet<ProductDetail>(`/api/products/${encodeURIComponent(handle)}`);
+    return await apiGet<ProductDetail>(productPath(slug));
   } catch (error) {
     if (error instanceof ApiError && error.status === 404) return null;
     throw error;
@@ -163,6 +261,12 @@ export interface OptionChoiceView {
   id: string;
   label: string;
   price: number;
+  /**
+   * Solo en variantes con descuento: el precio que se cobra. El de arriba pasa
+   * a ser el tachado. En las personalizaciones es siempre null, porque la
+   * promocion no las toca —su precio es el incremento integro.
+   */
+  finalPrice: number | null;
   checked: boolean;
 }
 
@@ -229,6 +333,7 @@ export function toOptionGroups(product: ProductDetail): OptionGroupView[] {
         id: variant.id,
         label: variant.name,
         price: variant.price,
+        finalPrice: variant.finalPrice,
         // defaultVariantId es la primera variante, como el simulador. El
         // index === 0 cubre el caso de que llegue null.
         checked: product.defaultVariantId ? variant.id === product.defaultVariantId : index === 0,
@@ -251,6 +356,8 @@ export function toOptionGroups(product: ProductDetail): OptionGroupView[] {
         id: option.id,
         label: option.label,
         price: option.price,
+        // Las personalizaciones se cobran integras, con promocion o sin ella.
+        finalPrice: null,
         // Solo los grupos radio traen preseleccion; en los demas es null.
         checked: option.id === customization.defaultOptionId,
       })),
@@ -268,12 +375,131 @@ export function defaultVariant(product: ProductDetail): Variant | undefined {
   );
 }
 
-/** Total inicial: variante por defecto + las opciones preseleccionadas. */
+/**
+ * Total inicial: variante por defecto + las opciones preseleccionadas.
+ *
+ * La variante entra ya descontada. Si entrara por su precio de lista, el boton
+ * prometeria un importe y el carrito cobraria otro —que es exactamente la
+ * asimetria que las promociones en el catalogo vienen a cerrar—.
+ */
 export function initialTotal(product: ProductDetail): number {
   const preselected = product.customizations.reduce((sum, customization) => {
     const option = customization.options.find((it) => it.id === customization.defaultOptionId);
     return sum + (option?.price ?? 0);
   }, 0);
 
-  return (defaultVariant(product)?.price ?? product.basePrice) + preselected;
+  return (variantPrice(defaultVariant(product)) ?? product.basePrice) + preselected;
+}
+
+// ---------------------------------------------------------------------------
+// La promocion, resuelta para pintarla
+// ---------------------------------------------------------------------------
+
+export interface PromotionView {
+  /** "15%" · "$50" · "2x1". La etiqueta corta de la tarjeta. */
+  label: string;
+  /**
+   * La misma etiqueta, escrita entera: "Descuento de 15%", "Lleva 2 y paga 1".
+   * La ficha tiene ancho de sobra y es la unica insignia de la pantalla, asi
+   * que ahi el atajo de la rejilla no hace falta.
+   */
+  detailLabel: string;
+  name: string;
+  /** Precio de lista a TACHAR. null = no se tacha nada. */
+  original: number | null;
+  /** Lo que se paga hoy por la variante de referencia. */
+  price: number;
+  /** Ahorro a rotular. 0 = no hay etiqueta de ahorro. */
+  savings: number;
+  /**
+   * Aclaracion bajo el precio para el descuento que no alcanza a todas las
+   * variantes, o null cuando no hace falta ninguna.
+   */
+  note: string | null;
+}
+
+const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
+
+/**
+ * El rotulo largo de cada tipo. `value` es el numero crudo del panel y este es
+ * justo el uso para el que viaja: componer etiquetas. Nunca para calcular.
+ *
+ * `special` se rotula aparte porque no descuenta nada: FIJA el precio. Llamarlo
+ * "Descuento de $150" en un platillo de $189 diria que se restan $150.
+ */
+const DISCOUNT_LABEL: Record<PromotionDiscount['kind'], (value: number) => string> = {
+  percentage: (value) => `Descuento de ${value}%`,
+  fixed: (value) => `Descuento de ${formatPrice(value)}`,
+  special: (value) => `Precio especial de ${formatPrice(value)}`,
+};
+
+/**
+ * Decide QUE se pinta a partir del bloque que manda la API. No calcula ningun
+ * importe: los tres —original, final y ahorro— llegan resueltos.
+ *
+ * Los tres casos que tiene que separar:
+ *
+ *   buy_get   el precio unitario no cambia. Ni tachado, ni ahorro, ni nota: la
+ *             insignia —"2x1"— es todo lo que se pinta, y el "Lleva N y paga M"
+ *             se queda como rotulo largo de la ficha. El descuento aparece en el
+ *             carrito, cuando hay unidades para formar grupo.
+ *   descuento con ahorro en la variante de referencia -> tachado + final + ahorro.
+ *   descuento SIN ahorro en ella: es el `special` degenerado, que baja unas
+ *             variantes y no la mas barata. Llega con savings 0 y se rotula por
+ *             cuantas alcanza, en vez de tachar un precio que no baja.
+ */
+export function promotionView(item: {
+  basePrice: number;
+  promotion: Promotion | null;
+}): PromotionView | null {
+  const promotion = item.promotion;
+  if (!promotion) return null;
+
+  const { buyGet, discount } = promotion;
+
+  if (promotion.type === 'buy_get' || !discount) {
+    const offer = buyGet ? `Lleva ${buyGet.buy} y paga ${buyGet.get}` : null;
+
+    return {
+      label: promotion.label,
+      detailLabel: offer ?? promotion.label,
+      name: promotion.name,
+      original: null,
+      price: item.basePrice,
+      savings: 0,
+      // El "Lleva 2 y paga 1" no baja al pie de la tarjeta: la insignia ya dice
+      // "2x1" en la misma tarjeta, y repetirlo debajo del precio ocupaba la
+      // linea del ahorro para decir por segunda vez lo mismo.
+      note: null,
+    };
+  }
+
+  const detailLabel = DISCOUNT_LABEL[discount.kind](discount.value);
+
+  const partial =
+    discount.variantsTotal > 1 && discount.variantsAffected < discount.variantsTotal
+      ? `Precio especial en ${discount.variantsAffected} de ${discount.variantsTotal} ${plural(discount.variantsTotal, 'tamano', 'tamanos')}`
+      : null;
+
+  if (discount.savings <= 0) {
+    return {
+      label: promotion.label,
+      detailLabel,
+      name: promotion.name,
+      original: null,
+      price: item.basePrice,
+      savings: 0,
+      note: partial,
+    };
+  }
+
+  return {
+    label: promotion.label,
+    detailLabel,
+    name: promotion.name,
+    original: discount.originalPrice,
+    price: discount.finalPrice,
+    savings: discount.savings,
+    note: partial,
+  };
 }

@@ -1,15 +1,22 @@
 // Vista de pedido: cantidades, borrado de lineas y totales.
 //
-// Ningun importe se calcula aqui. Cada cambio va a /api/cart/items/{linea} y la
+// Ningun importe se calcula aqui. Cada cambio va a /api/cart/items/{fila} y la
 // API devuelve el carrito completo ya recalculado; la pagina se limita a
 // repintar con lo que llega. Multiplicar en cliente daria totales que
 // contradicen al servidor en cuanto una linea tenga promocion: tanto los
 // descuentos por porcentaje como el "compra y lleva" dependen de las unidades.
 //
+// Y no se parchea linea a linea, se sustituye la LISTA ENTERA. Un grupo de
+// "compra y lleva" se forma con todas las unidades del mismo platillo del
+// carrito, asi que cambiar una cantidad puede rehacer los grupos, mover
+// unidades entre lineas y alterar el descuento de lineas que nadie toco. El
+// marcado lo pone el mismo renderizador que uso el servidor (src/lib/cart-view).
+//
 // El umbral de envio gratis si es de este front —la API no tiene regla de
 // envio todavia— y viaja en data-threshold.
 
 import { formatPrice } from '../lib/price';
+import { imageResolver, renderLines, type CartLinesView } from '../lib/cart-view';
 import { patchDraft } from '../lib/checkout-draft';
 
 // Los comentarios se guardan al salir del campo, no al enviar: "Continuar" es un
@@ -24,14 +31,9 @@ commentsField?.addEventListener('change', () => {
   patchDraft({ comments: commentsField.value.trim() });
 });
 
-interface CartLine {
-  id: string;
-  quantity: number;
-  lineTotal: number;
-}
-
-interface CartView {
-  items: CartLine[];
+interface CartView extends CartLinesView {
+  subtotal: number;
+  discountTotal: number;
   total: number;
 }
 
@@ -39,6 +41,8 @@ const summary = document.querySelector<HTMLElement>('[data-order-summary]');
 
 if (summary) {
   const threshold = Number.parseFloat(summary.dataset.threshold ?? '') || 0;
+  const resolveImage = imageResolver(summary.dataset.assetBase ?? '');
+
   const list = summary.querySelector<HTMLElement>('[data-order-list]');
   const empty = summary.querySelector<HTMLElement>('[data-empty]');
   const errorSlot = summary.querySelector<HTMLElement>('[data-cart-error]');
@@ -46,6 +50,9 @@ if (summary) {
   const progressEl = summary.querySelector<HTMLElement>('[data-shipping-progress]');
   const progressBar = progressEl?.querySelector<HTMLElement>('.progress-bar');
   const shippingLabel = summary.querySelector<HTMLElement>('[data-shipping-label]');
+  const totals = summary.querySelector<HTMLElement>('[data-order-totals]');
+  const subtotalOutput = summary.querySelector<HTMLElement>('[data-order-subtotal]');
+  const discountOutput = summary.querySelector<HTMLElement>('[data-order-discount]');
 
   const setError = (message: string | null): void => {
     if (!errorSlot) return;
@@ -54,30 +61,7 @@ if (summary) {
   };
 
   const render = (cart: CartView): void => {
-    const byId = new Map(cart.items.map((item) => [item.id, item]));
-
-    for (const line of summary.querySelectorAll<HTMLElement>('[data-line]')) {
-      const item = byId.get(line.dataset.lineId ?? '');
-
-      // La API ya no devuelve la linea: PATCH con 0 la elimina, y una
-      // configuracion fusionada puede colapsar dos lineas en una.
-      if (!item) {
-        line.remove();
-        continue;
-      }
-
-      const quantity = line.querySelector<HTMLElement>('[data-quantity]');
-      if (quantity) quantity.textContent = String(item.quantity);
-
-      const subtotal = line.querySelector<HTMLElement>('[data-line-subtotal]');
-      if (subtotal) subtotal.textContent = formatPrice(item.lineTotal);
-
-      // No se puede bajar de 1: para eliminar esta el boton de borrar.
-      const minus = line.querySelector<HTMLButtonElement>('[data-step="-1"]');
-      if (minus) minus.disabled = item.quantity <= 1;
-
-      line.removeAttribute('data-busy');
-    }
+    if (list) list.innerHTML = renderLines(cart, resolveImage);
 
     if (totalOutput) totalOutput.textContent = `Pedido ${formatPrice(cart.total)}`;
 
@@ -96,21 +80,30 @@ if (summary) {
           : `Estas a ${formatPrice(remaining)} de obtener envio gratis \u{1F389}`;
     }
 
-    const hasLines = summary.querySelectorAll('[data-line]').length > 0;
+    // Un cambio de cantidad puede estrenar o deshacer un descuento —cerrar un
+    // 2x1, o romperlo—, asi que el bloque aparece y desaparece con el.
+    totals?.classList.toggle('d-none', cart.discountTotal <= 0);
+    if (subtotalOutput) subtotalOutput.textContent = formatPrice(cart.subtotal);
+    if (discountOutput) discountOutput.textContent = `− ${formatPrice(cart.discountTotal)}`;
+
+    const hasLines = cart.lines.length > 0;
     list?.classList.toggle('d-none', !hasLines);
     empty?.classList.toggle('d-none', hasLines);
   };
 
   /**
-   * Lanza la operacion y repinta con la respuesta. La linea queda marcada como
-   * ocupada mientras tanto: dos pulsaciones seguidas al "+" mandarian dos
-   * cantidades calculadas sobre el mismo valor de partida.
+   * Lanza la operacion y repinta con la respuesta.
+   *
+   * La lista entera queda bloqueada mientras tanto, no solo la linea pulsada:
+   * dos pulsaciones seguidas mandarian dos cantidades calculadas sobre el mismo
+   * valor de partida, y ademas la respuesta puede cambiar cualquier otra linea
+   * del mismo platillo.
    */
-  const mutate = async (line: HTMLElement, path: string, init: RequestInit): Promise<void> => {
-    if (line.hasAttribute('data-busy')) return;
+  const mutate = async (path: string, init: RequestInit): Promise<void> => {
+    if (list?.hasAttribute('data-busy')) return;
 
     setError(null);
-    line.setAttribute('data-busy', '');
+    list?.setAttribute('data-busy', '');
 
     try {
       const response = await fetch(path, {
@@ -122,52 +115,68 @@ if (summary) {
         | null;
 
       if (!response.ok || !body?.data) {
-        line.removeAttribute('data-busy');
         setError(body?.message ?? 'No pudimos actualizar tu pedido.');
         return;
       }
 
       // El pedido se quedo vacio: recargar deja coherentes tambien la barra de
       // accion y el aviso, que los pinta el servidor.
-      if (body.data.items.length === 0) {
+      if (body.data.lines.length === 0) {
         window.location.reload();
         return;
       }
 
       render(body.data);
     } catch {
-      line.removeAttribute('data-busy');
       setError('No pudimos actualizar tu pedido. Revisa tu conexion.');
+    } finally {
+      list?.removeAttribute('data-busy');
     }
   };
 
-  const lineEndpoint = (line: HTMLElement) =>
-    `/api/cart/items/${encodeURIComponent(line.dataset.lineId ?? '')}`;
+  const lineEndpoint = (itemId: string) => `/api/cart/items/${encodeURIComponent(itemId)}`;
+
+  /** Manda la cantidad nueva de la fila. Con 0, la API la elimina. */
+  const setQuantity = (itemId: string, quantity: number): Promise<void> =>
+    quantity <= 0
+      ? mutate(lineEndpoint(itemId), { method: 'DELETE' })
+      : mutate(lineEndpoint(itemId), {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ quantity }),
+        });
 
   summary.addEventListener('click', (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
 
+    // Los controles cuelgan de la FILA, que es lo que el PATCH sabe cambiar.
+    // En un grupo de "compra y lleva" hay un solo control y la fila que lleva
+    // es la ultima que entro: el acordeon de arriba solo desglosa unidades.
+    const row = target.closest<HTMLElement>('[data-row]');
+    if (!row) return;
+
+    const itemId = row.dataset.lineId;
+    if (!itemId) return;
+
+    // La cantidad de la FILA, no la que se ve. Cuando parte de la fila esta
+    // dentro de un grupo son distintas, y sumar sobre lo visible bajaria el
+    // pedido al pulsar "+": la fila lleva 3 unidades y la linea ensena 1.
+    const rowQuantity = Number.parseInt(row.dataset.rowQuantity ?? '', 10) || 0;
+    const lineQuantity = Number.parseInt(row.dataset.lineQuantity ?? '', 10) || 0;
+
     const step = target.closest<HTMLElement>('[data-step]');
     if (step) {
-      const line = step.closest<HTMLElement>('[data-line]');
-      const value = line?.querySelector<HTMLElement>('[data-quantity]');
-      if (!line || !value) return;
-
       const delta = Number.parseInt(step.dataset.step ?? '', 10) || 0;
-      const quantity = Math.max(1, (Number.parseInt(value.textContent ?? '', 10) || 1) + delta);
-
-      void mutate(line, lineEndpoint(line), {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ quantity }),
-      });
+      void setQuantity(itemId, rowQuantity + delta);
       return;
     }
 
     if (target.closest('[data-remove-line]')) {
-      const line = target.closest<HTMLElement>('[data-line]');
-      if (line) void mutate(line, lineEndpoint(line), { method: 'DELETE' });
+      // Quita lo que esta linea representa: la fila entera cuando es toda suya
+      // —tambien en un grupo, donde se lleva la ultima que entro—, y solo las
+      // unidades sueltas cuando el resto ya esta en una promocion.
+      void setQuantity(itemId, rowQuantity - lineQuantity);
     }
   });
 
