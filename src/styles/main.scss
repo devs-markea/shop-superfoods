@@ -127,10 +127,16 @@
 @import 'components/order-item';
 @import 'components/stepper';
 @import 'components/order-comments';
+@import 'components/cart-summary'; // tarjeta de resumen: solo desktop
 
 // Vista de datos de entrega
 @import 'components/country-select';
 @import 'components/location';
+
+// Armazon de las pantallas del checkout en desktop (/carrito y /datos). Al final
+// del grupo, como .product-page en la ficha: es quien recoloca las piezas de
+// arriba —entre ellas .screen-body y la barra de accion— y asi sus reglas cierran.
+@import 'components/checkout-page';
 
 // Vista de resumen de pago
 @import 'components/tip';

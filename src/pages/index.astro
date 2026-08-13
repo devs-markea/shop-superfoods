@@ -112,10 +112,14 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
        franja blanca del pie flotando y el fondo gris asomando bajo ella. Crece el
        contenido, no el pie. -->
   <main class="storefront flex-grow-1">
-    {/* La pila solo existe en desktop —en movil es `display: contents`, ver
+    {/* El subcontenedor: un .container-fluid de Bootstrap, las 12 columnas a
+        ancho completo, con el banner, la barra y la lista dentro. <main> es el
+        contenedor de fuera y solo pone el aire de arriba y abajo.
+
+        La pila solo existe en desktop —en movil es `display: contents`, ver
         components/_storefront.scss—, asi que envolver no cambia nada de lo que
         ya habia: el aviso de tienda cerrada se queda fuera porque flota. */}
-    <div class="storefront__stack">
+    <div class="storefront__stack container-fluid">
       <Hero
         title={banner?.title}
         description={banner?.description}
@@ -137,10 +141,15 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 
           {
             products.length > 0 ? (
-              // m-0: .row solo resetea los margenes laterales y el superior, asi
-              // que el margin-bottom que el Reboot pone a <ul> sobreviviria.
+              // mb-0 y no m-0: .row ya resetea el margen superior y pone los
+              // laterales en NEGATIVO —es asi como compensa el padding de 12
+              // de cada columna, para que la primera arranque en el borde del
+              // contenedor y la ultima acabe en el otro—. Un m-0 se los lleva
+              // por delante y mete la rejilla 12 por cada lado. Lo unico que
+              // hay que quitar es el margin-bottom que el Reboot pone a <ul>,
+              // que ese si sobrevive.
               <ul
-                class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-6 list-unstyled m-0"
+                class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-6 list-unstyled mb-0"
                 data-product-list
               >
                 {products.map((product, index) => (

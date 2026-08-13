@@ -2,21 +2,33 @@
 import CountrySelect from './CountrySelect.astro';
 import TextField from './TextField.astro';
 
-// Spec: contenedor gap 8 — selector de pais (75) + telefono (resto del ancho).
+// Spec movil: contenedor gap 8 — selector de pais (75) + telefono (resto del
+// ancho). En desktop el grupo se rotula, y los dos controles se separan a 12.
+//
+// La etiqueta es del GRUPO, y por eso la escribe este componente en lugar de
+// <TextField>: rotula al selector de pais y al numero juntos, que son un solo
+// dato partido en dos controles. Apunta al numero, que es donde se escribe.
+//
+// En movil no se pinta —el diseno de movil no lleva etiquetas— pero sigue en el
+// arbol, y es la que nombra al campo para el lector de pantalla. Ver
+// components/_field.scss.
 ---
 
-<div class="d-flex gap-2">
-  <CountrySelect />
+<div class="field-group">
+  <label class="field-label" for="field-phone">Telefono de contacto</label>
 
-  <div class="flex-grow-1">
-    <TextField
-      name="phone"
-      label="Numero de telefono"
-      placeholder="Numero de telefono"
-      type="tel"
-      inputmode="tel"
-      autocomplete="tel-national"
-      required
-    />
+  <div class="d-flex gap-2 gap-md-3">
+    <CountrySelect />
+
+    <div class="flex-grow-1">
+      <TextField
+        name="phone"
+        placeholder="Numero de telefono"
+        type="tel"
+        inputmode="tel"
+        autocomplete="tel-national"
+        required
+      />
+    </div>
   </div>
 </div>

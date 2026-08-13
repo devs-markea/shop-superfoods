@@ -1,103 +1,232 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import ScreenHeader from '../../components/ScreenHeader.astro';
+import NavbarDesktop from '../../components/NavbarDesktop.astro';
 import Icon from '../../components/Icon.astro';
 import BankAccount from '../../components/BankAccount.astro';
 import OrderDetail from '../../components/OrderDetail.astro';
+import CartSummary from '../../components/CartSummary.astro';
 import ActionBar from '../../components/ActionBar.astro';
-import { getCart } from '../../lib/cart.ts';
+import ScheduleSheet from '../../components/ScheduleSheet.astro';
+import LocationSheet from '../../components/LocationSheet.astro';
+import Footer from '../../components/Footer.astro';
+import { getCart, type Cart } from '../../lib/cart.ts';
 import { resolveCartToken } from '../../lib/cart-session.ts';
+import { getShippingQuote } from '../../lib/shipping-quote.ts';
 import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
-import { getStoreConfig } from '../../lib/store-config.ts';
+import { resolveShipping } from '../../lib/shipping.ts';
+import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
+import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts';
 import type { OrderLine } from '../../lib/checkout.ts';
+
+// DOS PANTALLAS, UN MARCADO
+//
+// En movil es la de siempre: la cabecera de 124, la cuenta bancaria, el aviso, el
+// detalle del pedido y "Confirmar pedido" en la barra fija del fondo.
+//
+// En desktop se monta como las tres pantallas anteriores del checkout —la misma
+// barra de tienda, el mismo armazon de 48 y el mismo pie— y se parte en dos
+// columnas: lo que hay que leer antes de pagar a la izquierda y la tarjeta de
+// resumen a la derecha, que es donde se confirma. Ver
+// components/_checkout-page.scss.
+//
+// La tarjeta releva a la barra de accion: los dos son submits del mismo
+// formulario, asi que scripts/confirm-order.ts cierra el pedido igual desde
+// cualquiera de ellos y no hay dos caminos que mantener. En desktop la barra no se
+// pinta y en movil la tarjeta no existe.
 
 // El carrito de la sesion manda sobre cualquier valor de ejemplo.
 export const prerender = false;
 
+const token = resolveCartToken(Astro.cookies);
+
+// La propina y el modo de entrega vienen del borrador: la cookie la lee tambien
+// el servidor, asi que el total se pinta ya completo y no baila al arrancar el JS.
+const draft = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+const { tip } = draft;
+
 // El pedido todavia no existe: se crea al confirmar. Asi que lo que se lista es
-// el carrito, que sigue en pie.
-let items: OrderLine[] = [];
-let products = 0;
+// el carrito, que sigue en pie. Si no responde, la pantalla se sirve igual: la
+// cuenta bancaria es lo que se viene a leer aqui.
+const cartPending = getCart(token).catch((error) => {
+  console.error('[transferencia] fallo GET /api/cart', error);
+  return null as Cart | null;
+});
+
+// El catalogo, solo para los tres rotulos de categoria del pie: si falla, el pie
+// se queda con "Menu completo" y la pantalla sigue en pie.
+const categoriesPending = getProducts()
+  .then((items) => getCategories(items).filter((category) => category !== ALL_CATEGORIES))
+  .catch((error) => {
+    console.error('[transferencia] fallo el catalogo del pie', error);
+    return [] as string[];
+  });
+
+// La cotizacion del envio vive en el borrador, pero esa cookie dura dos horas y el
+// navegador la vacia de mas maneras de las que parece. Cuando falta y hay una
+// ubicacion que la justifica, se recupera de la API, que la guarda mientras dure la
+// sesion del carrito. Asi el importe llega en el primer render, y el total que se
+// ensena aqui no baja porque el navegador se limpiara solo.
+//
+// Solo se pregunta cuando puede haber algo que recuperar: en el camino normal, con
+// la cotizacion ya en el borrador, no se llama.
+const quotePending =
+  draft.deliveryType !== 'pickup' && draft.customer.locationUrl && !draft.shipping
+    ? getShippingQuote(token)
+    : Promise.resolve(null);
+
+const [store, schedule, cart, categories, recovered] = await Promise.all([
+  getStoreConfig(),
+  getStoreSchedule(),
+  cartPending,
+  categoriesPending,
+  quotePending,
+]);
+
+const quote = draft.shipping ?? recovered;
+
+const items: OrderLine[] = cart?.items ?? [];
+const products = cart?.total ?? 0;
 // Antes de descontar, y lo que descuentan las promociones. Con ellos el
 // comprador puede cuadrar la resta en lugar de fiarse del importe final.
-let subtotal = 0;
-let discount = 0;
+const subtotal = cart?.subtotal ?? 0;
+const discount = cart?.discountTotal ?? 0;
 
-try {
-  const cart = await getCart(resolveCartToken(Astro.cookies));
-  items = cart.items;
-  products = cart.total;
-  subtotal = cart.subtotal;
-  discount = cart.discountTotal;
-} catch (error) {
-  console.error('[transferencia] fallo GET /api/cart', error);
-}
+const { bankTransfer } = store;
 
-// La propina viene del borrador, no de la URL: la cookie la lee tambien el
-// servidor, asi que el total se pinta ya completo y no baila al arrancar el JS.
-const { tip } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+// El envio, con la misma cuenta que /pago: la distancia medida en /datos con la
+// tarifa, y por encima de ella las dos reglas que mandan —al recoger no hay
+// envio, y el envio gratis del negocio manda sobre cualquier distancia—. Este es
+// el importe que se va a transferir, asi que tiene que ser exactamente el mismo
+// que se acaba de ensenar en el resumen.
+const shipping = resolveShipping({
+  pickup: draft.deliveryType === 'pickup',
+  quote,
+  products,
+  freeShipping: store.delivery?.freeShipping,
+});
 
-// El envio sigue sin cotizar (el backend lo congela en 0), y por eso el aviso
-// dorado advierte de que el importe todavia puede subir.
-const total = products + tip;
+const total = products + tip + shipping.cost;
 
-const { bankTransfer } = await getStoreConfig();
+// El aviso solo advierte de lo que de verdad falta. Con el envio ya medido, el
+// importe de arriba es el definitivo y pedir que se espere a otro numero solo
+// frenaria una transferencia que ya se puede hacer. Sin medir —o al recoger, que
+// no lleva envio— se mantiene la advertencia de siempre.
+const pendingShipping = shipping.state === 'pending';
+
+// Las dos condiciones se calculan aqui, en el mismo sitio que monta las hojas: si
+// las dedujera la barra de desktop por su cuenta, podria ofrecer un boton para una
+// hoja que esta pantalla no monto.
+const address = store.location?.address;
+const mapsUrl = store.location?.mapsUrl;
+const hasLocation = Boolean(address || mapsUrl);
+const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 ---
 
 <Layout
   title="Pago por transferencia — Shop Superfoods"
   description="Datos bancarios para completar tu pedido."
 >
-  <ScreenHeader title="Pago por transferencia" backHref="/pago" />
+  {/* Una cabecera por pantalla: la de 124 con el control de vuelta en movil, y de
+      md hacia arriba la barra de la tienda. */}
+  <ScreenHeader title="Pago por transferencia" backHref="/pago" mobileOnly />
+
+  <NavbarDesktop
+    shortAddress={store.location?.shortAddress}
+    estimate={store.delivery?.estimate}
+    hasLocation={hasLocation}
+    hasSchedule={hasSchedule}
+    cartTotal={products}
+    cartCount={cart?.itemsCount ?? 0}
+  />
 
   <!-- La cadena flex (page > main > form) deja la barra de accion al fondo de
        la pantalla aunque el contenido no llegue a llenarla. -->
-  <main class="d-flex flex-column flex-grow-1">
-    {/*
-      data-method y data-next son lo unico que distingue este cierre del de
-      efectivo: el resto lo hace scripts/confirm-order.ts, compartido por los dos.
-    */}
-    <form
-      class="d-flex flex-column flex-grow-1"
-      action="#"
-      method="post"
-      data-confirm-form
-      data-method="bank_transfer"
-      data-next="/recibido"
-    >
-      <div class="screen-body">
-        <BankAccount
-          holder={bankTransfer?.holder}
-          bank={bankTransfer?.bank}
-          clabe={bankTransfer?.clabe}
-        />
+  <main class="checkout-page checkout-page--confirm d-flex flex-column flex-grow-1">
+    {/* La pila y la rejilla solo existen en desktop —en movil son `display:
+        contents`, ver components/_checkout-page.scss—, asi que envolver no cambia
+        nada de lo que ya habia. */}
+    <div class="checkout-page__stack">
+      <h1 class="checkout-page__title">Pago por transferencia</h1>
 
-        <div class="info-note">
-          <Icon name="info" size="sm" />
-          <p class="info-note__text">
-            Al finalizar tu pedido se te indicara el costo de envio exacto. Por favor
-            realiza la transferencia una vez confirmado.
-          </p>
+      {/*
+        data-method y data-next son lo unico que distingue este cierre del de
+        efectivo: el resto lo hace scripts/confirm-order.ts, compartido por los dos.
+      */}
+      <form
+        class="checkout-page__grid"
+        action="#"
+        method="post"
+        data-confirm-form
+        data-method="bank_transfer"
+        data-next="/recibido"
+        data-shipping={shipping.cost}
+      >
+        <!-- Contenedor 1: lo que hay que leer antes de transferir. -->
+        <div class="screen-body">
+          <BankAccount
+            holder={bankTransfer?.holder}
+            bank={bankTransfer?.bank}
+            clabe={bankTransfer?.clabe}
+          />
+
+          <div class="info-note">
+            <Icon name="info" size="sm" />
+            <p class="info-note__text">
+              {
+                pendingShipping
+                  ? 'Al finalizar tu pedido se te indicara el costo de envio exacto. Por favor realiza la transferencia una vez confirmado.'
+                  : 'Realiza la transferencia por el importe total y envianos el comprobante para confirmar tu pedido.'
+              }
+            </p>
+          </div>
+
+          <OrderDetail
+            items={items}
+            total={total}
+            subtotal={subtotal}
+            discount={discount}
+            tip={tip}
+            shipping={shipping}
+          />
+
+          {/* Lo rellena el script si el checkout rechaza el pedido. */}
+          <p class="form-error" role="alert" hidden data-checkout-error></p>
         </div>
 
-        <OrderDetail
-          items={items}
-          total={total}
+        <!-- En desktop esta barra no se pinta: confirmar es el boton de la
+             tarjeta. Los dos son submits del mismo formulario, asi que el script
+             cierra el pedido igual desde cualquiera de ellos. -->
+        <div class="checkout-page__action">
+          <ActionBar label="Confirmar pedido" />
+        </div>
+
+        {/* Contenedor 2, solo desktop: la misma tarjeta de las tres pantallas
+            anteriores, aqui ya con todo cerrado —descuentos, envio y propina—.
+            Sin `href`, su boton es un submit: lo que hace es crear el pedido, no
+            navegar, y a donde se va despues lo decide el script. */}
+        <CartSummary
           subtotal={subtotal}
           discount={discount}
+          products={products}
+          shipping={shipping}
           tip={tip}
+          label="Confirmar pedido"
         />
-
-        {/* Lo rellena el script si el checkout rechaza el pedido. */}
-        <p class="form-error" role="alert" hidden data-checkout-error></p>
-      </div>
-
-      <ActionBar label="Confirmar pedido" />
-    </form>
+      </form>
+    </div>
   </main>
+
+  {/* Las dos hojas que abren el pin y el reloj de la barra de desktop. */}
+  {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
+  {hasLocation && <LocationSheet address={address} mapsUrl={mapsUrl} />}
+
+  <Footer store={store} categories={categories} />
 </Layout>
 
 <script>
   import '../../scripts/copy-button';
   import '../../scripts/confirm-order';
+  // Abre las hojas del horario y la ubicacion desde la barra de desktop.
+  import '../../scripts/sheet';
 </script>

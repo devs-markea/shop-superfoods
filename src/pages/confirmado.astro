@@ -60,6 +60,9 @@ const view: ConfirmationView = order
 
 // Con pedido, todo sale de el: el checkout vacia el carrito, asi que leerlo aqui
 // devolveria una lista vacia.
+//
+// El envio ya viene dentro: la API lo calcula al cerrar el pedido y su `total` lo
+// incluye, asi que aqui no se suma nada por encima.
 let items: OrderLine[] = order?.items ?? [];
 let total = order?.total ?? 0;
 
@@ -104,7 +107,10 @@ const whatsapp =
         phone,
         fillMessage(store.whatsapp?.templates?.orderPlaced ?? '', {
           folio: order.id,
-          total: formatPrice(order.total),
+          // El mismo total que se rotula arriba, envio incluido: el mensaje lo
+          // lee la tienda, y dos importes distintos para un pedido abren una
+          // conversacion que nadie quiere tener.
+          total: formatPrice(total),
           nombre: order.customer?.name,
           estado: order.statusLabel,
           metodo: PAYMENT_LABEL[method],

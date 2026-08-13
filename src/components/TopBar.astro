@@ -7,9 +7,15 @@ interface Props {
   /** Total del pedido, a la derecha. */
   total: number;
   backHref?: string;
+  /**
+   * La barra se retira de md hacia arriba. Para la pantalla que tiene cabecera
+   * propia de desktop (.navbar-desktop): dos cabeceras seguidas serian una de
+   * mas, y el titulo lo repite ahi el rotulo de la pantalla.
+   */
+  mobileOnly?: boolean;
 }
 
-const { title, total, backHref = '/' } = Astro.props;
+const { title, total, backHref = '/', mobileOnly = false } = Astro.props;
 
 // Barra de 48 de la vista de pedido: control de vuelta + titulo + total.
 // El titulo queda "centro entre los elementos, no del layout": lo colocan sus
@@ -18,7 +24,7 @@ const { title, total, backHref = '/' } = Astro.props;
 // Para la cabecera de 124 con titulo centrado, usar ScreenHeader.
 ---
 
-<header class="topbar">
+<header class:list={['topbar', mobileOnly && 'topbar--mobile']}>
   <BackButton href={backHref} />
 
   <h1 class="topbar__title">{title}</h1>

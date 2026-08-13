@@ -74,6 +74,20 @@
   }
 }
 
+// Modifier: barra que solo existe en movil.
+//
+// La marca asi la pantalla que en desktop tiene cabecera propia —/carrito, con
+// la misma .navbar-desktop de la portada—, y ahi esta barra sobra entera: el
+// control de vuelta lo releva el logo, el titulo lo repite el rotulo de la
+// pantalla y el total, la tarjeta de resumen. No se apaga para todas las
+// pantallas con .topbar porque /datos y el pago siguen sin barra de desktop, y
+// sin esta se quedarian sin cabecera.
+.topbar--mobile {
+  @include media-breakpoint-up(md) {
+    display: none;
+  }
+}
+
 // Element: hueco simetrico al control de vuelta.
 // Con space-between, el elemento del medio solo queda centrado en el ancho de
 // la barra si el primero y el ultimo miden lo mismo. Este hueco de 24 replica

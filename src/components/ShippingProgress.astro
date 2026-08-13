@@ -1,5 +1,5 @@
 ---
-import { formatPrice } from '../lib/price.ts';
+import { freeShippingLabel } from '../lib/shipping.ts';
 
 interface Props {
   remaining: number;
@@ -8,12 +8,14 @@ interface Props {
 
 const { remaining, progress } = Astro.props;
 
+// Con el pedido vacio esta barra no se monta: lo decide la pantalla, que es quien
+// sabe si hay lineas. Ver /carrito.
+//
 // Al alcanzar el umbral cambia el texto, no el color: el dorado de este label
-// esta especificado en la spec y no depende del estado.
-const label =
-  remaining === 0
-    ? '¡Ya tienes envio gratis! 🎉'
-    : `Estas a ${formatPrice(remaining)} de obtener envio gratis 🎉`;
+// esta especificado en la spec y no depende del estado. La copia vive en
+// src/lib/shipping.ts, porque el script la reescribe con cada cambio de cantidad
+// y no puede decir otra cosa que esta.
+const label = freeShippingLabel(remaining);
 ---
 
 <section class="shipping-progress" aria-label="Progreso hacia el envio gratis">

@@ -39,6 +39,14 @@
   transition: color var(--sf-transition);
 }
 
+// Element: name — el nombre de la opcion, dentro del label y delante de su
+// importe. En movil no declara nada a proposito: ahi la etiqueta es una sola voz
+// —Inter 500 14/20— y el nombre se lee igual que el precio que lo sigue. Existe
+// por desktop, que si los separa (ver el final del archivo).
+//
+// Es el mismo elemento en los dos sitios donde se elige: el nombre de la
+// variante y el de la personalizacion.
+
 // Modifier: control de cantidad. No hay casilla que marcar, asi que la fila
 // es etiqueta a la izquierda y stepper a la derecha. Es la fila mas alta de
 // las tres: el stepper mide 28 frente a los 20 del radio y del checkbox.
@@ -106,4 +114,52 @@
 .option-group[data-inert] .option {
   cursor: default;
   opacity: 0.6;
+}
+
+// --- Desktop -------------------------------------------------------------
+// El nombre de la opcion sube a 15/15 y se lleva el estado de la fila: sin elegir
+// es Inter 500 gris y elegida Inter 600 negra. En la columna de la derecha la
+// lista es lo que se recorre para elegir, asi que la elegida se reconoce por su
+// nombre y no solo por la casilla.
+//
+// El 15 va literal por lo mismo que el 32 del titulo: no esta en la escala de
+// tamanos y es el unico rotulo de la tienda que lo pide. Los dos colores de la
+// spec ya son tokens: #111827 es --sf-ink, el negro del resto de la ficha, y
+// #4B5563 es --sf-slate, el mismo gris con el que se lee la descripcion.
+//
+// El importe que sigue al nombre no se toca: lo mueve el color del label, que es
+// de donde hereda.
+@include media-breakpoint-up(md) {
+  .option__name {
+    font-size: 15px;
+    font-weight: var(--sf-weight-medium);
+    line-height: 1;
+    color: var(--sf-slate);
+    transition: color var(--sf-transition);
+  }
+
+  // Elegida: casilla marcada, o unidades pedidas, que en el control de cantidad
+  // significa lo mismo.
+  .option__input:checked ~ .option__label .option__name,
+  .option--quantity[data-selected] .option__name {
+    font-weight: var(--sf-weight-semibold);
+    color: var(--sf-ink);
+  }
+
+  // El raton adelanta el color, pero no el peso: engordar el nombre al pasar por
+  // encima le cambia el ancho a la fila y la lista temblaria al recorrerla. El
+  // peso se reserva para lo que de verdad se eligio.
+  .option:hover .option__name {
+    color: var(--sf-ink);
+  }
+
+  // Al final del bloque, y por eso: una opcion deshabilitada puede estar marcada
+  // —un grupo con max: 0 apaga sus casillas sin desmarcarlas—, asi que esta regla
+  // y la de "elegida" chocan con la misma especificidad y gana la ultima. El
+  // nombre de algo que no se puede elegir no debe leerse como elegido.
+  .option__input:disabled ~ .option__label .option__name,
+  .option--quantity[data-blocked] .option__name {
+    font-weight: var(--sf-weight-medium);
+    color: var(--sf-placeholder);
+  }
 }

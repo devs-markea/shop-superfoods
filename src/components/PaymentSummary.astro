@@ -1,5 +1,6 @@
 ---
 import { formatPrice } from '../lib/price.ts';
+import { formatKm, type ShippingResult } from '../lib/shipping.ts';
 
 interface Props {
   /** Importe de los productos, en MXN. */
@@ -7,17 +8,23 @@ interface Props {
   /** Propina preseleccionada, en MXN. */
   tip: number;
   /**
-   * Si hay envio del que hablar. Al recoger no lo hay, y la fila desaparece: un
-   * "Por cotizar" en un pedido que se recoge promete un cobro que no va a llegar.
+   * El envio, ya resuelto por la pantalla (src/lib/shipping.ts). Son cuatro
+   * respuestas distintas y cada una se pinta distinto:
+   *
+   *   none    al recoger no hay envio, y la fila desaparece: un "Por cotizar" en
+   *           un pedido que se recoge promete un cobro que no va a llegar
+   *   free    el negocio lo regala
+   *   quoted  hay distancia medida, y con ella precio
+   *   pending sin ubicacion compartida no hay nada que medir
    */
-  shipping?: boolean;
+  shipping?: ShippingResult;
 }
 
-const { products, tip, shipping = true } = Astro.props;
+const { products, tip, shipping = { state: 'pending', cost: 0 } } = Astro.props;
 
 // El total se calcula, nunca se escribe: la vista no puede contradecir a los
 // datos. El script lo recalcula al cambiar la propina.
-const total = products + tip;
+const total = products + tip + shipping.cost;
 ---
 
 <div class="summary">
@@ -30,10 +37,25 @@ const total = products + tip;
     </div>
 
     {
-      shipping && (
+      shipping.state !== 'none' && (
         <div class="summary__row">
-          <dt class="summary__term">Costo de envio</dt>
-          <dd class="summary__value summary__value--pending">Por cotizar</dd>
+          <dt class="summary__term">
+            Costo de envio
+            {/* La distancia junto al concepto: es de donde sale el importe, y
+                asi el comprador puede cuadrarlo con la tarifa en lugar de
+                fiarse de un numero que aparece solo. */}
+            {shipping.state === 'quoted' && shipping.km !== null && (
+              <span class="summary__hint">{formatKm(shipping.km)}</span>
+            )}
+          </dt>
+
+          {shipping.state === 'quoted' ? (
+            <dd class="summary__value">{formatPrice(shipping.cost)}</dd>
+          ) : shipping.state === 'free' ? (
+            <dd class="summary__value summary__value--free">Gratis</dd>
+          ) : (
+            <dd class="summary__value summary__value--pending">Por cotizar</dd>
+          )}
         </div>
       )
     }

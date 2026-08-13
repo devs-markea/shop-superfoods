@@ -16,8 +16,29 @@
 // Declarado en vite.optimizeDeps.include, como el resto del JS de Bootstrap.
 import 'bootstrap/js/dist/dropdown.js';
 
-import { draftGaps, listGaps, patchDraft, phoneDigits } from '../lib/checkout-draft';
+import { paintCartSummary } from '../lib/cart-summary';
+import { draftGaps, listGaps, patchDraft, phoneDigits, readDraft } from '../lib/checkout-draft';
 import { bindDeliverySwitch, checkedDeliveryType } from '../lib/delivery-switch';
+import {
+  coordsFromMapsUrl,
+  isShortMapsLink,
+  otherSpot,
+  parseCoords,
+  quoteFromResponse,
+  resolveShipping,
+  type FreeShippingRule,
+  type ShippingQuote,
+  type ShippingQuoteResponse,
+} from '../lib/shipping';
+
+/**
+ * Hasta que imprecision se acepta una posicion del navegador, en metros.
+ *
+ * Un GPS da decenas de metros y una posicion por wifi, unos cientos. Lo que pasa
+ * de aqui viene de la IP del proveedor —decenas de kilometros, a veces otra
+ * ciudad— y no sirve para cobrar un envio por distancia.
+ */
+const MAX_ACCURACY_METERS = 5000;
 import type { CheckoutCustomer, DeliveryType } from '../lib/checkout';
 
 const form = document.querySelector<HTMLFormElement>('[data-delivery-form]');
@@ -26,6 +47,83 @@ if (form) {
   const value = (name: string): string =>
     form.querySelector<HTMLInputElement | HTMLTextAreaElement>(`[name="${name}"]`)?.value.trim() ??
     '';
+
+  // --- Avisos ---
+  // El aviso escrito de lo que falta por rellenar, y el de la zona de reparto,
+  // que es otra cosa: no frena el pedido, solo cuenta que la tienda entrega en
+  // Cancun y que ese envio se cotiza al final.
+  const error = form.querySelector<HTMLElement>('[data-delivery-error]');
+  const areaNotice = form.querySelector<HTMLElement>('[data-area-notice]');
+  const areaNoticeText = form.querySelector<HTMLElement>('[data-area-notice-text]');
+
+  // Modo de pruebas del servidor. Con el puesto no se avisa de nada, ni siquiera
+  // de un aviso que se hubiera guardado antes de encenderlo.
+  const testMode = form.dataset.testMode !== undefined;
+
+  const showError = (message: string | null): void => {
+    if (!error) return;
+    error.textContent = message ?? '';
+    error.hidden = !message;
+  };
+
+  /**
+   * Pone o quita el aviso de zona. El servidor ya lo dejo pintado con lo que
+   * recordaba el borrador; esto lo actualiza cuando llega un veredicto nuevo.
+   *
+   * No hace falta esconderlo al pasar a "Para recoger": vive dentro del bloque de
+   * direccion, que el switch oculta entero.
+   */
+  const showAreaNotice = (message: string | null): void => {
+    if (!areaNotice) return;
+    if (areaNoticeText && message) areaNoticeText.textContent = message;
+    areaNotice.hidden = !message;
+  };
+
+  const saved = readDraft();
+
+  /**
+   * La cotizacion de la ubicacion compartida: importe, kilometros, si se entrega
+   * ahi y el aviso si no. Se declara aqui arriba —antes que todo lo que la usa—
+   * porque la tarjeta de resumen la lee desde el primer momento, y el switch de
+   * entrega la consulta ya al arrancar.
+   */
+  let quote: ShippingQuote | null = saved.shipping;
+
+  // --- Tarjeta de resumen (desktop) ---
+  // La misma tarjeta de /carrito, con la cuenta del pedido. Aqui los importes de
+  // los productos no se mueven —eso es del carrito—, pero el envio si, y por dos
+  // caminos: compartir una ubicacion lo mide, y el switch de entrega lo quita
+  // entero. Las dos cosas pasan en esta pantalla, asi que la tarjeta se vuelve a
+  // resolver con la MISMA funcion que uso el servidor (src/lib/shipping.ts) en
+  // lugar de arrastrar el importe con el que se cargo la pagina.
+  const amount = (name: string): number => Number.parseFloat(form.dataset[name] ?? '') || 0;
+
+  const products = amount('products');
+  const threshold = amount('threshold');
+
+  const freeShipping: FreeShippingRule = {
+    mode:
+      form.dataset.freeShipping === 'always'
+        ? 'always'
+        : form.dataset.freeShipping === 'threshold'
+          ? 'threshold'
+          : 'none',
+    threshold: threshold || null,
+  };
+
+  const repaintSummary = (): void => {
+    paintCartSummary(form, {
+      subtotal: amount('subtotal'),
+      discount: amount('discount'),
+      products,
+      shipping: resolveShipping({
+        pickup: checkedDeliveryType(form) === 'pickup',
+        quote,
+        products,
+        freeShipping,
+      }),
+    });
+  };
 
   // --- Selector de codigo de pais ---
   const toggle = form.querySelector<HTMLElement>('[data-country-toggle]');
@@ -88,6 +186,12 @@ if (form) {
       const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`);
       if (field) field.required = home;
     }
+
+    // Al recoger no hay envio del que hablar y su fila se retira de la tarjeta.
+    // Va aqui dentro y no en un listener propio para cubrir los tres momentos que
+    // avisan —arranque, eleccion y vuelta atras—: al reponer el modo guardado los
+    // radios no emiten `change`.
+    repaintSummary();
   });
 
   // --- Ubicacion ---
@@ -97,13 +201,6 @@ if (form) {
   const locationLabel = form.querySelector<HTMLElement>('[data-location-label]');
   const locationLink = form.querySelector<HTMLAnchorElement>('[data-location-link]');
   const clearButton = form.querySelector<HTMLButtonElement>('[data-location-clear]');
-  const error = form.querySelector<HTMLElement>('[data-delivery-error]');
-
-  const showError = (message: string | null): void => {
-    if (!error) return;
-    error.textContent = message ?? '';
-    error.hidden = !message;
-  };
 
   // La ubicacion no cambia lo que se pide: es un extra sobre la direccion escrita,
   // no una alternativa. Compartirla o quitarla solo se ve aqui.
@@ -117,6 +214,17 @@ if (form) {
   const clearLocation = (): void => {
     if (locationUrl) locationUrl.value = '';
     if (selected) selected.hidden = true;
+    // Sin punto no hay cotizacion: era de esa ubicacion, y guardarla dejaria
+    // rotulando el envio de una direccion que ya no es la del pedido. Con ella se
+    // va el aviso, que tambien era de ese punto: quien quita una ubicacion de otra
+    // ciudad vuelve a estar como quien no comparte ninguna, con la direccion
+    // escrita que esta pantalla no puede comprobar.
+    quote = null;
+    patchDraft({ shipping: null });
+    showAreaNotice(null);
+
+    // Y el envio vuelve a "Por cotizar", que es lo que era antes de compartirla.
+    repaintSummary();
   };
 
   clearButton?.addEventListener('click', clearLocation);
@@ -130,77 +238,315 @@ if (form) {
     if (field && !field.value.trim() && text) field.value = text;
   };
 
-  /**
-   * Pide la direccion del punto y devuelve el texto para el label.
-   *
-   * Sin clave de Google configurada el endpoint responde `configured: false`, y
-   * entonces el label son las coordenadas: se ve peor, pero la ubicacion queda
-   * igual de bien guardada, porque lo que viaja al pedido es el enlace de Maps.
-   */
-  const describe = async (lat: number, lng: number): Promise<string> => {
-    const coordinates = `${lat.toFixed(5)}, ${lng.toFixed(5)}`;
+  // --- La ubicacion compartida ---
+  // Todo lo que se sabe del punto sale de una sola peticion: cuanto cuesta llegar,
+  // si la tienda entrega ahi y como se escribe esa direccion. Lo mide y lo decide
+  // el BACKEND —aqui no se calcula ningun precio—; esta pantalla solo pregunta,
+  // guarda la respuesta y la pinta.
+  //
+  // Se pregunta UNA VEZ por punto: hay ubicacion y todavia no hay respuesta para
+  // ella. Cada consulta gasta cuota de un tercero allí arriba, y ni la distancia
+  // ni la ciudad de un punto cambian al pasar de pantalla o al volver atras.
+  //
+  // Ver `feature/medicion-de-distancia-en-backend.md` en la documentacion.
 
-    try {
-      const response = await fetch(`/api/geocode?lat=${lat}&lng=${lng}`, {
-        headers: { Accept: 'application/json' },
-      });
-      if (!response.ok) return coordinates;
+  /** La direccion del punto, en los campos que pide este formulario. */
+  interface PlaceAddress {
+    label?: string;
+    neighborhood?: string;
+    street?: string;
+    exteriorNumber?: string;
+  }
 
-      const data = (await response.json()) as {
-        configured?: boolean;
-        label?: string | null;
-        neighborhood?: string;
-        street?: string;
-        exteriorNumber?: string;
-      };
+  interface Quoted {
+    quote: ShippingQuote | null;
+    address: PlaceAddress | null;
+  }
 
-      if (!data.configured) return coordinates;
+  // `quote` —la cotizacion de este punto— se declara mas arriba: la tarjeta de
+  // resumen y el switch la leen antes de llegar hasta aqui.
 
-      fillIfEmpty('neighborhood', data.neighborhood);
-      fillIfEmpty('street', data.street);
-      fillIfEmpty('number', data.exteriorNumber);
+  /** La direccion del ultimo punto, para no volver a pedirla si se repite. */
+  let lastAddress: PlaceAddress | null = null;
 
-      return data.label || coordinates;
-    } catch {
-      return coordinates;
+  /** Consulta en vuelo, para que "Continuar" no adelante a la respuesta. */
+  let pending: Promise<Quoted | null> | null = null;
+
+  // Numero de la ultima cotizacion pedida. Compartir un punto y cambiarlo enseguida
+  // deja dos peticiones en el aire, y la primera puede contestar la ultima: sin
+  // este contador, la respuesta del punto viejo pisaria a la del nuevo.
+  let latest = 0;
+
+  const askQuote = (lat: number, lng: number): Promise<Quoted | null> => {
+    // De este punto ya se sabe todo: no se vuelve a preguntar. Una cotizacion sin
+    // punto —la que recupero el servidor de la API, que no devuelve coordenadas—
+    // no cuenta como sabida: hay que preguntar por esta.
+    if (quote && quote.lat !== null && !otherSpot(quote, lat, lng)) {
+      return Promise.resolve({ quote, address: lastAddress });
     }
+
+    const ticket = ++latest;
+
+    pending = (async () => {
+      try {
+        // La direccion escrita hasta este momento viaja con el punto: es lo que
+        // le permite al backend resolver la zona de tarifa cuando el nombre de la
+        // colonia la delata y las coordenadas no.
+        const response = await fetch('/api/shipping/quote', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({
+            deliveryType: 'delivery',
+            location: { lat, lng },
+            address: {
+              neighborhood: value('neighborhood'),
+              street: value('street'),
+              exteriorNumber: value('number'),
+              crossStreets: value('cross_streets'),
+              references: value('references'),
+            },
+          }),
+        });
+
+        if (!response.ok) {
+          // 404 es el estado normal mientras la API no publique el endpoint: no
+          // hay cotizacion, el envio se queda "Por cotizar" y el pedido sigue.
+          // Cualquier otro estado si merece quedar anotado.
+          if (response.status !== 404) {
+            console.error('[envio] la API rechazo la cotizacion', response.status);
+          }
+          return null;
+        }
+
+        const body = (await response.json()) as {
+          data?: (ShippingQuoteResponse & { address?: PlaceAddress | null }) | null;
+        };
+
+        // Llego tarde: por el camino se compartio otro punto, y esta respuesta ya
+        // no es la del pedido.
+        if (latest !== ticket) return null;
+
+        const address = body.data?.address ?? null;
+        lastAddress = address;
+
+        quote = quoteFromResponse(body.data, { lat, lng });
+
+        // Se guarda al llegar, sin esperar a "Continuar": si el comprador sale de
+        // la pantalla y vuelve, la cotizacion sigue puesta y no se gasta otra
+        // peticion.
+        patchDraft({ shipping: quote });
+
+        // El aviso de zona lo escribe el backend. Vacio significa que no hay nada
+        // que decir, y entonces se retira el que hubiera de una ubicacion
+        // anterior: dejarlo puesto seria hablar de una direccion que ya no es.
+        showAreaNotice(testMode ? null : quote?.notice || null);
+
+        // Y la tarjeta se repinta con lo que sea que haya contestado: un importe,
+        // "Gratis" si el negocio lo regala, o "Por cotizar" si no se pudo.
+        repaintSummary();
+
+        return { quote, address };
+      } catch {
+        // Sin red no hay cotizacion, y no es culpa del comprador: el envio se
+        // queda por cotizar y el pedido puede seguir.
+        return null;
+      } finally {
+        // Solo se da por terminada la espera si esta seguia siendo la medicion
+        // buena: la de un punto ya descartado no puede desbloquear "Continuar".
+        if (latest === ticket) pending = null;
+      }
+    })();
+
+    return pending;
   };
 
+  /**
+   * Toma un punto, lo rotula y lo cotiza. Es el camino comun del GPS y de la hoja
+   * manual: de donde salieron las coordenadas ya no importa a partir de aqui.
+   */
+  const useLocation = async (lat: number, lng: number): Promise<void> => {
+    // El formato que entiende cualquier cliente de Maps, y el que espera la API
+    // en `customer.locationUrl`.
+    const url = `https://www.google.com/maps?q=${lat},${lng}`;
+
+    // El punto ya esta elegido, asi que se rotula sin esperar a nadie. Lo que
+    // falta —la direccion escrita— llega en la misma respuesta que el importe y
+    // sustituye a este texto en cuanto la API contesta.
+    showLocation(url, 'Ubicacion compartida');
+    showError(null);
+
+    const address = (await askQuote(lat, lng))?.address;
+
+    // Sin direccion resuelta, las coordenadas: se lee peor, pero deja comprobar
+    // el punto, y lo que viaja al pedido es el enlace de Maps.
+    showLocation(url, address?.label || `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+
+    // Ayudan, no corrigen: solo entran donde el comprador no haya escrito.
+    fillIfEmpty('neighborhood', address?.neighborhood);
+    fillIfEmpty('street', address?.street);
+    fillIfEmpty('number', address?.exteriorNumber);
+  };
+
+  // --- La hoja de la ubicacion a mano ---
+  // Sirve a dos casos con el mismo trabajo: el modo de pruebas, donde sustituye al
+  // navegador, y el respaldo de todos los demas, cuando el dispositivo no da un
+  // punto que valga.
+  const manualSheet = document.getElementById('location-input');
+  const manualInput = document.querySelector<HTMLInputElement>('[data-manual-input]');
+  const manualError = document.querySelector<HTMLElement>('[data-manual-error]');
+  const manualIntro = document.querySelector<HTMLElement>('[data-manual-intro]');
+
+  const openManualSheet = (reason?: string): void => {
+    // El motivo por el que se abre sola —sin GPS, o con uno que no sirve— sustituye
+    // a la explicacion de la hoja: es lo primero que hay que leer ahi.
+    if (reason && manualIntro) manualIntro.textContent = reason;
+
+    if (manualError) manualError.hidden = true;
+    if (manualSheet instanceof HTMLDialogElement) manualSheet.showModal();
+    manualInput?.focus();
+  };
+
+  document.querySelector('[data-manual-apply]')?.addEventListener('click', () => {
+    const text = manualInput?.value ?? '';
+    const spot = parseCoords(text);
+
+    if (!spot) {
+      if (manualError) {
+        // Un enlace corto no lleva el punto dentro: hay que abrirlo para que Maps
+        // lo despliegue, y eso no lo puede hacer el navegador contra otro dominio.
+        manualError.textContent = isShortMapsLink(text)
+          ? 'Ese enlace corto no trae las coordenadas. Abrelo en Maps y copia el enlace largo de la barra de direcciones.'
+          : 'No reconocimos ese enlace. Pega el enlace de Google Maps o las coordenadas, como "21.1421, -86.8235".';
+        manualError.hidden = false;
+      }
+      return;
+    }
+
+    if (manualSheet instanceof HTMLDialogElement) manualSheet.close();
+    if (manualInput) manualInput.value = '';
+
+    void useLocation(spot.lat, spot.lng);
+  });
+
+  // --- Compartir ubicacion ---
   // Se pide el permiso solo al pulsar, nunca al cargar.
   shareButton?.addEventListener('click', () => {
+    // En pruebas el punto lo escribe quien prueba: pedirselo al navegador daria
+    // el de la oficina, y lo que se quiere probar es un domicilio de Cancun.
+    if (testMode) {
+      openManualSheet();
+      return;
+    }
+
     if (!('geolocation' in navigator)) {
-      showError('Tu navegador no puede compartir la ubicacion. Escribe la direccion.');
+      openManualSheet('Tu navegador no puede compartir la ubicacion. Indicala en el mapa.');
       return;
     }
 
     shareButton.disabled = true;
 
     navigator.geolocation.getCurrentPosition(
-      async ({ coords }) => {
-        const { latitude, longitude } = coords;
-
-        // El formato que entiende cualquier cliente de Maps, y el que espera la
-        // API en `customer.locationUrl`.
-        const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
-
-        showLocation(url, 'Ubicacion compartida');
-        showError(null);
-
-        showLocation(url, await describe(latitude, longitude));
+      ({ coords }) => {
         shareButton.disabled = false;
+
+        // Lo que responde el navegador no siempre es un GPS. Sin sensor —o en un
+        // escritorio— la posicion se deduce de la IP del proveedor, y esa puede
+        // caer en otra ciudad: un cliente de Cancun aparece en Monterrey. Se nota
+        // en la precision, que entonces se mide en decenas de kilometros.
+        //
+        // Un punto asi no se guarda: el envio se cotiza por distancia, y con esa
+        // ubicacion la tienda cobraria un trayecto que nadie va a hacer. Se dice y
+        // se ofrece el mapa, que es donde se puede senalar de verdad.
+        if (coords.accuracy > MAX_ACCURACY_METERS) {
+          openManualSheet(
+            'Tu dispositivo dio una ubicacion aproximada, de varios kilometros, y con ella no podemos calcular el envio. Senalala en el mapa.',
+          );
+          return;
+        }
+
+        void useLocation(coords.latitude, coords.longitude);
       },
       () => {
-        // Permiso denegado o sin senal: se sigue con el alta manual.
-        showError('No pudimos obtener tu ubicacion. Escribe la direccion.');
+        // Permiso denegado, sin senal o agotado el plazo. La direccion escrita
+        // sigue bastando para pedir; lo que se pierde es la cotizacion del envio,
+        // y por eso se ofrece el mapa antes de rendirse.
         shareButton.disabled = false;
+        openManualSheet(
+          'No pudimos obtener tu ubicacion. Puedes senalarla en el mapa, o dejarla y escribir solo la direccion.',
+        );
       },
-      { enableHighAccuracy: false, timeout: 10_000 },
+      // enableHighAccuracy pide el sensor de verdad en lugar de la posicion
+      // deducida de la red, que es la que se va a otra ciudad. Tarda mas —de ahi
+      // los 20 segundos— y gasta mas bateria, y las dos cosas valen la pena
+      // cuando de ese punto sale un importe.
+      //
+      // maximumAge en 0: nada de reutilizar una posicion cacheada de antes, que
+      // puede ser de otro sitio.
+      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
     );
   });
+
+  // La ubicacion compartida sobrevive a la pantalla: viaja en el borrador como
+  // enlace de Maps, que es lo que espera la API. Al volver aqui —desde el pago o
+  // con el boton atras— se repone, para no tener que pedirla otra vez y para que
+  // el enlace siga en el pedido.
+  const savedSpot = coordsFromMapsUrl(saved.customer.locationUrl);
+
+  if (savedSpot && locationUrl && !locationUrl.value) {
+    showLocation(saved.customer.locationUrl ?? '', saved.locationLabel || 'Ubicacion compartida');
+  }
+
+  // Hay ubicacion y todavia no hay cotizacion: se pide ahora. Pasa cuando se
+  // continuo antes de que llegara la anterior, y cuando el borrador se perdio y
+  // el servidor tampoco pudo recuperarla de la API.
+  if (savedSpot && !quote) void askQuote(savedSpot.lat, savedSpot.lng);
 
   // --- Continuar ---
   // Sigue siendo un submit, no un enlace, para que los campos required se
   // validen antes de avanzar.
+  //
+  // Son DOS: el de la barra del fondo en movil y el de la tarjeta de resumen en
+  // desktop. Solo uno se ve a la vez, pero los dos existen en el marcado y los dos
+  // envian este formulario, asi que la espera de la medicion los bloquea a los dos.
+  const submitButtons = form.querySelectorAll<HTMLButtonElement>('button[type="submit"]');
+
+  /** Lo que se espera como mucho a una cotizacion en vuelo, en milisegundos. */
+  const QUOTE_TIMEOUT = 4000;
+
+  /**
+   * Guarda la cotizacion definitiva y avanza al pago.
+   *
+   * Puede haber una en vuelo —compartir la ubicacion y pulsar "Continuar"
+   * seguido—, y avanzar sin ella dejaria el envio "Por cotizar" teniendo el
+   * punto. Asi que se espera, pero con limite: la compra no puede quedarse parada
+   * porque un tercero tarde en responder.
+   *
+   * Se guarda solo si es DE ESTA ubicacion. Compartir un punto nuevo y continuar
+   * antes de que conteste dejaria pegado el importe del anterior, que es rotular
+   * el envio de otra direccion.
+   */
+  const goToPayment = async (home: boolean, url: string): Promise<void> => {
+    for (const button of submitButtons) button.disabled = true;
+
+    if (home && pending) {
+      await Promise.race([
+        pending,
+        new Promise((resolve) => window.setTimeout(resolve, QUOTE_TIMEOUT)),
+      ]);
+    }
+
+    const spot = home ? coordsFromMapsUrl(url) : null;
+
+    // Se conserva salvo que contradiga a la ubicacion actual. Una cotizacion sin
+    // punto no contradice nada —es la que la API guarda para esta sesion— y se
+    // queda; una de otro punto se descarta, que es rotular otra direccion.
+    patchDraft({
+      shipping: spot && quote && !otherSpot(quote, spot.lat, spot.lng) ? quote : null,
+    });
+
+    window.location.assign('/pago');
+  };
+
   form.addEventListener('submit', (event) => {
     event.preventDefault();
 
@@ -269,6 +615,9 @@ if (form) {
     }
 
     showError(null);
-    window.location.assign('/pago');
+
+    // Falta guardar la distancia, que puede seguir midiendose: por eso el ultimo
+    // paso es asincrono y la navegacion vive ahi dentro.
+    void goToPayment(home, customer.locationUrl ?? '');
   });
 }

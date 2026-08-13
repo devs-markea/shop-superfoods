@@ -19,15 +19,14 @@
 
 // --- Desktop -------------------------------------------------------------
 @include media-breakpoint-up(md) {
+  // Sin sangria propia: el margen lateral lo pone la pila de la portada (ver
+  // components/_storefront.scss), que es el contenedor de los tres bloques.
   .hero {
     display: block;
-    padding-inline: var(--sf-gutter-x);
   }
 
   .hero__panel {
     width: 100%;
-    max-width: var(--sf-container-max);
-    margin-inline: auto;
     // 48 + 44 (titulo) + 12 + 24 (bajada) + 48. Lo declara como minimo y no como
     // alto para que el banner no cambie de tamano segun lo que traiga: un
     // titular de dos lineas lo estira, y uno que llega solo con foto —sin texto

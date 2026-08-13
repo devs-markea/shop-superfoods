@@ -14,10 +14,23 @@
 //
 // El umbral de envio gratis si es de este front —la API no tiene regla de
 // envio todavia— y viaja en data-threshold.
+//
+// Con cada respuesta se repintan tres sitios, porque en desktop los tres estan a
+// la vista a la vez y decir el mismo importe de tres formas distintas es peor que
+// no decirlo: la lista, la tarjeta de resumen —donde el envio se vuelve a
+// resolver, que cruzar el umbral lo convierte en "Gratis"— y el chip del pedido
+// de la barra de arriba.
 
 import { formatPrice } from '../lib/price';
-import { imageResolver, renderLines, type CartLinesView } from '../lib/cart-view';
-import { patchDraft } from '../lib/checkout-draft';
+import {
+  cartChipLabel,
+  imageResolver,
+  renderLines,
+  type CartLinesView,
+} from '../lib/cart-view';
+import { paintCartSummary } from '../lib/cart-summary';
+import { patchDraft, readDraft } from '../lib/checkout-draft';
+import { freeShippingLabel, resolveShipping, type FreeShippingRule } from '../lib/shipping';
 
 // Los comentarios se guardan al salir del campo, no al enviar: "Continuar" es un
 // enlace y no hay submit donde recogerlos.
@@ -35,6 +48,8 @@ interface CartView extends CartLinesView {
   subtotal: number;
   discountTotal: number;
   total: number;
+  /** Suma de cantidades, no de lineas: la cifra del chip de la barra. */
+  itemsCount: number;
 }
 
 const summary = document.querySelector<HTMLElement>('[data-order-summary]');
@@ -49,10 +64,36 @@ if (summary) {
   const totalOutput = document.querySelector<HTMLElement>('[data-order-total]');
   const progressEl = summary.querySelector<HTMLElement>('[data-shipping-progress]');
   const progressBar = progressEl?.querySelector<HTMLElement>('.progress-bar');
-  const shippingLabel = summary.querySelector<HTMLElement>('[data-shipping-label]');
+  // El rotulo de la barra de avance ("Estas a $X de obtener envio gratis"), que no
+  // es el importe del envio de la tarjeta: ese lo escribe shippingLabel().
+  const progressLabel = summary.querySelector<HTMLElement>('[data-shipping-label]');
   const totals = summary.querySelector<HTMLElement>('[data-order-totals]');
   const subtotalOutput = summary.querySelector<HTMLElement>('[data-order-subtotal]');
   const discountOutput = summary.querySelector<HTMLElement>('[data-order-discount]');
+
+  // El chip del pedido de la barra de desktop. Esta es la unica pantalla donde el
+  // carrito se edita con la barra a la vista: sin esto, el chip se quedaria en el
+  // importe con el que se cargo la pagina, contradiciendo a la tarjeta.
+  const chip = document.querySelector<HTMLElement>('[data-cart-chip]');
+  const chipTotal = document.querySelector<HTMLElement>('[data-cart-chip-total]');
+  const chipCount = document.querySelector<HTMLElement>('[data-cart-chip-count]');
+
+  // La regla del negocio, para volver a resolver el envio en cada cambio: cruzar
+  // el umbral con un "+" convierte el importe en "Gratis" sin recargar. El modo lo
+  // pinta el servidor y el umbral es el mismo de la barra de avance.
+  const freeShipping: FreeShippingRule = {
+    mode:
+      summary.dataset.freeShipping === 'always'
+        ? 'always'
+        : summary.dataset.freeShipping === 'threshold'
+          ? 'threshold'
+          : 'none',
+    threshold: threshold || null,
+  };
+
+  // El modo de entrega y la distancia medida no cambian en esta pantalla —se
+  // eligen en el listado y en /datos—, asi que el borrador se lee una vez.
+  const draft = readDraft();
 
   const setError = (message: string | null): void => {
     if (!errorSlot) return;
@@ -71,13 +112,10 @@ if (summary) {
       progressEl.setAttribute('aria-valuenow', String(progress));
     }
 
-    // Solo cambia el texto: el dorado del label no depende del estado.
-    if (shippingLabel) {
-      const remaining = Math.max(0, threshold - cart.total);
-      shippingLabel.textContent =
-        remaining === 0
-          ? '¡Ya tienes envio gratis! \u{1F389}'
-          : `Estas a ${formatPrice(remaining)} de obtener envio gratis \u{1F389}`;
+    // Solo cambia el texto: el dorado del label no depende del estado. La copia es
+    // la misma que pinto el servidor (src/lib/shipping.ts).
+    if (progressLabel) {
+      progressLabel.textContent = freeShippingLabel(Math.max(0, threshold - cart.total));
     }
 
     // Un cambio de cantidad puede estrenar o deshacer un descuento —cerrar un
@@ -85,6 +123,32 @@ if (summary) {
     totals?.classList.toggle('d-none', cart.discountTotal <= 0);
     if (subtotalOutput) subtotalOutput.textContent = formatPrice(cart.subtotal);
     if (discountOutput) discountOutput.textContent = `− ${formatPrice(cart.discountTotal)}`;
+
+    // La tarjeta de resumen de desktop. El envio se vuelve a resolver entero, no
+    // se arrastra el de la carga: el umbral del envio gratis se mide contra el
+    // total, y este acaba de cambiar. Es la misma funcion que uso el servidor
+    // (src/lib/shipping.ts), asi que el repintado no puede llegar a otro importe
+    // que el primer pintado.
+    paintCartSummary(summary, {
+      subtotal: cart.subtotal,
+      discount: cart.discountTotal,
+      products: cart.total,
+      shipping: resolveShipping({
+        pickup: draft.deliveryType === 'pickup',
+        quote: draft.shipping,
+        products: cart.total,
+        freeShipping,
+      }),
+    });
+
+    if (chipTotal) chipTotal.textContent = formatPrice(cart.total);
+
+    if (chipCount) {
+      chipCount.textContent = String(cart.itemsCount);
+      chipCount.hidden = cart.itemsCount <= 0;
+    }
+
+    chip?.setAttribute('aria-label', cartChipLabel(cart.total, cart.itemsCount));
 
     const hasLines = cart.lines.length > 0;
     list?.classList.toggle('d-none', !hasLines);

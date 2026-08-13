@@ -1,7 +1,16 @@
 ---
 import TextField from './TextField.astro';
 
-// Spec: contenedor gap 12 — 4 campos de 44 y un textarea de 80.
+// Spec movil: contenedor gap 12 — 4 campos de 44 y un textarea de 80, uno debajo
+// de otro y sin etiquetas, que es lo que cabe en 350.
+//
+// En desktop es el mismo contenedor a 12, pero por dentro se reparte en tres:
+// colonia, calle y numero comparten una linea —son las tres piezas de la misma
+// direccion, y las tres cortas—, y los dos campos opcionales se quedan cada uno
+// con su etiqueta encima. Nada de eso duplica marcado: .field-row y .field-group
+// no existen en movil (ver components/_field.scss), asi que alli los campos
+// siguen siendo hijos de esta columna y su ritmo no cambia.
+//
 // El borde de 2px lo trae .field por defecto, comun a todos los campos.
 interface Props {
   /**
@@ -16,63 +25,53 @@ interface Props {
 }
 
 const { required = true } = Astro.props;
-
-interface AddressField {
-  name: string;
-  label: string;
-  placeholder: string;
-  autocomplete?: string;
-  required: boolean;
-}
-
-const fields: AddressField[] = [
-  {
-    name: 'neighborhood',
-    label: 'Colonia',
-    placeholder: 'Colonia',
-    autocomplete: 'address-level3',
-    required: true,
-  },
-  {
-    name: 'street',
-    label: 'Calle',
-    placeholder: 'Calle',
-    autocomplete: 'address-line1',
-    required: true,
-  },
-  {
-    name: 'number',
-    label: 'Numero exterior',
-    placeholder: 'Numero exterior',
-    autocomplete: 'address-line2',
-    required: true,
-  },
-  {
-    name: 'cross_streets',
-    label: 'Entre calles',
-    placeholder: 'Entre calles (opcional)',
-    required: false,
-  },
-];
 ---
 
 <div class="d-flex flex-column gap-3">
-  {
-    fields.map((field) => (
-      <TextField
-        name={field.name}
-        label={field.label}
-        placeholder={field.placeholder}
-        autocomplete={field.autocomplete}
-        required={field.required && required}
-      />
-    ))
-  }
+  {/* Los tres obligatorios. En desktop, una linea de tres a 12. */}
+  <div class="field-row">
+    <TextField
+      name="neighborhood"
+      label="Colonia"
+      placeholder="Colonia"
+      autocomplete="address-level3"
+      required={required}
+    />
+    <TextField
+      name="street"
+      label="Calle"
+      placeholder="Calle"
+      autocomplete="address-line1"
+      required={required}
+    />
+    <TextField
+      name="number"
+      label="Numero exterior"
+      placeholder="Numero exterior"
+      autocomplete="address-line2"
+      required={required}
+    />
+  </div>
 
-  <label class="visually-hidden" for="field-references">Referencias</label>
-  <textarea
-    class="field-note form-control"
-    id="field-references"
-    name="references"
-    placeholder="Referencias (opcional)"></textarea>
+  {/*
+    Los dos opcionales. La etiqueta la escribe el grupo y no <TextField>, porque
+    en desktop va encima del campo y no dentro de el; el `for` apunta al id que
+    arma el propio componente.
+  */}
+  <div class="field-group">
+    <label class="field-label" for="field-cross_streets">Entre calles (opcional)</label>
+    <TextField name="cross_streets" placeholder="Entre calles (opcional)" />
+  </div>
+
+  <div class="field-group">
+    <label class="field-label field-label--soft" for="field-references">
+      Referencias adicionales (opcional)
+    </label>
+
+    <textarea
+      class="field-note form-control"
+      id="field-references"
+      name="references"
+      placeholder="Referencias (opcional)"></textarea>
+  </div>
 </div>

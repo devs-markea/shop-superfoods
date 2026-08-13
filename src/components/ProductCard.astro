@@ -101,26 +101,33 @@ const displayName =
               ficha. */}
           <span class="product-card__from">Desde</span>
 
+          {/* Final primero y tachado despues: lo que se paga es lo que se viene
+              a leer, y el precio de lista queda como la referencia que lo
+              justifica, no como el primer importe que se cruza el ojo. */}
+          <span class="product-card__price">{formatPrice(promo?.price ?? product.basePrice)}</span>
+
           {
             promo?.original !== undefined && promo?.original !== null && (
               <s class="price-was">{formatPrice(promo.original)}</s>
             )
           }
-          <span class="product-card__price">{formatPrice(promo?.price ?? product.basePrice)}</span>
         </span>
 
-        <!-- Debajo del par de precios, no al lado: el ahorro es la conclusion
-             de esos dos importes, y en el pie no cabria junto a ellos y al
-             boton. Aqui tambien cae la aclaracion del descuento que no alcanza
-             a todas las variantes, que sin ella dejaria sin explicar un precio
-             que no baja. -->
+        <!-- Debajo del par de precios, no al lado: en el pie no cabria junto a
+             ellos y al boton. Aqui cae la aclaracion del descuento que no
+             alcanza a todas las variantes, que sin ella dejaria sin explicar un
+             precio que no baja.
+
+             La etiqueta verde de ahorro ("Ahorra $X") queda oculta por ahora:
+             el par de precios ya dice cuanto se baja. El calculo sigue vivo en
+             promotionView, asi que devolverla es descomentar. -->
         {
-          promo && (promo.savings > 0 || promo.note) && (
+          promo?.note && (
             <p class="product-card__deal">
-              {promo.savings > 0 && (
+              {/* {promo.savings > 0 && (
                 <span class="promo-save badge">{`Ahorra ${formatPrice(promo.savings)}`}</span>
-              )}
-              {promo.note && <span class="promo-note">{promo.note}</span>}
+              )} */}
+              <span class="promo-note">{promo.note}</span>
             </p>
           )
         }

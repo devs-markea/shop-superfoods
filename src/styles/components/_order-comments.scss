@@ -22,3 +22,29 @@
   resize: none;
   overflow-y: hidden;
 }
+
+// --- Desktop -------------------------------------------------------------
+// El bloque solo lo pinta /carrito, asi que sus reglas de desktop viven aqui y no
+// en el armazon de la pantalla.
+@include media-breakpoint-up(md) {
+  // La etiqueta sube de 12 a 14 y se oscurece: #4B5563 es --sf-slate, el gris con
+  // el que desktop rotula lo secundario (la descripcion de la ficha, las metas de
+  // la barra). Solo aqui: .section-label es de seis bloques y en el resto sigue
+  // siendo la de 12 de la spec de movil.
+  .order-comments .section-label {
+    font-size: var(--sf-font-size-base);
+    line-height: 1;
+    color: var(--sf-slate);
+  }
+
+  // Sobre el fondo gris de la pagina el campo pasa a ser superficie, como las
+  // tarjetas. El borde de 1 y el radius ya son los de .form-control.
+  //
+  // El `:focus` va aparte porque Bootstrap repone ahi el fondo del campo
+  // ($input-focus-bg, que en esta tienda es transparente): sin esta segunda regla
+  // el blanco se perderia justo al escribir.
+  .order-comments__field,
+  .order-comments__field:focus {
+    background-color: var(--sf-white);
+  }
+}
