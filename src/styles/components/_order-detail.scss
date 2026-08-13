@@ -74,8 +74,24 @@
   white-space: nowrap;
 }
 
-.order-detail__row--discount .order-detail__value {
+.order-detail__row--discount .order-detail__value,
+.order-detail__value--free {
   color: var(--sf-success);
+}
+
+// Modifier: el envio que todavia no se pudo medir ("Por cotizar")
+.order-detail__value--pending {
+  font-weight: var(--sf-weight-medium);
+  color: var(--sf-placeholder);
+}
+
+// Element: los kilometros del envio, junto al concepto. Acompanan al importe
+// para poder cuadrarlo con la tarifa, como en el resumen de /pago.
+.order-detail__hint {
+  margin-left: var(--sf-space-2);
+  font-weight: var(--sf-weight-regular);
+  color: var(--sf-placeholder);
+  white-space: nowrap;
 }
 
 // La divisora discontinua es .dashed-divider: la comparte con el resumen de

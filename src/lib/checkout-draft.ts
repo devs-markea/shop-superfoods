@@ -15,6 +15,7 @@
 // ---------------------------------------------------------------------------
 
 import { placeOrder } from './checkout.ts';
+import { parseQuote, type ShippingQuote } from './shipping.ts';
 import { ulid } from './ulid.ts';
 import type {
   CheckoutCustomer,
@@ -45,6 +46,24 @@ export interface CheckoutDraft {
   locationLabel: string;
   /** Comentarios del pedido, capturados en /carrito. Viajan como `notes`. */
   comments: string;
+  /**
+   * Lo que el backend contesto sobre el envio a la ubicacion compartida: el
+   * importe, los kilometros, si se entrega ahi y el aviso si no.
+   *
+   * Se pide UNA VEZ, al compartir la ubicacion en /datos, y de ahi en adelante
+   * solo se lee: cotizar es una llamada que mide contra un tercero con cuota, y
+   * ni la distancia ni la ciudad de un punto cambian entre pantallas. Se vuelve a
+   * pedir si el comprador comparte otro punto.
+   *
+   * Es una COPIA, no la fuente: la guarda la API mientras dure la sesion del
+   * carrito, y si esta cookie se pierde —dura dos horas— la pantalla la recupera
+   * con GET /api/shipping/quote. Y es solo para mostrarla: lo que se cobra lo
+   * calcula el backend al cerrar el pedido.
+   *
+   * `null` mientras no haya ubicacion compartida: entonces el envio se queda
+   * "Por cotizar", como antes de que hubiera cotizacion.
+   */
+  shipping: ShippingQuote | null;
   /**
    * Clave de idempotencia de ESTE intento de compra.
    *
@@ -96,6 +115,7 @@ export const EMPTY_DRAFT: CheckoutDraft = {
   customer: { name: '', phone: '' },
   locationLabel: '',
   comments: '',
+  shipping: null,
   idempotencyKey: '',
 };
 
@@ -119,6 +139,10 @@ export function parseDraft(raw: string | undefined | null): CheckoutDraft {
       // El cliente nunca se sustituye entero: si la cookie viene a medias, los
       // campos que falten tienen que quedar vacios, no undefined.
       customer: { ...EMPTY_DRAFT.customer, ...parsed.customer },
+      // La cotizacion se valida entera, como el modo de entrega: un importe
+      // negativo o de texto rotularia un envio con lo que diga la cookie. Sin
+      // cotizacion valida, el envio vuelve a "Por cotizar".
+      shipping: parseQuote(parsed.shipping),
     };
   } catch {
     // Cookie manipulada o de una version anterior: se empieza de cero.
@@ -253,10 +277,21 @@ export function toCheckoutRequest(draft: CheckoutDraft): CheckoutRequest | null 
 
   const notes = draft.comments.trim();
 
+  // La cotizacion que vio el comprador. Viaja SOLO como referencia: el envio que
+  // se cobra lo recalcula la API desde `customer.locationUrl`, y un importe
+  // enviado desde aqui se rechaza con 422. Sirve para que el backend pueda
+  // comparar lo que se enseño con lo que cobro, que es como se descubre que una
+  // pantalla se quedo atras.
+  //
+  // Al recoger no se manda: ahi no hay envio del que hablar, y la cotizacion que
+  // quede en el borrador es de una eleccion anterior.
+  const quoteId = draft.deliveryType === 'pickup' ? '' : (draft.shipping?.quoteId ?? '');
+
   return {
     deliveryType: draft.deliveryType,
     paymentMethod: draft.paymentMethod,
     tip: draft.tip,
+    ...(quoteId ? { shipping: { quoteId } } : {}),
     // La API acepta el campo ausente, null, vacio o con espacios: los cuatro se
     // guardan igual. Se omite cuando no hay nada que decir, y no se recorta a los
     // 1000 del limite porque el propio campo del carrito ya no deja escribir mas.
@@ -324,6 +359,11 @@ export function saveOrderPointer(pointer: OrderPointer): void {
  *
  * Al cerrarse, el borrador deja de ser la verdad y se borra: el carrito queda
  * vacio arriba y lo unico que queda del pedido es el pedido.
+ *
+ * El envio no viaja como importe: la API lo recalcula al cerrar, desde la misma
+ * ubicacion, y lo congela en `shippingTotal`. Lo unico que se manda es la
+ * referencia de la cotizacion que vio el comprador, para que el backend pueda
+ * comparar lo enseñado con lo cobrado. Ver toCheckoutRequest().
  */
 export async function confirmDraft(method: PaymentMethod): Promise<CheckoutOutcome> {
   const current = readDraft();

@@ -11,13 +11,20 @@
 // components/_navbar-desktop.scss.
 // ---------------------------------------------------------------------------
 
+// El fondo es el de la pagina, no una superficie blanca: en movil la barra no
+// es una tarjeta sobre el fondo sino la continuacion de el, y lo que se recorta
+// contra el gris son las tarjetas de platillo, que si son superficie.
+//
+// Opaco y no transparente aunque el color sea el mismo: la barra es sticky y el
+// catalogo le pasa por debajo. Con un fondo transparente se leerian las tarjetas
+// a traves del logo.
 .navbar {
   position: sticky;
   top: 0;
   z-index: var(--sf-z-navbar);
   min-height: var(--sf-navbar-height);
   padding: var(--sf-space-3) var(--sf-gutter-x);
-  background-color: var(--sf-surface);
+  background-color: var(--sf-body-bg);
 }
 
 .navbar__inner {

@@ -93,3 +93,34 @@
   color: var(--sf-placeholder);
   text-align: center;
 }
+
+// --- Desktop -------------------------------------------------------------
+// Aqui este bloque deja de ser una columna con rotulo propio: sus dos frases son
+// de movil y las retira el marcado (ver LocationPicker.astro), y lo que queda
+// —el boton y la ubicacion elegida— pasa a formar parte del bloque de direccion,
+// que es quien lleva el ritmo de 12 en desktop.
+//
+// `display: contents` es lo que lo consigue sin tocar el marcado de movil: el
+// envoltorio deja de pintar y de ocupar, y sus hijos se reparten en la columna de
+// arriba como si fueran suyos.
+@include media-breakpoint-up(md) {
+  .location {
+    display: contents;
+  }
+
+  // El boton pierde el tope de 350 y ocupa la columna entera, como los campos que
+  // tiene debajo: es una pieza mas del bloque de direccion y se alinea con ellos
+  // por los dos lados. El `margin-inline: 0` va explicito porque el `auto` que lo
+  // centra en movil solo se anula si el ancho llena el hueco, y aqui el ancho lo
+  // decide la columna.
+  //
+  // Y se rellena de blanco, que es el otro cambio de la spec: en movil el boton se
+  // lee por su borde dorado sobre el fondo de la pagina; aqui es un control con
+  // superficie propia. El alto sigue siendo el de todos los controles, 44.
+  .location__button {
+    max-width: none;
+    margin-inline: 0;
+    padding-inline: var(--sf-space-4);
+    background-color: var(--sf-surface);
+  }
+}

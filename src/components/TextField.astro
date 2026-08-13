@@ -1,8 +1,16 @@
 ---
 interface Props {
   name: string;
-  /** Etiqueta accesible. El placeholder no sirve como label. */
-  label: string;
+  /**
+   * Etiqueta accesible. El placeholder no sirve como label.
+   *
+   * Se omite SOLO cuando la escribe quien envuelve el campo, y por una razon: que
+   * el rotulo sea del grupo y no de este campo. Pasa dos veces en /datos —el
+   * telefono, que se reparte entre el selector de pais y el numero, y los campos
+   * que en desktop llevan la etiqueta encima y no dentro—, y en los dos casos esa
+   * etiqueta apunta aqui con for="field-<name>".
+   */
+  label?: string;
   placeholder: string;
   type?: 'text' | 'tel' | 'email';
   autocomplete?: string;
@@ -23,7 +31,7 @@ const {
 const id = `field-${name}`;
 ---
 
-<label class="visually-hidden" for={id}>{label}</label>
+{label && <label class="visually-hidden" for={id}>{label}</label>}
 <input
   class="field form-control"
   id={id}

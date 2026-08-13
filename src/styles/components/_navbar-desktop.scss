@@ -1,8 +1,12 @@
 // ---------------------------------------------------------------------------
 // Block: navbar-desktop
 // ---------------------------------------------------------------------------
-// La barra de DESKTOP: logo - secciones - tienda y carrito.
+// La barra de DESKTOP: logo - tienda y carrito.
 // Spec: space-between - padding 16/160 - borde inferior de 1
+//
+// En medio iban los rotulos de seccion ("Menu" y "Mi pedido"), retirados del
+// marcado: con dos elementos el space-between los manda a los dos extremos, que
+// es el mismo reparto de antes sin el grupo del centro.
 //
 // Bloque propio y no un modificador de .navbar: coinciden en el logo y en nada
 // mas. Solo una de las dos se ve, y el breakpoint md es la frontera.
@@ -55,32 +59,6 @@
   .navbar-desktop__logo {
     width: auto;
     height: 28px;
-  }
-
-  // Element: sections — los rotulos de estado. Hoy son texto: ver el porque en
-  // el frontmatter de NavbarDesktop.astro.
-  .navbar-desktop__sections {
-    display: flex;
-    align-items: center;
-    gap: var(--sf-space-6);
-  }
-
-  // 15px no esta en la escala tipografica (12/14/16/24) y no la abre: es el
-  // tamano de estos dos rotulos y de nada mas.
-  .navbar-desktop__section {
-    font-size: 15px;
-    font-weight: var(--sf-weight-medium);
-    line-height: 1;
-    color: var(--sf-slate);
-  }
-
-  // Modifier: la seccion en la que estas. El subrayado va con el grosor y el
-  // desplazamiento del navegador: la spec los da en 0%, que dejaria la raya sin
-  // dibujar.
-  .navbar-desktop__section--active {
-    font-weight: var(--sf-weight-semibold);
-    color: var(--sf-gold);
-    text-decoration: underline;
   }
 
   // Element: store — las metas de la tienda y el carrito

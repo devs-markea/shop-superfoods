@@ -46,6 +46,17 @@ export interface CheckoutRequest {
   /** Opcional para la API. Se manda siempre, aunque sea 0. */
   tip?: number;
   /**
+   * La cotizacion de envio que vio el comprador, como REFERENCIA de auditoria.
+   *
+   * El importe no viaja: la API recalcula el envio al cerrar —con la misma
+   * tarifa y el mismo punto— y lo congela en `shippingTotal`. Un `shipping.cost`
+   * en el cuerpo se rechaza con 422, y con razon: aceptar un precio del cliente
+   * es justo lo que este reparto viene a evitar.
+   *
+   * Un `quoteId` viejo, de otra sesion o inventado no rompe el pedido.
+   */
+  shipping?: { quoteId: string };
+  /**
    * Comentarios del pedido, maximo 1000. Van a la raiz y no al cliente porque
    * son del pedido: el panel los muestra bajo las lineas.
    */

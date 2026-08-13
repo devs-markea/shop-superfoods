@@ -25,14 +25,20 @@ export default defineConfig({
     schema: {
       API_URL: envField.string({ context: 'server', access: 'public' }),
 
-      // Geocodificacion inversa de la ubicacion compartida (/api/geocode).
-      // Opcional: sin ella la tienda funciona igual y la ubicacion se rotula con
-      // sus coordenadas. Secreta y de servidor para que no se gaste la cuota
-      // desde el navegador.
-      GOOGLE_MAPS_API_KEY: envField.string({
+      // Modo de pruebas: silencia el aviso de la zona de reparto, que es lo unico
+      // que hace desde que cotizar es cosa del backend. Sin ese aviso por delante,
+      // el equipo puede recorrer el pedido desde donde vive.
+      //
+      // Apagado mientras no se diga lo contrario: encendido en produccion, un
+      // comprador de otra ciudad no leeria donde entrega la tienda.
+      //
+      // Cuando la API tenga su propio modo de pruebas, esta variable sobra: quien
+      // decide si un punto esta en la ciudad es quien cotiza.
+      TEST_MODE: envField.boolean({
         context: 'server',
         access: 'secret',
         optional: true,
+        default: false,
       }),
     },
   },
@@ -52,9 +58,10 @@ export default defineConfig({
       provider: fontProviders.google(),
       name: 'Inter',
       cssVariable: '--sf-font-inter',
-      // El 800 lo pide un unico label —el folio de /confirmado— y suma
-      // dos ficheros al preload de todas las paginas. Si esa factura pesa mas
-      // que el peso exacto, se quita de aqui y el folio cae al 700.
+      // El 800 lo piden dos rotulos —el folio de /confirmado y el nombre del
+      // platillo en la ficha de desktop— y suma dos ficheros al preload de todas
+      // las paginas. Si esa factura pesa mas que el peso exacto, se quita de aqui
+      // y los dos caen al 700.
       weights: [400, 500, 600, 700, 800],
       styles: ['normal'],
       subsets: ['latin', 'latin-ext'],

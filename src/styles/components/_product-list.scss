@@ -10,12 +10,16 @@
   padding: var(--sf-space-5) var(--sf-gutter-x);
 }
 
-// Limita el ancho del contenido. Envuelve al .row en lugar de aplicarse sobre
-// el, porque .row usa margenes negativos para sus gutters.
+// Ya no limita el ancho: en desktop lo hace el subcontenedor de la portada, que
+// para en --sf-container-max igual que la cabecera y el pie (ver
+// components/_storefront.scss). Ponerlo aqui tambien no cambiaria nada y seria
+// un segundo sitio donde tocar el dia que el tope se mueva.
+//
+// El envoltorio sigue existiendo aunque ya no limite: envuelve al .row porque
+// .row usa margenes negativos para sus gutters, y en desktop es el que reparte
+// los 24 entre el titulo y la rejilla.
 .product-list__items {
   width: 100%;
-  max-width: var(--sf-container-max);
-  margin-inline: auto;
 }
 
 // Element: title — "Nuestros Platillos", encima de la rejilla. Solo desktop: en
@@ -45,10 +49,11 @@
 
 // --- Desktop -------------------------------------------------------------
 @include media-breakpoint-up(md) {
-  // Sin aire propio: el que la separa de la barra lo pone la pila de la portada
-  // (ver components/_storefront.scss), y el de abajo, el padding de <main>.
+  // Sin aire propio de ninguna clase: el que la separa de la barra lo pone la
+  // pila de la portada (ver components/_storefront.scss), el de abajo el padding
+  // de <main>, y el de los lados el gutter de la propia pila.
   .product-list {
-    padding-block: 0;
+    padding: 0;
   }
 
   // La lista pasa a ser dos piezas con 24 entre ellas: el titulo y la rejilla.

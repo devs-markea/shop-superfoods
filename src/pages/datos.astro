@@ -1,83 +1,279 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import ScreenHeader from '../components/ScreenHeader.astro';
+import NavbarDesktop from '../components/NavbarDesktop.astro';
 import DeliverySwitch from '../components/DeliverySwitch.astro';
 import TextField from '../components/TextField.astro';
 import PhoneField from '../components/PhoneField.astro';
 import LocationPicker from '../components/LocationPicker.astro';
 import AddressFields from '../components/AddressFields.astro';
+import CartSummary from '../components/CartSummary.astro';
 import ActionBar from '../components/ActionBar.astro';
+import ScheduleSheet from '../components/ScheduleSheet.astro';
+import LocationSheet from '../components/LocationSheet.astro';
+import Footer from '../components/Footer.astro';
+import Icon from '../components/Icon.astro';
 import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
+import { getShippingQuote } from '../lib/shipping-quote.ts';
+import { getCart } from '../lib/cart.ts';
+import { resolveCartToken } from '../lib/cart-session.ts';
+import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
+import { ALL_CATEGORIES, getCategories, getProducts } from '../lib/catalog.ts';
+import { resolveShipping } from '../lib/shipping.ts';
+import { TEST_MODE } from 'astro:env/server';
+
+// DOS PANTALLAS, UN MARCADO
+//
+// En movil es la de siempre: la cabecera de 124, el formulario y "Continuar" en la
+// barra fija del fondo.
+//
+// En desktop se monta como /carrito —la misma barra de tienda, el mismo armazon de
+// 48 y el mismo pie— y se parte en dos columnas: el formulario a la izquierda y la
+// tarjeta de resumen a la derecha, que es donde se continua. Es la MISMA tarjeta
+// del pedido (<CartSummary>), con otro rotulo en el boton; alli el boton es un
+// enlace al siguiente paso y aqui un submit, porque continuar es antes que nada
+// validar los campos. Ver components/_checkout-page.scss.
+//
+// El formulario tambien se recoloca por dentro, y solo en desktop: los campos se
+// juntan en un bloque de ritmo propio, aparecen las etiquetas que en movil hacen
+// los placeholders, colonia/calle/numero comparten una linea y el bloque de la
+// ubicacion se abre para dejar su boton entre los campos escritos. Todo eso son
+// las MISMAS piezas recolocadas por CSS —.field-row, .field-group y .field-label
+// no existen por debajo de md—, asi que la pantalla de movil no se toca: mismos
+// campos, mismo orden y mismo aspecto que antes.
 
 // Depende de la sesion: el modo de entrega decide que se pide en esta pantalla, y
 // se lee del borrador. Volver aqui desde el pago no puede reiniciarlo a "a
 // domicilio" y pedir de nuevo una direccion que el pedido no necesita.
 export const prerender = false;
 
+// El catalogo, solo para los tres rotulos de categoria del pie: si falla, el pie
+// se queda con "Menu completo" y la pantalla sigue en pie.
+const categoriesPending = getProducts()
+  .then((items) => getCategories(items).filter((category) => category !== ALL_CATEGORIES))
+  .catch((error) => {
+    console.error('[datos] fallo el catalogo del pie', error);
+    return [] as string[];
+  });
+
+// El carrito, para la tarjeta de resumen. Si no responde, la tarjeta se queda en
+// ceros pero el formulario se sirve igual: los datos de entrega se pueden rellenar
+// sin saber el importe, y el pago vuelve a pedirlo.
+const token = resolveCartToken(Astro.cookies);
+
+const cartPending = getCart(token).catch((error) => {
+  console.error('[datos] fallo GET /api/cart', error);
+  return null;
+});
+
 // El modo llega elegido de antes: del switch del listado —donde es un atajo para
 // no repetir la eleccion— o de esta misma pantalla. Es la misma eleccion en el
 // mismo sitio, el borrador, y viaja en su cookie: /carrito no tiene que reenviar
 // nada por el camino. Sin borrador que leer —primera visita, o caducado— manda el
 // defecto de EMPTY_DRAFT, que es a domicilio.
-const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+const draft = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+const { deliveryType } = draft;
 
 // Al recoger, donde entregar deja de existir: el pedido se recoge en el local.
 // El script repite esta decision al tocar el switch; aqui se declara para que la
 // pantalla llegue ya correcta, sin un salto al arrancar el JavaScript.
 const pickup = deliveryType === 'pickup';
+
+// La cotizacion del envio vive en el borrador, pero esa cookie dura dos horas y el
+// navegador la vacia de mas maneras de las que parece. Cuando falta y hay una
+// ubicacion que la justifica, se recupera de la API, que la guarda mientras dure la
+// sesion del carrito —treinta dias—. Asi el importe llega en el primer render en
+// lugar de pedirle otra vez la ubicacion al comprador.
+//
+// Solo se pregunta cuando puede haber algo que recuperar: a domicilio, con
+// ubicacion compartida y sin cotizacion a mano. En el camino normal no se llama.
+const quotePending =
+  !pickup && draft.customer.locationUrl && !draft.shipping
+    ? getShippingQuote(token)
+    : Promise.resolve(null);
+
+const [store, schedule, cart, categories, recovered] = await Promise.all([
+  getStoreConfig(),
+  getStoreSchedule(),
+  cartPending,
+  categoriesPending,
+  quotePending,
+]);
+
+const quote = draft.shipping ?? recovered;
+
+const total = cart?.total ?? 0;
+const { freeShipping } = store.delivery ?? {};
+
+// El envio de la tarjeta, resuelto en el servidor con lo que se sabe al entrar. Es
+// la pantalla donde mas se mueve: compartir la ubicacion lo mide y el switch lo
+// quita entero, asi que src/scripts/delivery-form.ts lo vuelve a resolver —con
+// esta misma funcion— cada vez que pasa una de las dos cosas.
+const shipping = resolveShipping({
+  pickup,
+  quote,
+  products: total,
+  freeShipping,
+});
+
+// Las dos condiciones se calculan aqui, en el mismo sitio que monta las hojas: si
+// las dedujera la barra de desktop por su cuenta, podria ofrecer un boton para una
+// hoja que esta pantalla no monto.
+const address = store.location?.address;
+const mapsUrl = store.location?.mapsUrl;
+const hasLocation = Boolean(address || mapsUrl);
+const hasSchedule = Boolean(schedule && schedule.days.length > 0);
+
+// El aviso de la zona de reparto, cuando la ubicacion compartida cayo fuera de la
+// ciudad. Lo escribe el backend al cotizar y viaja con la cotizacion, asi que aqui
+// solo se pinta —y se pinta ya desde el servidor, para que al volver a esta
+// pantalla siga puesto sin esperar al JavaScript ni gastar otra consulta—.
+//
+// No frena nada: el pedido sigue su curso y lo unico que cambia es que ese envio
+// se confirma al finalizar.
+//
+// El modo de pruebas lo silencia; viaja tambien al script para que tampoco lo
+// pinte con la respuesta de una consulta posterior.
+const areaNotice = TEST_MODE ? '' : (quote?.notice ?? '');
 ---
 
 <Layout
   title="Datos de entrega — Shop Superfoods"
   description="Indica donde y como quieres recibir tu pedido."
 >
-  <ScreenHeader title="Datos de entrega" backHref="/carrito" />
+  {/* Una cabecera por pantalla: la de 124 con el control de vuelta en movil, y de
+      md hacia arriba la barra de la tienda. */}
+  <ScreenHeader title="Datos de entrega" backHref="/carrito" mobileOnly />
+
+  <NavbarDesktop
+    shortAddress={store.location?.shortAddress}
+    estimate={store.delivery?.estimate}
+    hasLocation={hasLocation}
+    hasSchedule={hasSchedule}
+    cartTotal={total}
+    cartCount={cart?.itemsCount ?? 0}
+  />
 
   <!-- La cadena flex (page > main > form) deja la barra de accion al fondo de
        la pantalla aunque el formulario sea corto. -->
-  <main class="d-flex flex-column flex-grow-1">
-    <form class="d-flex flex-column flex-grow-1" action="#" method="post" data-delivery-form>
-      <div class="screen-body">
-        <!-- 1. Modo de entrega: el mismo switch del listado -->
-        <DeliverySwitch selected={deliveryType} />
+  <main class="checkout-page d-flex flex-column flex-grow-1">
+    {/* La pila y la rejilla solo existen en desktop —en movil son `display:
+        contents`, ver components/_checkout-page.scss—, asi que envolver no cambia
+        nada de lo que ya habia. */}
+    <div class="checkout-page__stack">
+      <h1 class="checkout-page__title">Datos de entrega</h1>
 
-        <!-- 2. Contacto (gap 8). Nombre y telefono se piden SIEMPRE, tambien al
-             recoger: el telefono es la llave con la que el ERP identifica al
-             cliente y el canal por el que se avisa que el pedido esta listo. -->
-        <div class="d-flex flex-column gap-2">
-          <TextField
-            name="name"
-            label="Nombre completo"
-            placeholder="Nombre completo"
-            autocomplete="name"
-            required
-          />
-          <PhoneField />
+      <form
+        class="checkout-page__grid"
+        action="#"
+        method="post"
+        data-delivery-form
+        data-free-shipping={freeShipping?.mode ?? 'none'}
+        data-threshold={freeShipping?.mode === 'threshold' ? (freeShipping.threshold ?? 0) : 0}
+        data-products={total}
+        data-subtotal={cart?.subtotal ?? 0}
+        data-discount={cart?.discountTotal ?? 0}
+        data-test-mode={TEST_MODE ? '' : undefined}
+      >
+        <!-- Contenedor 1: el formulario de entrega. -->
+        <div class="screen-body">
+          <!-- 1. Modo de entrega: el mismo switch del listado -->
+          <DeliverySwitch selected={deliveryType} />
+
+          {/* Los campos, como un solo bloque debajo del switch. Solo agrupa en
+              desktop, donde llevan un ritmo de 20 mas apretado que el 24 de la
+              pantalla; en movil es `display: contents` y contacto y direccion
+              siguen siendo dos hijos de .screen-body, con su 24 intacto. Ver
+              components/_checkout-page.scss. */}
+          <div class="checkout-page__fields">
+            <!-- 2. Contacto (gap 8 en movil, 20 en desktop). Nombre y telefono se
+                 piden SIEMPRE, tambien al recoger: el telefono es la llave con la
+                 que el ERP identifica al cliente y el canal por el que se avisa
+                 que el pedido esta listo. -->
+            <div class="d-flex flex-column gap-2 gap-md-5">
+              <TextField
+                name="name"
+                label="Nombre completo"
+                placeholder="Nombre completo"
+                autocomplete="name"
+                required
+              />
+              <PhoneField />
+            </div>
+
+            <!-- 3. Donde entregar: solo a domicilio.
+                 En movil son dos bloques —la ubicacion (gap 16) y la direccion
+                 escrita (gap 12)— separados por el 24 de la columna: la direccion
+                 escrita es la obligatoria, es la que lee el repartidor, y la
+                 ubicacion, opcional, la precisa.
+
+                 En desktop es un solo grupo a 12, rotulado "Direccion": el bloque
+                 de la ubicacion se abre (`display: contents`, ver
+                 components/_location.scss) y su boton queda como una pieza mas,
+                 encima de los campos escritos. -->
+            <div class="d-flex flex-column gap-6 gap-md-3" hidden={pickup} data-address-block>
+              {/* El rotulo del grupo, solo desktop: en movil lo dice "Ubicacion",
+                  dentro de <LocationPicker>. Uno en cada pantalla, para que no
+                  haya dos titulos para el mismo grupo. */}
+              <h2 class="field-label d-none d-md-block">Direccion</h2>
+
+              <LocationPicker testMode={TEST_MODE} />
+
+              {/*
+                Donde entrega la tienda, cuando la ubicacion compartida cae fuera. No
+                frena nada: avisa de que ese envio no se cotiza aqui y se confirma al
+                finalizar el pedido.
+
+                Vive DENTRO del bloque de direccion a proposito: al recoger no hay
+                direccion a la que llevar nada, y el aviso desaparece con el bloque
+                sin que el script tenga que acordarse.
+              */}
+              <div class="info-note" hidden={!areaNotice} data-area-notice>
+                <Icon name="info" size="sm" />
+                <p class="info-note__text" data-area-notice-text>{areaNotice}</p>
+              </div>
+
+              <AddressFields required={!pickup} />
+            </div>
+          </div>
+
+          <!-- Lo que falta para poder continuar. Lo rellena el script al intentar
+               avanzar: los globos del navegador se cierran al primer toque y hay
+               que dejar el aviso escrito en la pantalla. -->
+          <p class="form-error" role="alert" hidden data-delivery-error></p>
         </div>
 
-        <!-- 3. Donde entregar: solo a domicilio.
-             El gap de 24 es el de .screen-body, que este contenedor repite para
-             que agrupar los dos bloques no cambie el ritmo de la pantalla.
-
-             Ubicacion (gap 16) y direccion (gap 12) siguen siendo dos bloques:
-             la direccion escrita es la obligatoria —es la que lee el repartidor—
-             y la ubicacion, opcional, la precisa. -->
-        <div class="d-flex flex-column gap-6" hidden={pickup} data-address-block>
-          <LocationPicker />
-          <AddressFields required={!pickup} />
+        <!-- En desktop esta barra no se pinta: continuar es el boton de la
+             tarjeta. Los dos son submits del mismo formulario, asi que no hay dos
+             caminos que mantener: el script valida y avanza igual desde cualquiera
+             de ellos. -->
+        <div class="checkout-page__action">
+          <ActionBar label="Continuar" />
         </div>
 
-        <!-- Lo que falta para poder continuar. Lo rellena el script al intentar
-             avanzar: los globos del navegador se cierran al primer toque y hay
-             que dejar el aviso escrito en la pantalla. -->
-        <p class="form-error" role="alert" hidden data-delivery-error></p>
-      </div>
-
-      <ActionBar label="Continuar" />
-    </form>
+        {/* Contenedor 2, solo desktop: la misma tarjeta del pedido. Sin `href`, su
+            boton es un submit —igual que la barra— porque aqui continuar empieza
+            por validar los campos. */}
+        <CartSummary
+          subtotal={cart?.subtotal ?? 0}
+          discount={cart?.discountTotal ?? 0}
+          products={total}
+          shipping={shipping}
+          label="Continuar con el pago"
+        />
+      </form>
+    </div>
   </main>
+
+  {/* Las dos hojas que abren el pin y el reloj de la barra de desktop. */}
+  {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
+  {hasLocation && <LocationSheet address={address} mapsUrl={mapsUrl} />}
+
+  <Footer store={store} categories={categories} />
 </Layout>
 
 <script>
   import '../scripts/delivery-form';
+  // Abre las hojas del horario y la ubicacion desde la barra de desktop.
+  import '../scripts/sheet';
 </script>

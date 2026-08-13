@@ -24,8 +24,16 @@ const method = form?.dataset.method as PaymentMethod | undefined;
 // peor que no crearlo, porque el cobro quedaria esperando por el canal equivocado.
 if (form && method && method in PAYMENT_LABEL) {
   const next = form.dataset.next ?? '/recibido';
+
+  // El envio no se manda desde aqui: la API lo recalcula al cerrar el pedido y lo
+  // devuelve en `shippingTotal`, ya sumado al total. Lo unico que viaja es la
+  // referencia de la cotizacion, y de eso se encarga toCheckoutRequest().
   const error = form.querySelector<HTMLElement>('[data-checkout-error]');
-  const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+  // Son DOS: el de la barra del fondo en movil y el de la tarjeta de resumen en
+  // desktop. Solo uno se ve a la vez, pero los dos envian este formulario, asi que
+  // el cierre del pedido los bloquea a los dos.
+  const buttons = form.querySelectorAll<HTMLButtonElement>('button[type="submit"]');
 
   const showError = (message: string | null): void => {
     if (!error) return;
@@ -37,13 +45,13 @@ if (form && method && method in PAYMENT_LABEL) {
     event.preventDefault();
 
     showError(null);
-    if (button) button.disabled = true;
+    for (const button of buttons) button.disabled = true;
 
     const outcome = await confirmDraft(method);
 
     if (!outcome.ok) {
       showError(outcome.message);
-      if (button) button.disabled = false;
+      for (const button of buttons) button.disabled = false;
       return;
     }
 

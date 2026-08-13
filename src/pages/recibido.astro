@@ -56,6 +56,9 @@ if (phone && pointer) {
         phone,
         fillMessage(template ?? '', {
           folio: order.id,
+          // El total del pedido, con su envio ya incluido: es el importe que
+          // hay que transferir, y el comprobante que se manda por aqui tiene que
+          // cuadrar con el.
           total: formatPrice(order.total),
           nombre: order.customer?.name,
           estado: order.statusLabel,

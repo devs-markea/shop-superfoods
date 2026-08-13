@@ -159,6 +159,20 @@ export function describeOptions(options: CartOption[]): string {
 }
 
 /**
+ * El nombre accesible del chip del pedido de la barra de desktop: lo que lee un
+ * lector de pantalla donde la vista ve un importe y una cifra colgada del icono.
+ *
+ * Vive aqui —y no en el componente— porque lo escriben dos sitios: la barra al
+ * pintarse y el carrito al cambiar una cantidad, que la actualiza sin recargar.
+ * Es la misma regla que shippingLabel() en src/lib/shipping.ts.
+ */
+export function cartChipLabel(total: number, count: number): string {
+  if (count <= 0) return 'Mi pedido, vacio';
+
+  return `Mi pedido: ${count} ${count === 1 ? 'articulo' : 'articulos'}, ${formatPrice(total)}`;
+}
+
+/**
  * El nombre del platillo, enlazado a su ficha cuando todavia hay ficha.
  *
  * La ficha se pide por ENLACE —`/{slug}`—, y el id no es respaldo: `/{productId}`

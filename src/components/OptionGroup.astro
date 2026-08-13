@@ -41,15 +41,30 @@ const inert = isInert(rule);
 // alcanza.
 const unfulfillable = isUnfulfillable(rule, group.choices.length);
 
+// La etiqueta de una opcion son dos cosas pegadas: el NOMBRE y, detras, lo que
+// cuesta. Se escriben por separado —no una cadena sola, como antes— porque en
+// desktop el nombre lleva su propia tipografia y necesita un elemento donde
+// colgarla (ver components/_option.scss). El texto que sale es el mismo.
+//
+// El nombre solo cae al rotulo de respaldo en las variantes: una variante sin
+// nombre sigue siendo elegible y hay que poder senalarla, mientras que las
+// personalizaciones llegan siempre con el suyo.
+function choiceName(label: string): string {
+  return group.kind === 'variant' ? label || VARIANT_FALLBACK_LABEL : label;
+}
+
 // Variante: el precio ES el precio del platillo, sustituye a las otras, se
 // escribe sin signo y se muestra aunque valga 0.
 // Opcion: el precio es un sobrecoste que se suma, lleva `+` y con 0 no se
 // dibuja nada. La asimetria es deliberada, no un olvido.
-function choiceLabel(label: string, price: number): string {
+//
+// El espacio de delante es del separador, no del marcado: asi da igual como
+// quede sangrada la plantilla.
+function choicePrice(price: number): string {
   if (group.kind === 'variant') {
-    return `${label || VARIANT_FALLBACK_LABEL} — ${formatPrice(price)}`;
+    return ` — ${formatPrice(price)}`;
   }
-  return price > 0 ? `${label} + ${formatPrice(price)}` : label;
+  return price > 0 ? ` + ${formatPrice(price)}` : '';
 }
 
 // El precio que CUENTA para el total: el descontado cuando la promocion alcanza
@@ -105,7 +120,9 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
               data-option-id={choice.id}
               data-price={effectivePrice(choice)}
             >
-              <span class="option__label">{choiceLabel(choice.label, choice.price)}</span>
+              <span class="option__label">
+                <span class="option__name">{choiceName(choice.label)}</span>{choicePrice(choice.price)}
+              </span>
 
               {/* Lo rellena el script en cuanto hay mas de una unidad: es el
                   unico control donde el precio se multiplica. */}
@@ -142,10 +159,13 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
                     las variantes que la promocion no alcanza— sigue siendo una
                     sola cadena. */}
                 {choice.finalPrice === null ? (
-                  <span class="option__label">{choiceLabel(choice.label, choice.price)}</span>
+                  <span class="option__label">
+                    <span class="option__name">{choiceName(choice.label)}</span>{choicePrice(choice.price)}
+                  </span>
                 ) : (
                   <span class="option__label">
-                    {`${choice.label || VARIANT_FALLBACK_LABEL} — `}
+                    <span class="option__name">{choiceName(choice.label)}</span>
+                    {' — '}
                     <s class="price-was">{formatPrice(choice.price)}</s>{' '}
                     <span class="option__price-final">{formatPrice(choice.finalPrice)}</span>
                   </span>

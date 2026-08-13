@@ -1,15 +1,41 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import ScreenHeader from '../../components/ScreenHeader.astro';
+import NavbarDesktop from '../../components/NavbarDesktop.astro';
 import TipSelector from '../../components/TipSelector.astro';
 import PaymentMethods from '../../components/PaymentMethods.astro';
 import PaymentSummary from '../../components/PaymentSummary.astro';
+import CartSummary from '../../components/CartSummary.astro';
 import LegalNote from '../../components/LegalNote.astro';
 import ActionBar from '../../components/ActionBar.astro';
-import { getCart } from '../../lib/cart.ts';
+import ScheduleSheet from '../../components/ScheduleSheet.astro';
+import LocationSheet from '../../components/LocationSheet.astro';
+import Footer from '../../components/Footer.astro';
+import { getCart, type Cart } from '../../lib/cart.ts';
 import { resolveCartToken } from '../../lib/cart-session.ts';
+import { getShippingQuote } from '../../lib/shipping-quote.ts';
 import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
-import { getStoreConfig } from '../../lib/store-config.ts';
+import { resolveShipping } from '../../lib/shipping.ts';
+import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
+import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts';
+
+// DOS PANTALLAS, UN MARCADO
+//
+// En movil es la de siempre: la cabecera de 124, la propina, los metodos, el
+// desglose y "Continuar" en la barra fija del fondo.
+//
+// En desktop se monta como /carrito y /datos —la misma barra de tienda, el mismo
+// armazon de 48 y el mismo pie— y se parte en dos columnas: lo que hay que elegir
+// a la izquierda y la tarjeta de resumen a la derecha, que es donde se continua.
+// Ver components/_checkout-page.scss.
+//
+// Con la tarjeta, el desglose del cuerpo (<PaymentSummary>) se queda en movil: son
+// la misma cuenta contada dos veces, y a la tarjeta le toca porque ademas lleva el
+// boton. Sigue pintandose para movil, donde la tarjeta no existe.
+//
+// Por lo mismo se muda el aviso legal: lo que se acepta al continuar se lee junto
+// al control con el que se continua, y en desktop ese control esta en la tarjeta.
+// Los dos van en el marcado y cada ancho ensena el suyo.
 
 // El carrito de la sesion manda sobre cualquier valor de ejemplo.
 export const prerender = false;
@@ -32,22 +58,28 @@ if (Astro.url.searchParams.get('pago') === 'rechazado' && rejectedOrder) {
   return Astro.redirect(`/confirmado?order=${encodeURIComponent(rejectedOrder)}`);
 }
 
-// Esta pantalla solo lee el importe de los productos. La propina y el metodo se
-// guardan en el borrador, y con Mercado Pago el pedido se cierra aqui mismo.
-let products = 0;
+const token = resolveCartToken(Astro.cookies);
+
+// El carrito entero, no solo su total: la tarjeta de resumen desglosa el subtotal
+// y los descuentos, que es la parte de la cuenta que esta pantalla no rehace.
+let cart: Cart | null = null;
 
 try {
-  products = (await getCart(resolveCartToken(Astro.cookies))).total;
+  cart = await getCart(token);
 } catch (error) {
   console.error('[resumen] fallo GET /api/cart', error);
 }
 
-const store = await getStoreConfig();
+const products = cart?.total ?? 0;
 
-// La propina la decide el negocio: con el interruptor apagado no se pide, y sin
-// importes no hay selector que pintar.
-const tipAmounts = store.tips?.enabled ? (store.tips.amounts ?? []) : [];
-const showTips = tipAmounts.length > 0;
+// El catalogo, solo para los tres rotulos de categoria del pie: si falla, el pie
+// se queda con "Menu completo" y la pantalla sigue en pie.
+const categoriesPending = getProducts()
+  .then((items) => getCategories(items).filter((category) => category !== ALL_CATEGORIES))
+  .catch((error) => {
+    console.error('[resumen] fallo el catalogo del pie', error);
+    return [] as string[];
+  });
 
 // Propina y metodo elegidos antes, si se vuelve atras desde el pago. La primera
 // vez no hay borrador y manda el primer importe configurado: distinguir "sin
@@ -55,54 +87,173 @@ const showTips = tipAmounts.length > 0;
 const raw = Astro.cookies.get(DRAFT_COOKIE)?.value;
 const draft = parseDraft(raw);
 
-// Sin propina configurada, no hay propina que sumar.
-const tip = showTips ? (raw ? draft.tip : (tipAmounts[1] ?? tipAmounts[0])) : 0;
-
 // El modo de entrega, que se eligio en la pantalla anterior, decide los metodos:
 // al recoger solo hay efectivo, asi que la eleccion anterior no se repone —podria
 // ser una transferencia de un intento a domicilio— y tampoco hay envio que cotizar.
 const pickup = draft.deliveryType === 'pickup';
+
+// La cotizacion del envio vive en el borrador, pero esa cookie dura dos horas y el
+// navegador la vacia de mas maneras de las que parece. Cuando falta y hay una
+// ubicacion que la justifica, se recupera de la API, que la guarda mientras dure la
+// sesion del carrito. Asi el importe llega en el primer render, y el total que se
+// ensena aqui no baja porque el navegador se limpiara solo.
+//
+// Solo se pregunta cuando puede haber algo que recuperar: en el camino normal, con
+// la cotizacion ya en el borrador, no se llama.
+const quotePending =
+  !pickup && draft.customer.locationUrl && !draft.shipping
+    ? getShippingQuote(token)
+    : Promise.resolve(null);
+
+const [store, schedule, categories, recovered] = await Promise.all([
+  getStoreConfig(),
+  getStoreSchedule(),
+  categoriesPending,
+  quotePending,
+]);
+
+const quote = draft.shipping ?? recovered;
+
+// La propina la decide el negocio: con el interruptor apagado no se pide, y sin
+// importes no hay selector que pintar.
+const tipAmounts = store.tips?.enabled ? (store.tips.amounts ?? []) : [];
+const showTips = tipAmounts.length > 0;
+
+// Sin propina configurada, no hay propina que sumar.
+const tip = showTips ? (raw ? draft.tip : (tipAmounts[1] ?? tipAmounts[0])) : 0;
+
 const method = pickup ? 'efectivo' : draft.paymentMethod;
+
+// El envio, por fin con precio. Lo cotizo el backend en /datos al compartir la
+// ubicacion y viaja en el borrador; aqui se resuelve contra las dos reglas que
+// mandan sobre el: al recoger no hay envio, y el envio gratis del negocio manda
+// sobre cualquier importe.
+//
+// Se resuelve en el servidor, no en el navegador: el importe tiene que estar en
+// el primer pintado, junto al de los productos, y no aparecer despues.
+const shipping = resolveShipping({
+  pickup,
+  quote,
+  products,
+  freeShipping: store.delivery?.freeShipping,
+});
+
+// Las dos condiciones se calculan aqui, en el mismo sitio que monta las hojas: si
+// las dedujera la barra de desktop por su cuenta, podria ofrecer un boton para una
+// hoja que esta pantalla no monto.
+const address = store.location?.address;
+const mapsUrl = store.location?.mapsUrl;
+const hasLocation = Boolean(address || mapsUrl);
+const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 ---
 
 <Layout
   title="Resumen de pago — Shop Superfoods"
   description="Revisa el importe y elige como pagar."
 >
-  <ScreenHeader title="Resumen de pago" backHref="/datos" />
+  {/* Una cabecera por pantalla: la de 124 con el control de vuelta en movil, y de
+      md hacia arriba la barra de la tienda. */}
+  <ScreenHeader title="Resumen de pago" backHref="/datos" mobileOnly />
 
-  <main class="d-flex flex-column flex-grow-1">
-    <form
-      class="d-flex flex-column flex-grow-1"
-      action="#"
-      method="post"
-      data-payment-form
-      data-products={products}
-    >
-      <div class="screen-body">
-        {showTips && <TipSelector selected={tip} amounts={tipAmounts} />}
+  <NavbarDesktop
+    shortAddress={store.location?.shortAddress}
+    estimate={store.delivery?.estimate}
+    hasLocation={hasLocation}
+    hasSchedule={hasSchedule}
+    cartTotal={products}
+    cartCount={cart?.itemsCount ?? 0}
+  />
 
-        <PaymentMethods selected={method} deliveryType={draft.deliveryType} />
+  <main class="checkout-page d-flex flex-column flex-grow-1">
+    {/* La pila y la rejilla solo existen en desktop —en movil son `display:
+        contents`, ver components/_checkout-page.scss—, asi que envolver no cambia
+        nada de lo que ya habia. */}
+    <div class="checkout-page__stack">
+      <h1 class="checkout-page__title">Resumen de pago</h1>
 
-        <PaymentSummary products={products} tip={tip} shipping={!pickup} />
+      <form
+        class="checkout-page__grid"
+        action="#"
+        method="post"
+        data-payment-form
+        data-products={products}
+        data-shipping={shipping.cost}
+        data-shipping-state={shipping.state}
+        data-subtotal={cart?.subtotal ?? 0}
+        data-discount={cart?.discountTotal ?? 0}
+      >
+        <!-- Contenedor 1: lo que hay que elegir. -->
+        <div class="screen-body">
+          {showTips && <TipSelector selected={tip} amounts={tipAmounts} />}
 
-        {/* Lo rellena el script si el checkout rechaza el pedido. */}
-        <p class="form-error" role="alert" hidden data-checkout-error></p>
+          <PaymentMethods selected={method} deliveryType={draft.deliveryType} />
 
-        <LegalNote termsUrl={store.legal?.termsUrl} />
-      </div>
+          {/* Solo en movil: en desktop esta misma cuenta la cierra la tarjeta de
+              la derecha, con el boton dentro. Dos desgloses en una pantalla son
+              dos sitios donde leer el mismo total. */}
+          <div class="d-md-none">
+            <PaymentSummary products={products} tip={tip} shipping={shipping} />
+          </div>
 
-      {/*
-        Boton comun, no de WhatsApp: lo que hace es continuar el flujo —con
-        transferencia lleva a la cuenta, con efectivo a donde recoger, y con Mercado
-        Pago cierra el pedido—, y por aqui no se manda nada por WhatsApp. Ese canal
-        aparece en las dos pantallas finales, que es donde tiene sentido.
-      */}
-      <ActionBar label="Continuar" />
-    </form>
+          {/* Lo rellena el script si el checkout rechaza el pedido. */}
+          <p class="form-error" role="alert" hidden data-checkout-error></p>
+
+          {/* Tambien solo en movil: en desktop el aviso va dentro de la tarjeta,
+              pegado al boton que lo dispara. Aqui abajo se quedaria lejos de el,
+              y ademas repetido. */}
+          <div class="d-md-none">
+            <LegalNote termsUrl={store.legal?.termsUrl} />
+          </div>
+        </div>
+
+        {/*
+          Boton comun, no de WhatsApp: lo que hace es continuar el flujo —con
+          transferencia lleva a la cuenta, con efectivo a donde recoger, y con Mercado
+          Pago cierra el pedido—, y por aqui no se manda nada por WhatsApp. Ese canal
+          aparece en las dos pantallas finales, que es donde tiene sentido.
+
+          En desktop no se pinta: continuar es el boton de la tarjeta. Los dos son
+          submits del mismo formulario, asi que el script decide igual desde
+          cualquiera de ellos.
+        */}
+        <div class="checkout-page__action">
+          <ActionBar label="Continuar" />
+        </div>
+
+        {/* Contenedor 2, solo desktop: la misma tarjeta de /carrito y /datos, aqui
+            ya con la propina. Sin `href`, su boton es un submit —igual que la
+            barra— porque a donde se va depende del metodo que se acabe de elegir.
+
+            El rotulo del boton no es el de la barra de movil: esta es la ultima
+            pantalla en la que se elige algo, y de aqui se sale a pagar. La barra
+            sigue diciendo "Continuar" porque en movil el aviso legal y el boton
+            estan donde siempre. */}
+        <CartSummary
+          subtotal={cart?.subtotal ?? 0}
+          discount={cart?.discountTotal ?? 0}
+          products={products}
+          shipping={shipping}
+          tip={tip}
+          label="Confirmar el pago"
+        >
+          {/* El aviso legal, en desktop, entre el total y el boton: es el boton
+              que lo acepta. La tarjeta es de las tres pantallas del checkout,
+              pero el hueco solo lo llena esta. */}
+          <LegalNote slot="note" termsUrl={store.legal?.termsUrl} />
+        </CartSummary>
+      </form>
+    </div>
   </main>
+
+  {/* Las dos hojas que abren el pin y el reloj de la barra de desktop. */}
+  {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
+  {hasLocation && <LocationSheet address={address} mapsUrl={mapsUrl} />}
+
+  <Footer store={store} categories={categories} />
 </Layout>
 
 <script>
   import '../../scripts/payment-summary';
+  // Abre las hojas del horario y la ubicacion desde la barra de desktop.
+  import '../../scripts/sheet';
 </script>

@@ -4,9 +4,15 @@ import BackButton from './BackButton.astro';
 interface Props {
   title: string;
   backHref?: string;
+  /**
+   * La cabecera se retira de md hacia arriba. Para la pantalla que tiene cabecera
+   * propia de desktop (.navbar-desktop): dos cabeceras seguidas serian una de
+   * mas, y el titulo lo repite ahi el rotulo de la pantalla.
+   */
+  mobileOnly?: boolean;
 }
 
-const { title, backHref = '/' } = Astro.props;
+const { title, backHref = '/', mobileOnly = false } = Astro.props;
 
 // Cabecera de pantalla: control de vuelta + titulo centrado, 124 de alto.
 // Es la forma reutilizable para cualquier pantalla interior (datos de entrega,
@@ -16,7 +22,7 @@ const { title, backHref = '/' } = Astro.props;
 // .topbar y sus elements, pero reparte distinto.
 ---
 
-<header class="topbar topbar--tall">
+<header class:list={['topbar', 'topbar--tall', mobileOnly && 'topbar--mobile']}>
   <BackButton href={backHref} />
 
   <h1 class="topbar__title topbar__title--centered">{title}</h1>

@@ -1,11 +1,12 @@
 ---
 import { formatPrice } from '../lib/price.ts';
+import { formatKm, type ShippingResult } from '../lib/shipping.ts';
 import type { OrderLine } from '../lib/checkout.ts';
 
 interface Props {
   /** Lineas del carrito de la sesion. Solo se leen cantidad, nombre y promocion. */
   items: OrderLine[];
-  /** Importe a transferir o a pagar, en MXN. */
+  /** Importe a transferir o a pagar, en MXN. Ya lleva el envio y la propina. */
   total: number;
   /** Suma de los productos ANTES de descontar. */
   subtotal?: number;
@@ -13,9 +14,21 @@ interface Props {
   discount?: number;
   /** Propina elegida. 0 = no hay fila que pintar. */
   tip?: number;
+  /**
+   * El envio ya resuelto por la pantalla, igual que en el resumen de /pago. Con
+   * `none` —al recoger— no hay fila: no hay envio del que hablar.
+   */
+  shipping?: ShippingResult;
 }
 
-const { items, total, subtotal = total, discount = 0, tip = 0 } = Astro.props;
+const {
+  items,
+  total,
+  subtotal = total,
+  discount = 0,
+  tip = 0,
+  shipping = { state: 'none', cost: 0 },
+} = Astro.props;
 
 // Recordatorio de lo que se pidio, ya en la pantalla de pago: aqui no se edita
 // nada, por eso las lineas son texto y no controles.
@@ -23,11 +36,11 @@ const { items, total, subtotal = total, discount = 0, tip = 0 } = Astro.props;
 // Spec: contenedor gap 12 - padding 16 - radius 16 - borde 1px
 //       lineas gap 8, 12/16 #6C757D - divisora discontinua - total 14/20
 //
-// El desglose aparece solo cuando hay algo que explicar. Con un descuento o una
-// propina, un unico "Total a pagar" obligaria al comprador a fiarse: la resta
-// no le cuadraria con lo que vio en el pedido. Sin ninguno de los dos, las
-// filas sobran porque el subtotal seria el total repetido.
-const breakdown = discount > 0 || tip > 0;
+// El desglose aparece solo cuando hay algo que explicar. Con un descuento, un
+// envio o una propina, un unico "Total a pagar" obligaria al comprador a fiarse:
+// la resta no le cuadraria con lo que vio en el pedido. Sin ninguno de los tres,
+// las filas sobran porque el subtotal seria el total repetido.
+const breakdown = discount > 0 || tip > 0 || shipping.state !== 'none';
 ---
 
 <div class="order-detail">
@@ -66,6 +79,25 @@ const breakdown = discount > 0 || tip > 0;
           <div class="order-detail__row order-detail__row--discount">
             <dt class="order-detail__term">Descuentos</dt>
             <dd class="order-detail__value">{`− ${formatPrice(discount)}`}</dd>
+          </div>
+        )}
+
+        {shipping.state !== 'none' && (
+          <div class="order-detail__row">
+            <dt class="order-detail__term">
+              Envio
+              {shipping.state === 'quoted' && shipping.km !== null && (
+                <span class="order-detail__hint">{formatKm(shipping.km)}</span>
+              )}
+            </dt>
+
+            {shipping.state === 'quoted' ? (
+              <dd class="order-detail__value">{formatPrice(shipping.cost)}</dd>
+            ) : shipping.state === 'free' ? (
+              <dd class="order-detail__value order-detail__value--free">Gratis</dd>
+            ) : (
+              <dd class="order-detail__value order-detail__value--pending">Por cotizar</dd>
+            )}
           </div>
         )}
 

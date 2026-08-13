@@ -18,6 +18,8 @@
 // la pasarela de Mercado Pago, que no forma parte de las cuatro APIs.
 
 import { formatPrice } from '../lib/price';
+import { paintCartSummary } from '../lib/cart-summary';
+import { shippingFromState } from '../lib/shipping';
 import { toPaymentMethod, type PaymentMethod } from '../lib/checkout';
 import { confirmDraft, patchDraft } from '../lib/checkout-draft';
 
@@ -33,9 +35,25 @@ const form = document.querySelector<HTMLFormElement>('[data-payment-form]');
 
 if (form) {
   const products = Number.parseFloat(form.dataset.products ?? '') || 0;
+
+  // El envio ya viene resuelto del servidor: la tarifa, la distancia medida en
+  // /datos y el envio gratis se aplicaron alli (ver src/lib/shipping.ts). Aqui
+  // solo es un sumando mas del total, que la propina vuelve a mover.
+  const shipping = Number.parseFloat(form.dataset.shipping ?? '') || 0;
   const output = form.querySelector<HTMLElement>('[data-summary-total]');
   const error = form.querySelector<HTMLElement>('[data-checkout-error]');
-  const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+  // Son DOS: el de la barra del fondo en movil y el de la tarjeta de resumen en
+  // desktop. Solo uno se ve a la vez, pero los dos envian este formulario, asi que
+  // el cierre del pedido los bloquea a los dos.
+  const buttons = form.querySelectorAll<HTMLButtonElement>('button[type="submit"]');
+
+  // El envio no se mueve en esta pantalla —se resolvio en el servidor—, pero la
+  // tarjeta se repinta entera con cada propina y necesita su estado: llega en el
+  // marcado, junto al importe.
+  const shippingResult = shippingFromState(form.dataset.shippingState, shipping);
+
+  const amount = (name: string): number => Number.parseFloat(form.dataset[name] ?? '') || 0;
 
   const selectedTip = (): number => {
     const selected = form.querySelector<HTMLInputElement>('[data-tip]:checked');
@@ -43,7 +61,18 @@ if (form) {
   };
 
   const recalculate = (): void => {
-    if (output) output.textContent = formatPrice(products + selectedTip());
+    const tip = selectedTip();
+
+    if (output) output.textContent = formatPrice(products + shipping + tip);
+
+    // La misma cuenta en la tarjeta de desktop, que ademas desglosa la propina.
+    paintCartSummary(form, {
+      subtotal: amount('subtotal'),
+      discount: amount('discount'),
+      products,
+      shipping: shippingResult,
+      tip,
+    });
   };
 
   const showError = (message: string | null): void => {
@@ -78,13 +107,15 @@ if (form) {
     }
 
     showError(null);
-    if (button) button.disabled = true;
+    for (const button of buttons) button.disabled = true;
 
+    // El envio no viaja como importe: la API lo recalcula al cerrar y lo devuelve
+    // dentro del total del pedido. Ver toCheckoutRequest().
     const outcome = await confirmDraft(method);
 
     if (!outcome.ok) {
       showError(outcome.message);
-      if (button) button.disabled = false;
+      for (const button of buttons) button.disabled = false;
       return;
     }
 

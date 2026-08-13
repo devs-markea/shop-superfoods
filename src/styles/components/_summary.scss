@@ -53,6 +53,23 @@
   color: var(--sf-placeholder);
 }
 
+// Modifier: envio que no se cobra ("Gratis"). En verde, como los descuentos del
+// detalle: es lo mismo, dinero que no se paga.
+.summary__value--free {
+  color: var(--sf-success);
+}
+
+// Element: el dato del que sale el importe —los kilometros del envio—, junto al
+// concepto y en pequeno: acompana a la fila, no compite con ella.
+.summary__hint {
+  margin-left: var(--sf-space-2);
+  font-size: var(--sf-font-size-sm);
+  font-weight: var(--sf-weight-regular);
+  line-height: var(--sf-line-height-sm);
+  color: var(--sf-placeholder);
+  white-space: nowrap;
+}
+
 // Element: divisora. Spec: 2px #EAECF0
 .summary__divider {
   height: 0;
