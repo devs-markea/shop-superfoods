@@ -25,6 +25,16 @@ const { testMode = false } = Astro.props;
 // repartidor. Lo que aporta es el envio: con un punto, el backend puede medir la
 // distancia y cotizarlo; sin el, se confirma al final, a mano.
 //
+// EN DESKTOP ES SOLO EL BOTON
+//
+// El rotulo "Ubicacion" y la pista "o ingresa manualmente" son de movil: alli
+// este bloque va suelto y tiene que decir de que va y que hay otro camino. En
+// desktop el grupo entero lo rotula "Direccion" —lo pone /datos— y los campos
+// escritos quedan justo debajo, asi que las dos frases sobrarian: repetirian el
+// mismo titulo y describirian algo que ya se ve. Se retiran con d-md-none, y con
+// ellas se va la columna de este bloque (ver components/_location.scss): el boton
+// pasa a ser una pieza mas del bloque de direccion.
+//
 // DE DONDE SALE EL PUNTO
 //
 // Primero del dispositivo, que es lo unico que sabe donde esta. Pero pedirselo al
@@ -37,7 +47,7 @@ const { testMode = false } = Astro.props;
 ---
 
 <div class="location" data-location>
-  <h2 class="section-label" id="location-label">Ubicacion</h2>
+  <h2 class="section-label d-md-none" id="location-label">Ubicacion</h2>
 
   <button
     class="location__button btn-plain"
@@ -72,7 +82,7 @@ const { testMode = false } = Astro.props;
     </button>
   </p>
 
-  <p class="location__hint">o ingresa manualmente</p>
+  <p class="location__hint d-md-none">o ingresa manualmente</p>
 </div>
 
 {/*

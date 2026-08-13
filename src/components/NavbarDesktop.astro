@@ -6,11 +6,6 @@ import { cartChipLabel } from '../lib/cart-view.ts';
 
 interface Props {
   /**
-   * En que seccion esta la pantalla que monta la barra. Solo decide cual de los
-   * dos rotulos se ve activo.
-   */
-  section?: 'menu' | 'order';
-  /**
    * La direccion ABREVIADA. Es la que cabe en una barra, y la unica que se rotula
    * aqui: la completa es del modal. Sin ella el pin rotula la accion, no el dato.
    */
@@ -28,7 +23,6 @@ interface Props {
 }
 
 const {
-  section = 'menu',
   shortAddress,
   estimate,
   hasLocation,
@@ -37,22 +31,15 @@ const {
   cartCount,
 } = Astro.props;
 
-// Barra de desktop. Tres elementos: logo - secciones - tienda y carrito.
+// Barra de desktop. Dos elementos: logo - tienda y carrito.
 //
 // No es una variante de .navbar: son otros elementos, otro reparto y otro alto,
 // asi que es otro bloque. La monta <Navbar>, que es quien decide cual de las dos
 // se ve segun el breakpoint.
 //
-// LOS ROTULOS DE SECCION NO NAVEGAN TODAVIA
-// Cual esta activo lo dice la pantalla que monta la barra: "Menu" en la portada y
-// en la ficha, "Mi pedido" en el carrito. Pero siguen siendo <span> y no enlaces
-// —un rotulo que marca donde estas no lleva a ninguna parte— y por eso el grupo
-// tampoco es un <nav>: un landmark de navegacion sin nada que navegar solo
-// estorba a quien llega con lector de pantalla.
-const sections = [
-  { label: 'Menu', active: section === 'menu' },
-  { label: 'Mi pedido', active: section === 'order' },
-];
+// En medio iban los rotulos de seccion —"Menu" y "Mi pedido"—, que marcaban en
+// que pantalla estabas sin llevar a ninguna parte. Se retiraron: el reparto vuelve
+// a ser logo a un lado y tienda al otro.
 
 // Las metas de la tienda: pin y reloj, cada uno con su rotulo.
 //
@@ -135,21 +122,6 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
     <a class="navbar-desktop__brand" href="/">
       <BrandLogo class="navbar-desktop__logo" />
     </a>
-
-    <div class="navbar-desktop__sections">
-      {
-        sections.map((section) => (
-          <span
-            class:list={[
-              'navbar-desktop__section',
-              section.active && 'navbar-desktop__section--active',
-            ]}
-          >
-            {section.label}
-          </span>
-        ))
-      }
-    </div>
 
     <div class="navbar-desktop__store">
       {

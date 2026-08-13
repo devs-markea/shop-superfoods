@@ -32,6 +32,10 @@ import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts
 // Con la tarjeta, el desglose del cuerpo (<PaymentSummary>) se queda en movil: son
 // la misma cuenta contada dos veces, y a la tarjeta le toca porque ademas lleva el
 // boton. Sigue pintandose para movil, donde la tarjeta no existe.
+//
+// Por lo mismo se muda el aviso legal: lo que se acepta al continuar se lee junto
+// al control con el que se continua, y en desktop ese control esta en la tarjeta.
+// Los dos van en el marcado y cada ancho ensena el suyo.
 
 // El carrito de la sesion manda sobre cualquier valor de ejemplo.
 export const prerender = false;
@@ -152,7 +156,6 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   <ScreenHeader title="Resumen de pago" backHref="/datos" mobileOnly />
 
   <NavbarDesktop
-    section="order"
     shortAddress={store.location?.shortAddress}
     estimate={store.delivery?.estimate}
     hasLocation={hasLocation}
@@ -195,7 +198,12 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
           {/* Lo rellena el script si el checkout rechaza el pedido. */}
           <p class="form-error" role="alert" hidden data-checkout-error></p>
 
-          <LegalNote termsUrl={store.legal?.termsUrl} />
+          {/* Tambien solo en movil: en desktop el aviso va dentro de la tarjeta,
+              pegado al boton que lo dispara. Aqui abajo se quedaria lejos de el,
+              y ademas repetido. */}
+          <div class="d-md-none">
+            <LegalNote termsUrl={store.legal?.termsUrl} />
+          </div>
         </div>
 
         {/*
@@ -214,15 +222,25 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 
         {/* Contenedor 2, solo desktop: la misma tarjeta de /carrito y /datos, aqui
             ya con la propina. Sin `href`, su boton es un submit —igual que la
-            barra— porque a donde se va depende del metodo que se acabe de elegir. */}
+            barra— porque a donde se va depende del metodo que se acabe de elegir.
+
+            El rotulo del boton no es el de la barra de movil: esta es la ultima
+            pantalla en la que se elige algo, y de aqui se sale a pagar. La barra
+            sigue diciendo "Continuar" porque en movil el aviso legal y el boton
+            estan donde siempre. */}
         <CartSummary
           subtotal={cart?.subtotal ?? 0}
           discount={cart?.discountTotal ?? 0}
           products={products}
           shipping={shipping}
           tip={tip}
-          label="Continuar"
-        />
+          label="Confirmar el pago"
+        >
+          {/* El aviso legal, en desktop, entre el total y el boton: es el boton
+              que lo acepta. La tarjeta es de las tres pantallas del checkout,
+              pero el hueco solo lo llena esta. */}
+          <LegalNote slot="note" termsUrl={store.legal?.termsUrl} />
+        </CartSummary>
       </form>
     </div>
   </main>

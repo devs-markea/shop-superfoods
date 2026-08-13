@@ -32,7 +32,8 @@
 
 .checkout-page__stack,
 .checkout-page__action,
-.checkout-page__notes {
+.checkout-page__notes,
+.checkout-page__fields {
   display: contents;
 }
 
@@ -102,6 +103,43 @@
     min-width: 0;
     margin-inline: 0;
     padding: 0;
+  }
+
+  // Modifier: confirm — las dos pantallas de cierre, /pago/transferencia y
+  // /pago/efectivo. El armazon es el mismo; lo que cambia es el ritmo de la
+  // columna, que se queda en el 24 de movil.
+  //
+  // Porque lo que hay en ella no son controles que elegir sino tres cosas que
+  // leer de una sentada —a que cuenta pagar (o como), el aviso que lo matiza y el
+  // detalle del pedido—: separarlas 32 las convierte en tres bloques sueltos
+  // cuando son un solo recado.
+  .checkout-page--confirm .screen-body {
+    gap: var(--sf-space-6);
+  }
+
+  // El switch de entrega se arrima al borde de la columna en lugar de quedarse
+  // centrado: en movil la columna mide justo sus 350 y centrarlo es lo mismo que
+  // alinearlo, pero aqui la columna es del doble y esos 350 flotando en medio no
+  // se alinean con nada.
+  //
+  // Va aqui, con el resto de lo que esta pantalla recoloca, y no en el bloque del
+  // switch: es cosa de esta columna. La barra de la portada hace lo propio con la
+  // suya (ver components/_order-bar.scss).
+  .checkout-page .switch {
+    margin-inline: 0;
+  }
+
+  // Element: fields — los campos de /datos, a 20. Es el bloque que el switch de
+  // entrega encabeza: contacto y direccion dejan de ser dos grupos separados por
+  // el 24 de la columna y pasan a ser un solo formulario con un ritmo propio, mas
+  // apretado que el de la pantalla.
+  //
+  // En movil no existe —arriba es `display: contents`—, asi que el 24 de
+  // .screen-body sigue separando alli los dos grupos como hasta ahora.
+  .checkout-page__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sf-space-5);
   }
 
   // En desktop no hay barra de accion en ningun caso: la accion es el boton de la

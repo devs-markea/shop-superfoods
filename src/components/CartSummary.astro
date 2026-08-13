@@ -131,6 +131,17 @@ const total = products + shipping.cost + tip;
     </div>
   </dl>
 
+  {/*
+    Hueco entre la cuenta y el boton, para lo que cada pantalla tenga que decir
+    antes de continuar. Hoy solo lo llena /pago, con el aviso legal que en movil
+    va al final del cuerpo.
+
+    Es un slot y no una prop porque la tarjeta no sabe en que pantalla esta —ver
+    la nota de arriba— y un `termsUrl` la obligaria a saberlo. Sin rellenar no
+    pinta nada: no queda ni el nodo ni el hueco del gap.
+  */}
+  <slot name="note" />
+
   {
     // El mismo reparto que <ActionBar>: apagado es un <button disabled> y no un
     // enlace en gris, porque un <a> sin href sigue siendo enfocable y anunciable
