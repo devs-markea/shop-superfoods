@@ -53,8 +53,9 @@
   --sf-weight-medium: 500;
   --sf-weight-semibold: 600;
   --sf-weight-bold: 700;
-  // Solo el folio de /confirmado. Se descarga como el resto de pesos,
-  // declarado en la config de Astro: sin el, el navegador cae al 700.
+  // El folio de /confirmado y el nombre del platillo en la ficha de desktop. Se
+  // descarga como el resto de pesos, declarado en la config de Astro: sin el, el
+  // navegador cae al 700.
   --sf-weight-extrabold: 800;
 
   // --- Espaciado ---

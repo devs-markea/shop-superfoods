@@ -1,11 +1,15 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import TopBar from '../components/TopBar.astro';
+import NavbarDesktop from '../components/NavbarDesktop.astro';
 import ShippingProgress from '../components/ShippingProgress.astro';
 import OrderComments from '../components/OrderComments.astro';
+import CartSummary from '../components/CartSummary.astro';
 import ActionBar from '../components/ActionBar.astro';
 import ScheduleSheet from '../components/ScheduleSheet.astro';
+import LocationSheet from '../components/LocationSheet.astro';
 import StoreClosedNotice from '../components/StoreClosedNotice.astro';
+import Footer from '../components/Footer.astro';
 import {
   getCart,
   remainingForFreeShipping,
@@ -15,16 +19,42 @@ import {
 import { imageResolver, renderLines } from '../lib/cart-view.ts';
 import { assetBase } from '../lib/api.ts';
 import { resolveCartToken } from '../lib/cart-session.ts';
+import { getShippingQuote } from '../lib/shipping-quote.ts';
 import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
 import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
+import { ALL_CATEGORIES, getCategories, getProducts } from '../lib/catalog.ts';
+import { resolveShipping } from '../lib/shipping.ts';
 import { isClosed } from '../lib/schedule.ts';
 import { formatPrice } from '../lib/price.ts';
+
+// DOS PANTALLAS, UN MARCADO
+//
+// En movil el pedido es el de siempre: la barra de 48 con el total, la columna
+// con las lineas y los comentarios, y "Continuar" en la barra fija del fondo.
+//
+// En desktop crece por arriba y por abajo —la misma barra de tienda y el mismo
+// pie que la portada y la ficha— y por dentro se parte en dos columnas: el pedido
+// a la izquierda y la tarjeta de resumen a la derecha, que es la que cierra la
+// cuenta y continua el flujo. Alli la barra del fondo no se pinta. Nada de eso
+// duplica marcado —son los mismos elementos recolocados por CSS, ver
+// components/_checkout-page.scss— salvo la tarjeta, que es una pieza nueva y de
+// desktop entera.
 
 // El carrito es de esta sesion: no hay nada que prerenderizar.
 export const prerender = false;
 
 let cart: Cart | null = null;
 let unreachable = false;
+
+// El catalogo, solo para los tres rotulos de categoria del pie. Se pide a la vez
+// que el carrito y si falla el pie se queda con "Menu completo": son tres rotulos
+// de un pie, no el contenido de la pantalla.
+const categoriesPending = getProducts()
+  .then((items) => getCategories(items).filter((category) => category !== ALL_CATEGORIES))
+  .catch((error) => {
+    console.error('[pedido] fallo el catalogo del pie', error);
+    return [] as string[];
+  });
 
 try {
   // resolveCartToken emite la cookie si es la primera visita, asi que llegar
@@ -47,14 +77,29 @@ const lines = cart?.lines ?? [];
 const base = assetBase();
 const linesHtml = cart ? renderLines(cart, imageResolver(base)) : '';
 
-// Los comentarios ya escritos: se guardan en el borrador del pedido, asi que
-// volver aqui desde el pago no los pierde.
+// El borrador del pedido: lo que se ha ido reuniendo hasta aqui.
 //
-// En el mismo borrador viaja el modo de entrega que se eligio en el listado, pero
-// esta pantalla no lo usa ni lo reenvia: la cookie la lee el servidor en cada
-// peticion, asi que /datos la recibe entera sin que el carrito tenga que pasarle
-// nada. Un dato copiado aqui solo podria contradecir al original.
-const { comments } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+// Los comentarios ya escritos, para que volver desde el pago no los pierda; y el
+// modo de entrega y la cotizacion del envio, que son lo que la tarjeta de resumen
+// necesita para cerrar la cuenta. Nada de esto se reenvia a /datos: la cookie la
+// lee el servidor en cada peticion, asi que la siguiente pantalla la recibe entera
+// sin que el carrito tenga que pasarle nada. Un dato copiado aqui solo podria
+// contradecir al original.
+const draft = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+const pickup = draft.deliveryType === 'pickup';
+
+// La cotizacion del envio vive en el borrador, pero esa cookie dura dos horas y el
+// navegador la vacia de mas maneras de las que parece. Cuando falta y hay una
+// ubicacion que la justifica, se recupera de la API, que la guarda mientras dure la
+// sesion del carrito. Asi el importe llega en el primer render.
+//
+// Solo se pregunta cuando puede haber algo que recuperar: en el camino normal, con
+// la cotizacion ya en el borrador, no se llama.
+const quote =
+  draft.shipping ??
+  (!pickup && draft.customer.locationUrl
+    ? await getShippingQuote(resolveCartToken(Astro.cookies))
+    : null);
 
 // El envio gratis lo decide el negocio, y son tres respuestas distintas:
 //
@@ -63,12 +108,44 @@ const { comments } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 //   none       no hay envio gratis    -> no se promete lo que no existe
 //
 // El umbral viaja en data-threshold para que el script recalcule el avance con el
-// total que devuelve cada operacion de carrito.
-const [store, schedule] = await Promise.all([getStoreConfig(), getStoreSchedule()]);
+// total que devuelve cada operacion de carrito, y el modo en data-free-shipping,
+// que es lo que le falta para volver a resolver el envio de la tarjeta: cruzar el
+// umbral con un "+" cambia el importe a "Gratis" sin recargar.
+const [store, schedule, categories] = await Promise.all([
+  getStoreConfig(),
+  getStoreSchedule(),
+  categoriesPending,
+]);
 
 const { freeShipping } = store.delivery ?? {};
 const threshold = freeShipping?.mode === 'threshold' ? (freeShipping.threshold ?? 0) : 0;
-const showProgress = threshold > 0;
+
+// Dos condiciones, y la segunda es del pedido, no del negocio: con el carrito
+// vacio no hay avance que ensenar. El envio gratis se gana llegando a un importe,
+// asi que una barra en cero delante de un pedido sin nada solo puede decir dos
+// cosas, y las dos son falsas: que ya se esta avanzando, o que basta agregar algo
+// para conseguirlo. Se pinta cuando hay pedido que medir.
+const showProgress = threshold > 0 && lines.length > 0;
+
+// El envio de la tarjeta. Aqui todavia suele estar "Por cotizar" —la ubicacion se
+// comparte en /datos, que es donde se mide la distancia—, pero las otras tres
+// respuestas tambien se dan: al recoger no hay envio, el negocio puede regalarlo,
+// y volver atras desde el pago trae la distancia ya medida en el borrador.
+const shipping = resolveShipping({
+  pickup,
+  quote,
+  products: total,
+  freeShipping,
+});
+
+// Las dos condiciones se calculan aqui, en el mismo sitio que monta las hojas: si
+// las dedujera la barra de desktop por su cuenta, podria ofrecer un boton para una
+// hoja que esta pantalla no monto. Es lo mismo que hacen <Navbar> en la portada y
+// la ficha en la suya.
+const address = store.location?.address;
+const mapsUrl = store.location?.mapsUrl;
+const hasLocation = Boolean(address || mapsUrl);
+const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 
 // Ultima pantalla donde el aviso sirve de algo: aqui todavia hay una decision que
 // tomar —seguir o no—, y de aqui en adelante ya no. El pedido no se pierde: sigue
@@ -77,100 +154,162 @@ const closed = isClosed(schedule);
 ---
 
 <Layout title="Mi pedido — Shop Superfoods" description="Revisa tu pedido antes de pagar.">
-  <TopBar title="Mi pedido" total={total} />
+  {/* Una cabecera por pantalla: la barra de 48 con el total en movil, y de md
+      hacia arriba la barra de la tienda, la misma de la portada y de la ficha. */}
+  <TopBar title="Mi pedido" total={total} mobileOnly />
+
+  <NavbarDesktop
+    section="order"
+    shortAddress={store.location?.shortAddress}
+    estimate={store.delivery?.estimate}
+    hasLocation={hasLocation}
+    hasSchedule={hasSchedule}
+    cartTotal={total}
+    cartCount={cart?.itemsCount ?? 0}
+  />
 
   <!-- La cadena flex (page > main > form) deja la barra de accion al fondo de
        la pantalla aunque el pedido tenga pocas lineas. -->
-  <main class="d-flex flex-column flex-grow-1">
-    <!-- El formulario envuelve tambien la barra de accion: "Continuar" envia
-         el pedido junto con los comentarios. -->
-    <form class="d-flex flex-column flex-grow-1" action="#" method="post">
-      <div
-        class="screen-body"
+  <main class="checkout-page d-flex flex-column flex-grow-1">
+    {/* La pila y la rejilla solo existen en desktop —en movil son `display:
+        contents`, ver components/_checkout-page.scss—, asi que envolver no cambia
+        nada de lo que ya habia. */}
+    <div class="checkout-page__stack">
+      <h1 class="checkout-page__title">Mi pedido</h1>
+
+      <!-- El formulario envuelve tambien la barra de accion: "Continuar" envia
+           el pedido junto con los comentarios. Y en desktop es ademas la rejilla
+           de dos columnas, para que la tarjeta caiga dentro de [data-order-summary]
+           y el script pueda repintarla con cada respuesta de la API. -->
+      <form
+        class="checkout-page__grid"
+        action="#"
+        method="post"
         data-order-summary
         data-threshold={threshold}
+        data-free-shipping={freeShipping?.mode ?? 'none'}
         data-asset-base={base}
       >
+        {/* Contenedor 1: el pedido. */}
+        <div class="screen-body">
+          {
+            showProgress && (
+              <ShippingProgress
+                remaining={remainingForFreeShipping(total, threshold)}
+                progress={shippingProgress(total, threshold)}
+              />
+            )
+          }
+
+          <!-- set:html y no un componente por linea: ver la cabecera de
+               src/lib/cart-view.ts. Los grupos se rehacen enteros en cada cambio,
+               asi que la lista se sustituye completa con el mismo marcado. -->
+          <ul
+            class:list={['order-list', 'list-unstyled', lines.length === 0 && 'd-none']}
+            data-order-list
+            set:html={linesHtml}
+          />
+
+          <p class:list={['text-secondary', 'text-center', 'm-0', lines.length > 0 && 'd-none']} data-empty>
+            {unreachable ? 'No pudimos cargar tu pedido. Intentalo de nuevo.' : 'Tu carrito esta vacio.'}
+          </p>
+
+          <!-- Lo rellena el script cuando la API rechaza un cambio. -->
+          <p class="order-list__error" role="alert" hidden data-cart-error></p>
+
+          <!-- Solo con descuento: sin el, el subtotal seria el total repetido.
+               Es lo que cierra la cuenta de una promocion —cuanto costaba, cuanto
+               se descuenta— porque el total vive arriba, en la barra.
+
+               Solo en movil: en desktop no hay barra que complete, y la cuenta
+               entera —con el envio y el total— la lleva la tarjeta de resumen. -->
+          <dl
+            class:list={['order-totals', 'd-md-none', discountTotal <= 0 && 'd-none']}
+            data-order-totals
+          >
+            <div class="order-totals__row">
+              <dt class="order-totals__term">Subtotal</dt>
+              <dd class="order-totals__value" data-order-subtotal>{formatPrice(subtotal)}</dd>
+            </div>
+            <div class="order-totals__row order-totals__row--discount">
+              <dt class="order-totals__term">Descuentos</dt>
+              <dd class="order-totals__value" data-order-discount>
+                {`− ${formatPrice(discountTotal)}`}
+              </dd>
+            </div>
+          </dl>
+
+          {/* La divisoria y los comentarios son una sola pieza: la raya esta ahi
+              para separarlos del pedido, asi que si ellos no se pintan, ella
+              tampoco tiene nada que separar.
+
+              En desktop se retiran con el pedido vacio —una nota para el
+              repartidor sobre un pedido que no existe no se puede escribir—, y en
+              movil se quedan como estaban: el envoltorio no pinta nada alli. */}
+          <div
+            class:list={['checkout-page__notes', lines.length === 0 && 'checkout-page__notes--empty']}
+          >
+            <hr class="screen-body__divider" />
+
+            <OrderComments value={draft.comments} />
+          </div>
+        </div>
+
+        <!-- Tres casos, y el ultimo es el que no pinta barra:
+             · con lineas          -> Continuar, apagado en gris si la tienda cerro
+             · sin lineas, abierta -> Ver el menu, que es lo unico que queda por hacer
+             · sin lineas, cerrada -> nada. Un pedido vacio con la tienda cerrada no
+               tiene ninguna accion que ofrecer, y la tarjeta flotante ya dice por que
+               y lleva al horario: una barra debajo solo competiria con ella.
+
+             Los tres son de movil: en desktop la barra no se pinta nunca, porque la
+             accion es el boton de la tarjeta —y con el pedido vacio ese boton esta
+             apagado, que es lo que hay que decir: no hay pedido con el que seguir. -->
         {
-          showProgress && (
-            <ShippingProgress
-              remaining={remainingForFreeShipping(total, threshold)}
-              progress={shippingProgress(total, threshold)}
-            />
+          lines.length > 0 ? (
+            <div class="checkout-page__action">
+              <ActionBar label="Continuar" href="/datos" disabled={closed} />
+            </div>
+          ) : closed ? null : (
+            <div class="checkout-page__action">
+              <ActionBar label="Ver el menu" href="/" />
+            </div>
           )
         }
 
-        <!-- set:html y no un componente por linea: ver la cabecera de
-             src/lib/cart-view.ts. Los grupos se rehacen enteros en cada cambio,
-             asi que la lista se sustituye completa con el mismo marcado. -->
-        <ul
-          class:list={['order-list', 'list-unstyled', lines.length === 0 && 'd-none']}
-          data-order-list
-          set:html={linesHtml}
+        {/* Contenedor 2, solo desktop. Se pinta siempre —tambien con el pedido
+            vacio, donde la cuenta es de ceros— porque es la columna de la derecha:
+            aparecer y desaparecer con la primera linea agregada movería la pantalla
+            entera. Lo que si cambia es su boton, que sin pedido no puede continuar
+            con nada. */}
+        <CartSummary
+          subtotal={subtotal}
+          discount={discountTotal}
+          products={total}
+          shipping={shipping}
+          label="Continuar con la entrega"
+          href="/datos"
+          disabled={closed || lines.length === 0}
         />
-
-        <p class:list={['text-secondary', 'text-center', 'm-0', lines.length > 0 && 'd-none']} data-empty>
-          {unreachable ? 'No pudimos cargar tu pedido. Intentalo de nuevo.' : 'Tu pedido esta vacio.'}
-        </p>
-
-        <!-- Lo rellena el script cuando la API rechaza un cambio. -->
-        <p class="order-list__error" role="alert" hidden data-cart-error></p>
-
-        <!-- Solo con descuento: sin el, el subtotal seria el total repetido.
-             Es lo que cierra la cuenta de una promocion —cuanto costaba, cuanto
-             se descuenta— porque el total vive arriba, en la barra. -->
-        <dl
-          class:list={['order-totals', discountTotal <= 0 && 'd-none']}
-          data-order-totals
-        >
-          <div class="order-totals__row">
-            <dt class="order-totals__term">Subtotal</dt>
-            <dd class="order-totals__value" data-order-subtotal>{formatPrice(subtotal)}</dd>
-          </div>
-          <div class="order-totals__row order-totals__row--discount">
-            <dt class="order-totals__term">Descuentos</dt>
-            <dd class="order-totals__value" data-order-discount>
-              {`− ${formatPrice(discountTotal)}`}
-            </dd>
-          </div>
-        </dl>
-
-        <hr class="screen-body__divider" />
-
-        <OrderComments value={comments} />
-      </div>
-
-      <!-- Tres casos, y el ultimo es el que no pinta barra:
-           · con lineas          -> Continuar, apagado en gris si la tienda cerro
-           · sin lineas, abierta -> Ver el menu, que es lo unico que queda por hacer
-           · sin lineas, cerrada -> nada. Un pedido vacio con la tienda cerrada no
-             tiene ninguna accion que ofrecer, y la tarjeta flotante ya dice por que
-             y lleva al horario: una barra debajo solo competiria con ella. -->
-      {
-        lines.length > 0 ? (
-          <ActionBar label="Continuar" href="/datos" disabled={closed} />
-        ) : closed ? null : (
-          <ActionBar label="Ver el menu" href="/" />
-        )
-      }
-    </form>
+      </form>
+    </div>
   </main>
 
-  {/* La hoja del horario la monta esta pantalla: no tiene cabecera con reloj, asi
-      que el boton de la tarjeta se quedaria sin nada que abrir. */}
-  {
-    closed && schedule && (
-      <>
-        <StoreClosedNotice schedule={schedule} />
-        {schedule.days.length > 0 && <ScheduleSheet schedule={schedule} />}
-      </>
-    )
-  }
+  {closed && schedule && <StoreClosedNotice schedule={schedule} />}
+
+  {/* Las dos hojas que abren el pin y el reloj de la barra de desktop. La del
+      horario la abre ademas el boton de la tarjeta de tienda cerrada, que es
+      quien la pedia antes de que esta pantalla tuviera barra. */}
+  {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
+  {hasLocation && <LocationSheet address={address} mapsUrl={mapsUrl} />}
+
+  <Footer store={store} categories={categories} />
 </Layout>
 
 <script>
   import '../scripts/order-summary';
   import '../scripts/auto-grow';
-  // Abre la hoja del horario desde la tarjeta de tienda cerrada.
+  // Abre las hojas del horario y la ubicacion desde la barra de desktop y desde
+  // la tarjeta de tienda cerrada.
   import '../scripts/sheet';
 </script>

@@ -45,9 +45,11 @@ $sf-success-tint: rgba($sf-success, 0.12);
 $sf-ink: #141821;
 $sf-ink-soft: #616673;
 $sf-muted: #6c757d;
-// Gris de la barra de desktop: los rotulos de seccion apagados y las metas de la
-// tienda. Viene asi del diseno y no se apoya en $sf-muted ni en $sf-ink-soft: es
-// mas frio y mas oscuro que los dos, y esa barra es la unica que lo usa.
+// Gris de texto secundario de desktop: los rotulos de seccion apagados y las
+// metas de la barra, y en la ficha la descripcion del platillo y el nombre de las
+// opciones que todavia no se han elegido. Viene asi del
+// diseno y no se apoya en $sf-muted ni en $sf-ink-soft: es mas frio y mas oscuro
+// que los dos, que es lo que pide un gris que va a leerse a 16.
 $sf-slate: #4a5568;
 $sf-border: #eaecf0;
 $sf-white: #ffffff;

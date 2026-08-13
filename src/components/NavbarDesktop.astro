@@ -2,8 +2,14 @@
 import Icon, { type IconName } from './Icon.astro';
 import BrandLogo from './BrandLogo.astro';
 import { formatPrice } from '../lib/price.ts';
+import { cartChipLabel } from '../lib/cart-view.ts';
 
 interface Props {
+  /**
+   * En que seccion esta la pantalla que monta la barra. Solo decide cual de los
+   * dos rotulos se ve activo.
+   */
+  section?: 'menu' | 'order';
   /**
    * La direccion ABREVIADA. Es la que cabe en una barra, y la unica que se rotula
    * aqui: la completa es del modal. Sin ella el pin rotula la accion, no el dato.
@@ -21,8 +27,15 @@ interface Props {
   cartCount: number;
 }
 
-const { shortAddress, estimate, hasLocation, hasSchedule, cartTotal, cartCount } =
-  Astro.props;
+const {
+  section = 'menu',
+  shortAddress,
+  estimate,
+  hasLocation,
+  hasSchedule,
+  cartTotal,
+  cartCount,
+} = Astro.props;
 
 // Barra de desktop. Tres elementos: logo - secciones - tienda y carrito.
 //
@@ -30,16 +43,15 @@ const { shortAddress, estimate, hasLocation, hasSchedule, cartTotal, cartCount }
 // asi que es otro bloque. La monta <Navbar>, que es quien decide cual de las dos
 // se ve segun el breakpoint.
 //
-// LOS ROTULOS DE SECCION SON DE MOMENTO SOLO VISUALES
-// "Menu" es la portada y "Mi pedido" el resto de las pantallas, pero la parte
-// logica esta pendiente: hoy la barra solo la monta la portada, asi que el activo
-// va fijo en "Menu". Por eso son <span> y no enlaces —un rotulo que no navega y
-// no marca donde estas no es un enlace todavia— y por eso el grupo no es un
-// <nav>: un landmark de navegacion sin nada que navegar solo estorba a quien
-// llega con lector de pantalla.
+// LOS ROTULOS DE SECCION NO NAVEGAN TODAVIA
+// Cual esta activo lo dice la pantalla que monta la barra: "Menu" en la portada y
+// en la ficha, "Mi pedido" en el carrito. Pero siguen siendo <span> y no enlaces
+// —un rotulo que marca donde estas no lleva a ninguna parte— y por eso el grupo
+// tampoco es un <nav>: un landmark de navegacion sin nada que navegar solo
+// estorba a quien llega con lector de pantalla.
 const sections = [
-  { label: 'Menu', active: true },
-  { label: 'Mi pedido', active: false },
+  { label: 'Menu', active: section === 'menu' },
+  { label: 'Mi pedido', active: section === 'order' },
 ];
 
 // Las metas de la tienda: pin y reloj, cada uno con su rotulo.
@@ -109,11 +121,13 @@ if (estimate || hasSchedule) {
 
 // El chip es la unica via al pedido que queda en la portada de desktop, asi que
 // enlaza. El importe y las unidades vienen del carrito de la sesion, que pide la
-// pagina: sin sesion abierta llegan en cero y la etiqueta no se pinta.
-const cartLabel =
-  cartCount > 0
-    ? `Mi pedido: ${cartCount} ${cartCount === 1 ? 'articulo' : 'articulos'}, ${formatPrice(cartTotal)}`
-    : 'Mi pedido, vacio';
+// pagina: sin sesion abierta llegan en cero y la etiqueta se queda vacia.
+//
+// En /carrito los tres —importe, cifra y nombre accesible— los reescribe
+// src/scripts/order-summary.ts en cada cambio de cantidad: es la unica pantalla
+// donde el carrito se edita con la barra a la vista, y un chip que se queda en el
+// importe anterior contradice a la tarjeta que tiene justo debajo.
+const cartLabel = cartChipLabel(cartTotal, cartCount);
 ---
 
 <header class="navbar-desktop">
@@ -178,21 +192,28 @@ const cartLabel =
         })
       }
 
-      <a class="navbar-desktop__cart" href="/carrito" aria-label={cartLabel}>
-        <span class="navbar-desktop__cart-total">{formatPrice(cartTotal)}</span>
+      <a class="navbar-desktop__cart" href="/carrito" aria-label={cartLabel} data-cart-chip>
+        <span class="navbar-desktop__cart-total" data-cart-chip-total>
+          {formatPrice(cartTotal)}
+        </span>
 
         {/* Contexto de posicion del tamano exacto del icono: la etiqueta se
             cuelga de su esquina, no del chip. */}
         <span class="navbar-desktop__cart-icon">
           <Icon name="shopping-cart" class="navbar-desktop__cart-glyph" />
 
-          {
-            cartCount > 0 && (
-              <span class="navbar-desktop__cart-count" aria-hidden="true">
-                {cartCount}
-              </span>
-            )
-          }
+          {/* La cifra se pinta siempre y se esconde con `hidden` en lugar de no
+              existir: en /carrito el chip se actualiza sin recargar, y una
+              etiqueta que hay que crear desde el script es marcado dibujado dos
+              veces. Vacio el pedido, `hidden` la retira igual que antes. */}
+          <span
+            class="navbar-desktop__cart-count"
+            aria-hidden="true"
+            hidden={cartCount <= 0}
+            data-cart-chip-count
+          >
+            {cartCount}
+          </span>
         </span>
       </a>
     </div>

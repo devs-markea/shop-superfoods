@@ -12,10 +12,13 @@
 // components/_order-meta.scss) y el switch sube al nivel de las categorias.
 // ---------------------------------------------------------------------------
 
+// Mismo fondo que la pagina, igual que la barra de movil: entre la cabecera y
+// el catalogo no hay tres franjas de color sino una sola continua, y lo unico
+// que se levanta sobre ella son las tarjetas.
 .order-bar {
   min-height: 132px;
   padding: 0 var(--sf-gutter-x) var(--sf-space-2);
-  background-color: var(--sf-surface);
+  background-color: var(--sf-body-bg);
 }
 
 .order-bar__inner {
@@ -35,18 +38,23 @@
   // franja de cabecera y pasa a ser un bloque mas de la portada, entre el panel
   // de bienvenida y la lista. El hueco que la separa de los dos lo pone la pila
   // (ver components/_storefront.scss), asi que sumar aqui el suyo lo duplicaria.
+  // Sin fondo, sin borde y sin aire propio —tampoco el lateral—: el margen de
+  // los lados lo pone la pila, igual que el hueco de arriba y abajo.
   .order-bar {
     min-height: 0;
-    padding-block: 0;
+    padding: 0;
     border-bottom: 0;
     background-color: transparent;
   }
 
+  // Y sin tope de ancho: la fila llega hasta donde llega la rejilla, que es lo
+  // que alinea el switch con la primera tarjeta y el ultimo chip con la tercera.
   .order-bar__inner {
     flex-direction: row;
     align-items: center;
     justify-content: space-between;
     gap: var(--sf-space-4);
+    max-width: none;
   }
 
   // La pista deja de ocupar el ancho de la pantalla y se mide por sus dos

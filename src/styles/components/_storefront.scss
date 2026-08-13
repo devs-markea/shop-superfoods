@@ -1,21 +1,33 @@
 // ---------------------------------------------------------------------------
 // Block: storefront
 // ---------------------------------------------------------------------------
-// El armazon de la portada, y solo de la portada.
+// El armazon de la portada, y solo de la portada. Son dos piezas encajadas:
 //
-// En movil no existe: las piezas —barra de pedido y rejilla— se apilan solas y
-// cada una trae su propio gutter y su propio aire, como hasta ahora. En desktop
-// aparece y manda: <main> abre 48 arriba y abajo, y la pila reparte 32 entre el
-// panel de bienvenida, la barra y la lista.
+//   .storefront        <main>, el contenedor de fuera: 48 arriba y 48 abajo.
+//   .storefront__stack el subcontenedor, un .container-fluid de Bootstrap: las
+//                      12 columnas, 32 de sangria y tope en --sf-container-max,
+//                      y dentro el banner, la barra y la rejilla separados 32.
 //
-// Por eso el aire vertical se le quita ahi a la barra y a la lista (ver
-// components/_order-bar.scss y components/_product-list.scss): en desktop lo
-// pone el hueco de la pila, en un solo sitio, y no la suma de los margenes de
-// cada bloque.
+// El de fuera solo pone el aire vertical; el de dentro, el ancho y el lateral.
+// Repartido asi, mover la portada arriba o abajo no toca los margenes, y
+// cambiar de ancho no toca el aire.
+//
+// En movil el subcontenedor no existe: las piezas —barra de pedido y rejilla—
+// se apilan solas y cada una trae su propio gutter y su propio aire, como hasta
+// ahora. En desktop aparece y manda tambien de lado a lado: es EL contenedor de
+// los tres, asi que el unico margen lateral de la portada es el suyo. Antes cada
+// bloque ponia el suyo y paraba en su propio ancho, y bastaba que uno cambiara
+// para que los bordes dejaran de coincidir; ahora los tres arrancan y acaban en
+// la misma linea porque solo hay una que decide donde esta.
+//
+// Por eso el aire —vertical y lateral— se les quita ahi a los tres (ver
+// components/_hero.scss, _order-bar.scss y _product-list.scss): en desktop lo
+// pone la pila, en un solo sitio, y no la suma de los margenes de cada bloque.
 // ---------------------------------------------------------------------------
 
-// display: contents: en movil el envoltorio no pinta ni ocupa nada, asi que sus
-// hijos siguen siendo hijos de <main> a efectos de layout y la pantalla se ve
+// display: contents: en movil el envoltorio no pinta ni ocupa nada —ni el ancho
+// ni el relleno del .container-fluid llegan a aplicarse—, asi que sus hijos
+// siguen siendo hijos de <main> a efectos de layout y la pantalla se ve
 // exactamente igual que si no estuviera.
 .storefront__stack {
   display: contents;
@@ -23,11 +35,35 @@
 
 // --- Desktop -------------------------------------------------------------
 @include media-breakpoint-up(md) {
+  // El contenedor de fuera: solo el aire de arriba y abajo. El lateral no puede
+  // ir aqui porque el aviso de tienda cerrada tambien cuelga de <main>, flota y
+  // trae su propia sangria: se la duplicaria.
   .storefront {
     padding-block: var(--sf-space-12);
   }
 
   .storefront__stack {
+    // El ancho, el centrado y la sangria son los del .container-fluid; lo unico
+    // que se le cambia es la medida del gutter, que en la portada es el de la
+    // tienda (32) y no el de la rejilla (24). Se pide en --bs-gutter-x, que es
+    // la variable por la que el contenedor pregunta, y se dobla porque el
+    // reparte la mitad a cada lado.
+    //
+    // No se filtra a las tarjetas: el .row de la lista lleva `g-6` y `g-6`
+    // redeclara --bs-gutter-x en el propio .row.
+    --bs-gutter-x: calc(var(--sf-gutter-x) * 2);
+
+    // Y el tope, que es lo unico que .container-fluid no trae: fluido hasta
+    // aqui, y de aqui en adelante centrado, dejando el resto de la pantalla a
+    // los lados. Sin el, la portada seguiria creciendo mientras la cabecera y el
+    // pie paran en --sf-container-max, y los tres dejarian de coincidir en el
+    // primer monitor ancho.
+    //
+    // Se suma el gutter porque el tope del diseno es el del CONTENIDO y la caja
+    // mide con border-box: 1140 + 32 + 32 deja dentro los 1140 de la spec, los
+    // mismos que paran la cabecera y el pie dentro de su propia sangria.
+    max-width: calc(var(--sf-container-max) + var(--bs-gutter-x));
+
     display: flex;
     flex-direction: column;
     gap: var(--sf-space-8);

@@ -7,12 +7,34 @@ import OrderDetail from '../../components/OrderDetail.astro';
 import ActionBar from '../../components/ActionBar.astro';
 import { getCart } from '../../lib/cart.ts';
 import { resolveCartToken } from '../../lib/cart-session.ts';
+import { getShippingQuote } from '../../lib/shipping-quote.ts';
 import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
+import { resolveShipping } from '../../lib/shipping.ts';
 import { getStoreConfig } from '../../lib/store-config.ts';
 import type { OrderLine } from '../../lib/checkout.ts';
 
 // El carrito de la sesion manda sobre cualquier valor de ejemplo.
 export const prerender = false;
+
+// La propina y el modo de entrega vienen del borrador: la cookie la lee tambien
+// el servidor, asi que el total se pinta ya completo y no baila al arrancar el JS.
+const draft = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+const { tip } = draft;
+
+// La cotizacion del envio vive en el borrador, pero esa cookie dura dos horas y el
+// navegador la vacia de mas maneras de las que parece. Cuando falta y hay una
+// ubicacion que la justifica, se recupera de la API, que la guarda mientras dure la
+// sesion del carrito. Asi el importe llega en el primer render, y el total que se
+// ensena aqui no baja porque el navegador se limpiara solo.
+//
+// Solo se pregunta cuando puede haber algo que recuperar: en el camino normal, con
+// la cotizacion ya en el borrador, no se llama.
+const quote =
+  draft.shipping ??
+  (draft.deliveryType !== 'pickup' && draft.customer.locationUrl
+    ? await getShippingQuote(resolveCartToken(Astro.cookies))
+    : null);
+
 
 // El pedido todavia no existe: se crea al confirmar. Asi que lo que se lista es
 // el carrito, que sigue en pie.
@@ -33,15 +55,28 @@ try {
   console.error('[transferencia] fallo GET /api/cart', error);
 }
 
-// La propina viene del borrador, no de la URL: la cookie la lee tambien el
-// servidor, asi que el total se pinta ya completo y no baila al arrancar el JS.
-const { tip } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+const store = await getStoreConfig();
+const { bankTransfer } = store;
 
-// El envio sigue sin cotizar (el backend lo congela en 0), y por eso el aviso
-// dorado advierte de que el importe todavia puede subir.
-const total = products + tip;
+// El envio, con la misma cuenta que /pago: la distancia medida en /datos con la
+// tarifa, y por encima de ella las dos reglas que mandan —al recoger no hay
+// envio, y el envio gratis del negocio manda sobre cualquier distancia—. Este es
+// el importe que se va a transferir, asi que tiene que ser exactamente el mismo
+// que se acaba de ensenar en el resumen.
+const shipping = resolveShipping({
+  pickup: draft.deliveryType === 'pickup',
+  quote,
+  products,
+  freeShipping: store.delivery?.freeShipping,
+});
 
-const { bankTransfer } = await getStoreConfig();
+const total = products + tip + shipping.cost;
+
+// El aviso solo advierte de lo que de verdad falta. Con el envio ya medido, el
+// importe de arriba es el definitivo y pedir que se espere a otro numero solo
+// frenaria una transferencia que ya se puede hacer. Sin medir —o al recoger, que
+// no lleva envio— se mantiene la advertencia de siempre.
+const pendingShipping = shipping.state === 'pending';
 ---
 
 <Layout
@@ -64,6 +99,7 @@ const { bankTransfer } = await getStoreConfig();
       data-confirm-form
       data-method="bank_transfer"
       data-next="/recibido"
+      data-shipping={shipping.cost}
     >
       <div class="screen-body">
         <BankAccount
@@ -75,8 +111,11 @@ const { bankTransfer } = await getStoreConfig();
         <div class="info-note">
           <Icon name="info" size="sm" />
           <p class="info-note__text">
-            Al finalizar tu pedido se te indicara el costo de envio exacto. Por favor
-            realiza la transferencia una vez confirmado.
+            {
+              pendingShipping
+                ? 'Al finalizar tu pedido se te indicara el costo de envio exacto. Por favor realiza la transferencia una vez confirmado.'
+                : 'Realiza la transferencia por el importe total y envianos el comprobante para confirmar tu pedido.'
+            }
           </p>
         </div>
 
@@ -86,6 +125,7 @@ const { bankTransfer } = await getStoreConfig();
           subtotal={subtotal}
           discount={discount}
           tip={tip}
+          shipping={shipping}
         />
 
         {/* Lo rellena el script si el checkout rechaza el pedido. */}

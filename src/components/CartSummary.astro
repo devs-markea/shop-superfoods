@@ -1,0 +1,153 @@
+---
+import { formatPrice } from '../lib/price.ts';
+import { shippingLabel, type ShippingResult } from '../lib/shipping.ts';
+
+interface Props {
+  /** Importe de los productos ANTES de descuentos: `subtotal` del carrito. */
+  subtotal: number;
+  /** Lo que descuentan las promociones. Con 0 la fila no se pinta. */
+  discount: number;
+  /** Lo que cuestan los productos ya descontados: `total` del carrito. */
+  products: number;
+  /**
+   * El envio, ya resuelto por la pantalla (src/lib/shipping.ts). Aqui todavia
+   * suele estar "Por cotizar" —la ubicacion se comparte en /datos—, salvo que el
+   * negocio regale el envio o que se vuelva atras con la distancia ya medida.
+   */
+  shipping: ShippingResult;
+  /**
+   * Propina elegida, en MXN. Con 0 la fila no se pinta: solo la hay donde se
+   * elige (/pago), y ahi puede volver a cero.
+   */
+  tip?: number;
+  /** Texto del boton. */
+  label: string;
+  /**
+   * A donde lleva el boton. Sin el, el control es un submit del formulario que lo
+   * envuelve: la misma regla que <ActionBar>, y la que necesita /datos, donde
+   * continuar es validar los campos antes de avanzar.
+   */
+  href?: string;
+  /**
+   * Apagado de verdad: ni navega ni envia, y se pinta gris. Para lo que ahora no
+   * existe —continuar con la tienda cerrada, o con el pedido vacio—, la misma
+   * regla que el `disabled` de <ActionBar>.
+   */
+  disabled?: boolean;
+}
+
+const {
+  subtotal,
+  discount,
+  products,
+  shipping,
+  tip = 0,
+  label,
+  href,
+  disabled = false,
+} = Astro.props;
+
+// La tarjeta de resumen del pedido, SOLO desktop: en movil no se pinta (ver
+// components/_cart-summary.scss). Es la segunda columna de /carrito y donde se
+// continua el flujo, porque alli la barra fija del fondo no existe.
+//
+// No sabe en que pantalla esta: recibe los importes ya calculados, el envio ya
+// resuelto y a donde lleva su boton. Lo unico que decide por su cuenta es el
+// total, y lo decide porque no puede recibirlo: una cifra que se pueda pasar por
+// fuera es una cifra que puede contradecir a sus propias filas.
+//
+// Cierra la cuenta entera —lo que valen los productos, lo que descuentan las
+// promociones, lo que cuesta llevarlo y lo que se paga—, y por eso en desktop
+// releva al bloque .order-totals del cuerpo: dos "Subtotal" en la misma pantalla,
+// uno con descuentos aplicados y otro sin ellos, son dos cifras que no cuadran.
+//
+// El total se calcula, nunca se escribe, igual que en <PaymentSummary>: la vista
+// no puede contradecir a los datos. Y el que manda aqui es el de los PRODUCTOS
+// —`products`, que ya trae los descuentos aplicados—, no el subtotal de arriba.
+const total = products + shipping.cost + tip;
+
+// El envio "Por cotizar" no suma nada al total: no hay importe cotizado, y poner
+// una tarifa a ojo seria prometer algo que el pedido va a desmentir.
+//
+// La propina SI se desglosa, a diferencia de <PaymentSummary>, que la suma al
+// total sin nombrarla porque el selector la tiene justo encima. Aqui esa columna
+// no esta al lado: sin fila, el total de la tarjeta no cuadraria con las suyas.
+---
+
+<aside class="cart-summary" aria-labelledby="cart-summary-title" data-cart-summary>
+  <h2 class="cart-summary__title" id="cart-summary-title">Resumen de compra</h2>
+
+  <dl class="cart-summary__rows">
+    <div class="cart-summary__row">
+      <dt class="cart-summary__term">Subtotal</dt>
+      <dd class="cart-summary__value" data-cart-subtotal>{formatPrice(subtotal)}</dd>
+    </div>
+
+    {/* Solo con promociones aplicadas. Se pinta siempre en el marcado —oculta
+        con d-none— porque un cambio de cantidad puede estrenar o deshacer un
+        descuento, y el script la ensena y la esconde sin recargar. */}
+    <div
+      class:list={['cart-summary__row', discount <= 0 && 'd-none']}
+      data-cart-discount-row
+    >
+      <dt class="cart-summary__term">Descuentos</dt>
+      <dd class="cart-summary__value cart-summary__value--save" data-cart-discount>
+        {`− ${formatPrice(discount)}`}
+      </dd>
+    </div>
+
+    {/* Al recoger no hay envio y la fila desaparece entera: un "Por cotizar" en un
+        pedido que se recoge promete un cobro que no va a llegar. Se pinta oculta y
+        no se omite porque en /datos el modo de entrega se elige aqui mismo, y la
+        fila tiene que poder irse y volver con el switch. */}
+    <div
+      class:list={['cart-summary__row', shipping.state === 'none' && 'd-none']}
+      data-cart-shipping-row
+    >
+      <dt class="cart-summary__term">Costo de envio</dt>
+
+      {/* El estado va en data-state y no en un modificador por cada caso: el
+          script lo cambia con una sola asignacion —al cruzar el umbral del envio
+          gratis, o al llegar la distancia medida— y el color y el peso los pone
+          el CSS. */}
+      <dd class="cart-summary__value" data-state={shipping.state} data-cart-shipping>
+        {shippingLabel(shipping)}
+      </dd>
+    </div>
+
+    {/* Solo donde se elige (/pago), y solo si se dejo algo: una fila de $0.00 no
+        dice nada. Se pinta oculta, como las otras dos condicionales, porque el
+        selector la mueve sin recargar. */}
+    <div class:list={['cart-summary__row', tip <= 0 && 'd-none']} data-cart-tip-row>
+      <dt class="cart-summary__term">Propina</dt>
+      <dd class="cart-summary__value" data-cart-tip>{formatPrice(tip)}</dd>
+    </div>
+
+    <hr class="cart-summary__divider" />
+
+    <div class="cart-summary__row">
+      <dt class="cart-summary__total-term">Total</dt>
+      <dd class="cart-summary__total-value" data-cart-total>{formatPrice(total)}</dd>
+    </div>
+  </dl>
+
+  {
+    // El mismo reparto que <ActionBar>: apagado es un <button disabled> y no un
+    // enlace en gris, porque un <a> sin href sigue siendo enfocable y anunciable
+    // como destino, y este control no lleva a ninguna parte. `type="button"` para
+    // que no envie el formulario que lo envuelve.
+    disabled ? (
+      <button class="cart-summary__action btn btn-primary" type="button" disabled>
+        {label}
+      </button>
+    ) : href ? (
+      <a class="cart-summary__action btn btn-primary" href={href}>
+        {label}
+      </a>
+    ) : (
+      <button class="cart-summary__action btn btn-primary" type="submit">
+        {label}
+      </button>
+    )
+  }
+</aside>

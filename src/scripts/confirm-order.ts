@@ -24,6 +24,10 @@ const method = form?.dataset.method as PaymentMethod | undefined;
 // peor que no crearlo, porque el cobro quedaria esperando por el canal equivocado.
 if (form && method && method in PAYMENT_LABEL) {
   const next = form.dataset.next ?? '/recibido';
+
+  // El envio no se manda desde aqui: la API lo recalcula al cerrar el pedido y lo
+  // devuelve en `shippingTotal`, ya sumado al total. Lo unico que viaja es la
+  // referencia de la cotizacion, y de eso se encarga toCheckoutRequest().
   const error = form.querySelector<HTMLElement>('[data-checkout-error]');
   const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
 

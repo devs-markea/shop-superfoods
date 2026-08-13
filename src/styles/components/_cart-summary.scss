@@ -1,0 +1,175 @@
+// ---------------------------------------------------------------------------
+// Block: cart-summary
+// ---------------------------------------------------------------------------
+// La tarjeta de resumen de /carrito, SOLO desktop. Spec: 390 de ancho - gap 24 -
+// padding 24 - radius 16 - fondo blanco - sombra suave.
+//
+// No es una variante de .summary, el desglose de /pago: alli el resumen es una
+// pieza mas de la columna —sin superficie, sin boton y con otra escala
+// tipografica— y aqui es la segunda columna de la pantalla, la que cierra la
+// cuenta y continua el flujo. Coinciden en tener filas de concepto e importe y en
+// nada mas, asi que es otro bloque.
+//
+// En movil no existe: alli la cuenta la cierran el total de la barra superior, el
+// bloque .order-totals del cuerpo y la barra de accion del fondo.
+//
+// Los colores de la spec ya son tokens de la tienda: #111827 es --sf-ink (el
+// negro del resto de la interfaz, la misma equivalencia que ya documentan la
+// ficha y el contador de unidades), #6B7280 es --sf-muted, #EAECF0 es --sf-border
+// y #16A34A es --sf-success, el verde con el que se rotula lo que no se paga.
+// ---------------------------------------------------------------------------
+
+.cart-summary {
+  display: none;
+}
+
+@include media-breakpoint-up(md) {
+  .cart-summary {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sf-space-6);
+    width: 100%;
+    padding: var(--sf-space-6);
+    background-color: var(--sf-surface);
+    border-radius: var(--sf-radius-lg);
+    box-shadow: var(--sf-shadow-card);
+  }
+
+  // Element: title — Inter 700 18/100%. El 18 no esta en la escala de tamanos
+  // (12/14/16/24) y no la abre: es el de este rotulo y el del nombre de la
+  // tarjeta de platillo, y de nada mas.
+  .cart-summary__title {
+    margin: 0;
+    font-size: 18px;
+    font-weight: var(--sf-weight-bold);
+    line-height: 1;
+    color: var(--sf-ink);
+  }
+
+  // Element: rows — los conceptos y la divisoria, a 16. Es un <dl>: son pares
+  // concepto/importe, no una lista de elementos sueltos. El margen que el Reboot
+  // pone al <dl> y a cada <dd> se anula.
+  .cart-summary__rows {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sf-space-4);
+    margin: 0;
+  }
+
+  .cart-summary__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sf-space-3);
+  }
+
+  // Element: term — Inter 400 14/100%
+  .cart-summary__term {
+    margin: 0;
+    font-size: var(--sf-font-size-base);
+    font-weight: var(--sf-weight-regular);
+    line-height: 1;
+    color: var(--sf-muted);
+  }
+
+  // Element: value — Inter 600 14/100%. Tabular para que las cifras de las filas
+  // queden alineadas entre si.
+  .cart-summary__value {
+    margin: 0;
+    font-size: var(--sf-font-size-base);
+    font-weight: var(--sf-weight-semibold);
+    line-height: 1;
+    color: var(--sf-ink);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  // Modifier: lo que descuentan las promociones. En verde, como en el detalle del
+  // pedido: es lo mismo, dinero que no se paga.
+  .cart-summary__value--save {
+    color: var(--sf-success);
+  }
+
+  // Los tres estados del envio. El importe cotizado se rotula con el peso y el
+  // gris del concepto —lo pide la spec, y es coherente: es el unico importe de la
+  // tarjeta que todavia puede cambiar cuando se comparta la ubicacion—, el
+  // regalado en verde, y el que no se ha podido medir en el gris mas claro, el de
+  // los datos que aun no existen.
+  .cart-summary__value[data-state='quoted'] {
+    font-weight: var(--sf-weight-regular);
+    color: var(--sf-muted);
+  }
+
+  .cart-summary__value[data-state='free'] {
+    color: var(--sf-success);
+  }
+
+  .cart-summary__value[data-state='pending'] {
+    font-weight: var(--sf-weight-regular);
+    color: var(--sf-placeholder);
+  }
+
+  // Element: divider — la linea de 1 de la spec (height 0 + borde)
+  .cart-summary__divider {
+    height: 0;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--sf-border);
+    opacity: 1;
+  }
+
+  // Element: total — Inter 700 16/100% el concepto, Inter 800 20/100% el importe.
+  // El 20 y el 800 son los de la cifra que remata la cuenta y no se repiten en
+  // ningun otro sitio de la tienda; el peso se descarga con la fuente (ver
+  // --sf-weight-extrabold en _tokens.scss).
+  .cart-summary__total-term {
+    margin: 0;
+    font-size: var(--sf-font-size-lg);
+    font-weight: var(--sf-weight-bold);
+    line-height: 1;
+    color: var(--sf-ink);
+  }
+
+  .cart-summary__total-value {
+    margin: 0;
+    font-size: 20px;
+    font-weight: var(--sf-weight-extrabold);
+    line-height: 1;
+    color: var(--sf-gold);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  // Element: action — el boton que continua el flujo. Los 342 de la spec son el
+  // ancho del contenido de la tarjeta (390 - 24 - 24), asi que se piden como
+  // ancho completo y no como medida fija: la tarjeta ya decide cuanto mide.
+  //
+  // El dorado, el radius de 12, el relleno de 12/16 y la tipografia son los de
+  // .btn-primary, que ya son los de la spec (ver _variables.scss).
+  .cart-summary__action {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sf-space-2);
+    width: 100%;
+  }
+
+  // Tienda cerrada: gris y no dorado desvaido, la misma regla que la barra de
+  // accion. El dorado al 50% dice "te falta algo"; esto dice "ahora no se puede".
+  .cart-summary__action:disabled {
+    --bs-btn-disabled-bg: var(--sf-border);
+    --bs-btn-disabled-border-color: var(--sf-border);
+    --bs-btn-disabled-color: var(--sf-placeholder);
+    --bs-btn-disabled-opacity: 1;
+  }
+}
+
+// --- Dos columnas ---------------------------------------------------------
+// De lg la tarjeta es la segunda columna y toma su ancho de la spec. Hasta ahi va
+// debajo del pedido y a todo lo ancho: un bloque de 390 solo, bajo una columna de
+// 700, se lee como algo que se quedo a medias.
+@include media-breakpoint-up(lg) {
+  .cart-summary {
+    flex: 0 0 390px;
+  }
+}
