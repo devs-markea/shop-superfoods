@@ -50,3 +50,74 @@
 
 // El boton de copiar es .copy-button: lo comparte con la tarjeta de la CLABE de
 // /recibido.
+
+// --- Desktop -------------------------------------------------------------
+// La tarjeta se encabeza y se recolorea. Spec:
+//   rotulo de la tarjeta  Inter 700 16/100% #111827 (= .section-label--strong)
+//   rotulos de fila       Inter 400 13/100% #6C757D
+//   titular y banco       Inter 600 15/100% #111827
+//   CLABE                 Inter 700 15/100% #D5AA53
+//   boton de copiar       fondo #F8F9FB con el icono en #6C757D
+//
+// El 13 y el 15 no estan en la escala de tamanos (12/14/16/24) y no la abren:
+// son los de esta tarjeta y de nada mas, como el 18 es el del rotulo de la de
+// resumen. Los cuatro colores si son tokens de la tienda: #111827 es --sf-ink
+// —la misma equivalencia que ya documentan la ficha y el contador de unidades—,
+// #6C757D es --sf-muted exacto, #D5AA53 es el dorado de marca y #F8F9FB es
+// --sf-body-bg, el gris de fondo de la pagina.
+//
+// El reparto no cambia: los mismos 20 de la tarjeta separan ahora el rotulo del
+// grupo, y dentro del grupo las filas siguen a 20.
+@include media-breakpoint-up(md) {
+  // Element: fields — los tres datos como un grupo, para que el rotulo de la
+  // tarjeta quede fuera de el. En movil es `display: contents` (arriba) y no
+  // existe.
+  .bank-account__fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sf-space-5);
+  }
+
+  // El rotulo de cada fila se aleja del dato en lugar de acercarse: aqui el
+  // dato pesa mas —15 en lugar de 14— y el gris claro de movil (#9CA3AF, el de
+  // --soft) se leeria como un dato apagado y no como su etiqueta.
+  //
+  // Se rebaja el modifier, no el bloque: .section-label sigue siendo la etiqueta
+  // de toda la tienda, y el rotulo de la tarjeta —que es .section-label--strong—
+  // no entra aqui porque cuelga de la tarjeta y no de una fila.
+  .bank-account__field .section-label {
+    font-size: 13px;
+    font-weight: var(--sf-weight-regular);
+    // 100% del tamano: es un rotulo de una linea.
+    line-height: 1;
+    color: var(--sf-muted);
+  }
+
+  .bank-account__value {
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  // Modifier: la CLABE. Es el unico dato de la tarjeta que se copia y se teclea,
+  // asi que se destaca del titular y del banco con el peso y el dorado, el mismo
+  // que rotula los importes que cierran una cuenta.
+  .bank-account__value--clabe {
+    font-weight: var(--sf-weight-bold);
+    color: var(--sf-gold);
+  }
+
+  // El boton de copiar: el tinte dorado de reposo pasa al gris de la pagina, que
+  // al lado de una CLABE ya dorada dejaba dos dorados peleando en la misma linea.
+  // La tarjeta de /recibido hace lo mismo en desktop y por lo mismo, que es donde
+  // su CLABE tambien se vuelve dorada; en movil las dos siguen con el tinte.
+  //
+  // Se cambia el punto de partida, no el color: son las dos variables de reposo
+  // del bloque (ver components/_copy-button.scss). El hover y el "copiado" se
+  // quedan como en el resto de la tienda —el dorado lleno es lo que dice que el
+  // boton responde, y el visto en blanco sobre dorado, que ya se copio—, que es
+  // justo lo que una regla de color aqui habria pisado.
+  .bank-account .copy-button {
+    --sf-copy-button-bg: var(--sf-body-bg);
+    --sf-copy-button-color: var(--sf-muted);
+  }
+}

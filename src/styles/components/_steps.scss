@@ -64,3 +64,56 @@
   line-height: var(--sf-line-height-base);
   color: var(--sf-ink);
 }
+
+// --- Desktop -------------------------------------------------------------
+// La tarjeta se alinea con las otras dos superficies de esta columna —la cuenta
+// bancaria y el detalle del pedido— y deja de ser la excepcion que era en movil.
+// Spec:
+//   tarjeta  gap 20 - padding 24 - radius 16 - borde 1px #EAECF0 - bg #FFFFFF
+//   rotulo   Inter 700 18/100% #111827
+//   lista    gap 16 - item gap 12
+//   numero   24 redondo dorado, digito Inter 700 12/100% #FFFFFF
+//
+// El gap de 20 de la tarjeta, el de 16 de la lista y el de 12 del item ya son
+// los de movil y no se repiten; el relleno de 24 y el fondo blanco, tampoco. Lo
+// que cambia son las tres cosas de abajo.
+//
+// Los 532x104 de la spec no se declaran, la misma regla que ya siguen
+// .screen-body y .order-detail: 532 es lo que deja la columna de esta pantalla
+// (580 - 24 - 24) y 104 lo que miden tres pasos de una linea (3x24 + 2x16), asi
+// que los ponen el ancho de la columna y el contenido.
+@include media-breakpoint-up(md) {
+  // El radius baja de 20 a 16 y la franja dorada de la izquierda se va, relevada
+  // por el borde de 1 que llevan las tarjetas de esta columna. La franja marcaba
+  // la tarjeta entre otras dos sin borde; aqui la separaria de ellas.
+  .steps {
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius-lg);
+  }
+
+  // El rotulo encabeza una seccion de la pantalla, con el mismo 18 que abre la
+  // tarjeta del detalle del pedido y la de resumen del checkout.
+  .steps .section-label {
+    font-size: 18px;
+    font-weight: var(--sf-weight-bold);
+    // 100% del tamano: es un rotulo de una linea.
+    line-height: 1;
+    color: var(--sf-ink);
+  }
+
+  // El numero encoge a 24 con el digito en 12: aqui el paso es un marcador al
+  // lado del texto, no la pieza que lo encabeza. El radius de 12 sobre una caja
+  // de 24 es el circulo que ya declara el bloque.
+  .steps__number {
+    flex: 0 0 24px;
+    width: 24px;
+    height: 24px;
+    font-size: var(--sf-font-size-sm);
+  }
+
+  // Y con el numero en 24, lo que centra la primera linea contra el es 2:
+  // (24 - 20) / 2.
+  .steps__text {
+    padding-top: 2px;
+  }
+}

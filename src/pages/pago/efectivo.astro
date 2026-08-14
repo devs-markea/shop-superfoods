@@ -17,7 +17,6 @@ import { DRAFT_COOKIE, draftGaps, parseDraft } from '../../lib/checkout-draft.ts
 import { resolveShipping } from '../../lib/shipping.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
 import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts';
-import type { OrderLine } from '../../lib/checkout.ts';
 
 // DOS PANTALLAS, UN MARCADO
 //
@@ -91,7 +90,7 @@ const [store, schedule, cart, categories, recovered] = await Promise.all([
 
 const quote = draft.shipping ?? recovered;
 
-const items: OrderLine[] = cart?.items ?? [];
+const items = cart?.items ?? [];
 const products = cart?.total ?? 0;
 // Antes de descontar, y lo que descuentan las promociones. Con ellos el
 // comprador puede cuadrar la resta en lugar de fiarse del importe final.
@@ -176,10 +175,14 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
       >
         <!-- Contenedor 1: lo que hay que leer antes de pagar. -->
         <div class="screen-body">
+          {/* La frase de desktop dice lo mismo que la de movil, entera y en una
+              sola linea: alli la tarjeta se queda en dos renglones —titulo y
+              explicacion— y la frase de abajo se retira. */}
           <PaymentMethodCard
             icon="cash"
             title="Pago contra entrega"
             note="Efectivo en mano"
+            wideNote="El pago se realizara en efectivo directamente al repartidor al momento de la entrega o en mostrador si es para recoger."
             description="Realiza tu pago directamente al repartidor al recibir tu pedido en tu domicilio, o en caja al recoger en sucursal."
           />
 

@@ -1,11 +1,20 @@
 ---
 import { formatPrice } from '../lib/price.ts';
 import { formatKm, type ShippingResult } from '../lib/shipping.ts';
-import type { OrderLine } from '../lib/checkout.ts';
+import { describeSelection } from '../lib/cart-view.ts';
+import { assetUrl } from '../lib/api.ts';
+import type { CartItem } from '../lib/cart.ts';
 
 interface Props {
-  /** Lineas del carrito de la sesion. Solo se leen cantidad, nombre y promocion. */
-  items: OrderLine[];
+  /**
+   * Lineas del carrito de la sesion.
+   *
+   * En movil se leen tres cosas —cantidad, nombre y promocion—; en desktop, ademas,
+   * la foto, el importe de la linea y la configuracion elegida. Por eso el tipo es
+   * la linea del carrito y no la del pedido (`OrderLine`, que es lo que viaja al
+   * checkout): esos tres datos solo los tiene el carrito.
+   */
+  items: CartItem[];
   /** Importe a transferir o a pagar, en MXN. Ya lleva el envio y la propina. */
   total: number;
   /** Suma de los productos ANTES de descontar. */
@@ -33,13 +42,26 @@ const {
 // Recordatorio de lo que se pidio, ya en la pantalla de pago: aqui no se edita
 // nada, por eso las lineas son texto y no controles.
 //
-// Spec: contenedor gap 12 - padding 16 - radius 16 - borde 1px
-//       lineas gap 8, 12/16 #6C757D - divisora discontinua - total 14/20
+// Spec movil: contenedor gap 12 - padding 16 - radius 16 - borde 1px
+//             lineas gap 8, 12/16 #6C757D - divisora discontinua - total 14/20
+//
+// Spec desktop: rotulo 18 - lista gap 16 - linea gap 16 con foto de 56
+//               nombre 15/600 e importe 15/700 en la misma fila, y debajo la
+//               configuracion en 13/400
+//
+// UN MARCADO, DOS PANTALLAS: la foto, el importe y la configuracion existen solo
+// en desktop, y los envoltorios que los colocan son `display: contents` en movil,
+// donde la linea sigue siendo el mismo renglon de texto de siempre. Ver
+// components/_order-detail.scss.
 //
 // El desglose aparece solo cuando hay algo que explicar. Con un descuento, un
 // envio o una propina, un unico "Total a pagar" obligaria al comprador a fiarse:
 // la resta no le cuadraria con lo que vio en el pedido. Sin ninguno de los tres,
 // las filas sobran porque el subtotal seria el total repetido.
+//
+// En desktop no se pintan: esas mismas cuatro filas —y con las mismas cifras— las
+// lleva la tarjeta de resumen de al lado, que ademas es donde esta el boton. Lo
+// que se queda es "Total a pagar", que es lo que cierra el recordatorio.
 const breakdown = discount > 0 || tip > 0 || shipping.state !== 'none';
 ---
 
@@ -49,16 +71,57 @@ const breakdown = discount > 0 || tip > 0 || shipping.state !== 'none';
   {
     items.length > 0 ? (
       <ul class="order-detail__items list-unstyled">
-        {items.map((item) => (
-          <li class="order-detail__item">
-            <span>{`${item.quantity}× ${item.name}`}</span>
-            {item.promotion?.label && (
-              <span class="promo-badge promo-badge--sm">
-                <span class="promo-badge__label">{item.promotion.label}</span>
+        {items.map((item) => {
+          // La variante y las personalizaciones, con guiones: "Grande - Guacamole
+          // x2". Es lo que distingue dos lineas del mismo platillo, y se arma con
+          // la misma funcion que las pinta en el pedido para que no puedan decir
+          // dos cosas distintas de la misma linea.
+          const selection = describeSelection(item, ' - ');
+
+          return (
+            <li class="order-detail__item">
+              {/* Solo desktop. La foto llega absoluta salvo el placeholder de los
+                  platillos sin foto, que es una ruta del Laravel: assetUrl() es
+                  quien lo resuelve.
+
+                  `loading="lazy"` es aqui lo que evita que un movil pague por una
+                  foto que no va a ver: una imagen dentro de un `display: none` no
+                  llega a entrar en pantalla, asi que la carga se queda esperando
+                  un momento que en movil no ocurre. */}
+              <span class="order-detail__media">
+                <img
+                  class="order-detail__image"
+                  src={assetUrl(item.image.url)}
+                  width="56"
+                  height="56"
+                  alt={item.image.alt}
+                  loading="lazy"
+                  decoding="async"
+                />
               </span>
-            )}
-          </li>
-        ))}
+
+              <span class="order-detail__line">
+                <span class="order-detail__head">
+                  <span class="order-detail__info">
+                    <span class="order-detail__name">{`${item.quantity}× ${item.name}`}</span>
+
+                    {item.promotion?.label && (
+                      <span class="promo-badge promo-badge--sm">
+                        <span class="promo-badge__label">{item.promotion.label}</span>
+                      </span>
+                    )}
+                  </span>
+
+                  {/* Solo desktop: en movil la linea no lleva importes, que los
+                      cierra el total de abajo. */}
+                  <span class="order-detail__price">{formatPrice(item.lineTotal)}</span>
+                </span>
+
+                {selection && <span class="order-detail__custom">{selection}</span>}
+              </span>
+            </li>
+          );
+        })}
       </ul>
     ) : (
       <p class="order-detail__item">Tu pedido esta vacio.</p>
