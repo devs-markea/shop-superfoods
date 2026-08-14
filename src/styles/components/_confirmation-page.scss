@@ -1,0 +1,130 @@
+// ---------------------------------------------------------------------------
+// Block: confirmation-page
+// ---------------------------------------------------------------------------
+// El armazon de las pantallas de cierre: /confirmado y /recibido. Es a ellas lo
+// que .checkout-page a /carrito y /datos, o .product-page a la ficha: no pinta
+// nada, reparte.
+//
+// Es UN bloque y no uno por pantalla porque el reparto es identico: la barra de
+// la tienda arriba, el pie abajo, y en medio una columna centrada con los
+// subcontenedores de la pantalla —sello, resumen o pasos, la cuenta— y el enlace
+// al estado del pedido cerrandola. Lo unico que cambia de una a otra es que se
+// pone dentro.
+//
+// En movil no existe, y esas pantallas no cambian: la cabecera de 64, la columna
+// de siempre y la barra de accion fija al fondo. El envoltorio que se anade a esa
+// barra es `display: contents`, asi que no pinta ni ocupa y su hijo sigue siendo
+// hijo del <main> a efectos de layout —con el sigue funcionando el `margin-top:
+// auto` que la manda al fondo—.
+//
+// Spec de desktop: contenedor con padding 64/160 y 40 entre subcontenedores.
+// ---------------------------------------------------------------------------
+
+.confirmation-page__action {
+  display: contents;
+}
+
+// Element: cta — el subcontenedor nuevo, que solo existe de md hacia arriba.
+// Escondido con `display: none` y no ausente del marcado: es la misma pieza en
+// las dos pantallas y el breakpoint es lo unico que decide si se ve.
+.confirmation-page__cta {
+  display: none;
+}
+
+// --- Desktop -------------------------------------------------------------
+@include media-breakpoint-up(md) {
+  // El contenedor de fuera. Los 64 no estan en la escala del sistema —48 es el
+  // ultimo escalon— y se escriben sumando dos que si estan, como hace el pie con
+  // sus 48. Los 160 de sangria son --sf-gutter-wide, la misma de la barra de
+  // desktop y el pie: se piden como maximo y por debajo caen al gutter de la
+  // pagina.
+  .confirmation-page {
+    padding: calc(var(--sf-space-12) + var(--sf-space-4)) var(--sf-gutter-wide);
+  }
+
+  // El contenedor de dentro: los subcontenedores de la pantalla, ahora a 40. Se
+  // le quita el relleno de movil —el aire ya lo pone el contenedor de fuera— y
+  // sube el tope de ancho de .screen-body de 560 a 580, que es lo que mantiene la
+  // columna centrada y legible en un monitor ancho: aqui no hay segunda columna
+  // que llenar, y estirar el resumen del pedido a 1120 dejaria dos lineas de
+  // texto flotando en medio de la pantalla.
+  //
+  // Los 580 los fija la tarjeta de pasos, que la spec de desktop da con la lista
+  // en 532: mas los dos rellenos de 24 de la tarjeta, 580 clavados.
+  //
+  // El 40 queda fuera de la escala de 4 del proyecto, como el 40 de relleno que
+  // este mismo bloque gasta en movil.
+  .confirmation-page .screen-body--confirmation {
+    gap: 40px;
+    max-width: 580px;
+    padding: 0;
+  }
+
+  // En desktop no hay barra de accion: la accion es el enlace del ultimo
+  // subcontenedor. La misma regla que en el checkout, donde la releva el boton de
+  // la tarjeta de resumen.
+  .confirmation-page__action {
+    display: none;
+  }
+
+  // Spec: 320 de ancho - gap 12. Centrado bajo una columna mas ancha que el:
+  // es un remate, no un bloque de contenido.
+  .confirmation-page__cta {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sf-space-3);
+    width: 320px;
+    margin-inline: auto;
+  }
+
+  // Element: cta-button — 320x46, padding 14/32, radius 12, fondo #16A34A y
+  // label Inter 600 15/100% en blanco.
+  //
+  // El #16A34A es --sf-success, el verde con el que la tienda dice que algo salio
+  // bien: el mismo del sello que corona esta pantalla y el de la tarjeta de
+  // resumen del checkout. No es el de WhatsApp, que identifica un canal.
+  //
+  // El 15 no esta en la escala de tamanos (12/14/16/24) y no la abre, como el 13
+  // del pie o el 28 de los titulos del checkout. El alto de 46 manda sobre el
+  // relleno vertical: los dos vienen de la spec y con la caja de borde no pueden
+  // sumar los dos, asi que el 14 se declara igual —es lo que sostiene el boton si
+  // el label se parte— y el 46 lo remata.
+  //
+  // Se sobreescriben las custom properties de .btn en lugar del background, para
+  // que hover y activo sigan la mecanica de Bootstrap. Misma tecnica que el boton
+  // de WhatsApp de la barra de accion.
+  .confirmation-page__cta-button {
+    --bs-btn-bg: var(--sf-success);
+    --bs-btn-border-color: var(--sf-success);
+    --bs-btn-hover-bg: var(--sf-success-hover);
+    --bs-btn-hover-border-color: var(--sf-success-hover);
+    --bs-btn-active-bg: var(--sf-success-hover);
+    --bs-btn-active-border-color: var(--sf-success-hover);
+    --bs-btn-color: var(--sf-white);
+    --bs-btn-hover-color: var(--sf-white);
+    --bs-btn-active-color: var(--sf-white);
+    --bs-btn-padding-y: 14px;
+    --bs-btn-padding-x: var(--sf-space-8);
+    --bs-btn-font-size: 15px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 46px;
+    line-height: 1;
+  }
+
+  // Element: cta-note — Inter 400 12/100% centrado #6C757D. Es el mismo aviso que
+  // la barra de accion pone bajo su boton en movil, y por eso no reusa
+  // .action-bar__note: aquel es de la barra —Inter 500 sobre el gris mas claro— y
+  // este es de la columna.
+  .confirmation-page__cta-note {
+    margin: 0;
+    font-size: var(--sf-font-size-sm);
+    font-weight: var(--sf-weight-regular);
+    line-height: 1;
+    color: var(--sf-muted);
+    text-align: center;
+  }
+}

@@ -36,6 +36,13 @@ $sf-whatsapp-hover: #1fb855;
 // aquel identifica un canal, este dice que algo salio bien.
 $sf-success: #3aa678;
 
+// Su hover. Se calcula con la misma sombra del 8% que Bootstrap aplica a los
+// botones de tema (ver $btn-hover-bg-shade-amount, mas abajo): el unico control
+// verde del sistema es el enlace al estado del pedido de las pantallas de
+// cierre, y no tiene sentido escribirle un hex a mano que luego haya que
+// mantener a juego con el de arriba.
+$sf-success-hover: shade-color($sf-success, 8%);
+
 // Fondo de la etiqueta de ahorro. El verde de las promociones es senaletica
 // —"esto te cuesta menos"— y por eso se conserva del panel, a diferencia del
 // dorado del precio final, que si es tipografia de cada tienda.

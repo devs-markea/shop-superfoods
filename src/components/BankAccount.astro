@@ -21,42 +21,65 @@ const { holder, bank, clabe } = Astro.props;
 // Spec: tarjeta gap 20 - padding 20 - radius 20 - sombra de tarjeta
 //       filas gap 6 - etiqueta 12/16 #9CA3AF - dato 14/20 #141821
 //       la CLABE comparte su fila con un boton de copiar de 32 - radius 8
+//
+// En desktop la tarjeta se encabeza y se recolorea: rotulo "Datos de
+// transferencia" arriba, los tres rotulos de fila mas apagados y la CLABE en
+// dorado, que es el dato que se copia. Son las MISMAS piezas con otra escala
+// —ver components/_bank-account.scss—, salvo el rotulo, que es de desktop entero.
 ---
 
 <div class="bank-account">
-  {
-    holder && (
-      <div class="bank-account__field">
-        <span class="section-label section-label--soft">Titular</span>
-        <span class="bank-account__value">{holder}</span>
-      </div>
-    )
-  }
+  {/*
+    Solo desktop. En movil la tarjeta cuelga directamente de la cabecera de la
+    pantalla, "Pago por transferencia", que ya dice de que son estos datos: el
+    rotulo seria un segundo titulo pegado al primero. Arriba el titulo de la
+    pantalla queda lejos —la columna empieza debajo del rotulo de 28— y la
+    tarjeta tiene que decir por si misma que es.
+  */}
+  <h2 class="section-label section-label--strong d-none d-md-block">Datos de transferencia</h2>
 
-  {
-    bank && (
-      <div class="bank-account__field">
-        <span class="section-label section-label--soft">Banco</span>
-        <span class="bank-account__value">{bank}</span>
-      </div>
-    )
-  }
-
-  {
-    clabe && (
-      <div class="bank-account__field">
-        <span class="section-label section-label--soft">CLABE</span>
-
-        <div class="bank-account__row">
-          <span class="bank-account__value">{formatClabe(clabe)}</span>
-
-          {/*
-            Se copia la CLABE en crudo (18 digitos seguidos), no el texto agrupado
-            de al lado: es lo que se pega en la banca en linea.
-          */}
-          <CopyButton value={clabe} label="Copiar la CLABE" />
+  {/*
+    Los tres datos, agrupados. El grupo solo existe en desktop, que es donde hay
+    un rotulo del que separarse; en movil es `display: contents` y las filas
+    siguen siendo hijas de la tarjeta, con su gap de 20 intacto.
+  */}
+  <div class="bank-account__fields">
+    {
+      holder && (
+        <div class="bank-account__field">
+          <span class="section-label section-label--soft">Titular</span>
+          <span class="bank-account__value">{holder}</span>
         </div>
-      </div>
-    )
-  }
+      )
+    }
+
+    {
+      bank && (
+        <div class="bank-account__field">
+          <span class="section-label section-label--soft">Banco</span>
+          <span class="bank-account__value">{bank}</span>
+        </div>
+      )
+    }
+
+    {
+      clabe && (
+        <div class="bank-account__field">
+          <span class="section-label section-label--soft">CLABE</span>
+
+          <div class="bank-account__row">
+            <span class="bank-account__value bank-account__value--clabe">
+              {formatClabe(clabe)}
+            </span>
+
+            {/*
+              Se copia la CLABE en crudo (18 digitos seguidos), no el texto agrupado
+              de al lado: es lo que se pega en la banca en linea.
+            */}
+            <CopyButton value={clabe} label="Copiar la CLABE" />
+          </div>
+        </div>
+      )
+    }
+  </div>
 </div>

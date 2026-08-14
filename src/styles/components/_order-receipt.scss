@@ -38,6 +38,18 @@
   line-height: var(--sf-line-height-base);
 }
 
+// En movil el grupo no existe: la cantidad y el nombre siguen siendo hijos de la
+// linea, y su hueco de 8 lo pone ella.
+.order-receipt__label {
+  display: contents;
+}
+
+// El importe de la linea es de desktop entero: en movil la cuenta la cierra el
+// total del pie.
+.order-receipt__price {
+  display: none;
+}
+
 .order-receipt__quantity {
   color: var(--sf-muted);
   white-space: nowrap;
@@ -88,4 +100,99 @@
   line-height: 1;
   color: var(--sf-ink);
   white-space: nowrap;
+}
+
+// --- Desktop -------------------------------------------------------------
+// La tarjeta se encabeza y se enmarca, como las otras dos de la columna, y cada
+// linea del pedido pasa a llevar su importe. Spec:
+//   tarjeta   gap 20 - padding 24 - radius 16 - borde 1px #EAECF0
+//   rotulo    Inter 700 18/100% #111827
+//   lista     gap 12
+//   linea     rotulo y su importe, uno en cada extremo
+//   rotulo    "×2 Nombre" en Inter 400 14/100% #6C757D
+//   importe   Inter 600 14/100% #111827
+//   pie       "Metodo de pago: X" en Inter 600 14/100% #111827
+//             y el total en Inter 800 18/100% #D5AA53
+//
+// El gap de 12 de la lista, el fondo blanco y el reparto del pie ya son los de
+// movil y no se repiten. Los colores son tokens: #111827 es --sf-ink, #6C757D es
+// --sf-muted exacto y #D5AA53 el dorado de marca.
+//
+// El pie cambia de fondo: en movil son dos renglones —el rotulo del metodo arriba
+// y el metodo debajo, con su icono— y aqui es una sola linea que dice lo mismo con
+// menos piezas. El icono se va con el rotulo: sin la columna de dos renglones no
+// tiene donde apoyarse, y la fila la cierra el importe.
+@include media-breakpoint-up(md) {
+  .order-receipt {
+    gap: var(--sf-space-5);
+    padding: var(--sf-space-6);
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius-lg);
+  }
+
+  // El rotulo de la tarjeta, con el mismo 18 que encabeza el detalle del pedido y
+  // la tarjeta de resumen del checkout. El `>` deja fuera al del metodo, que es la
+  // otra .section-label de la tarjeta.
+  .order-receipt > .section-label {
+    font-size: 18px;
+    font-weight: var(--sf-weight-bold);
+    // 100% del tamano: es un rotulo de una linea.
+    line-height: 1;
+    color: var(--sf-ink);
+  }
+
+  // La linea se reparte: el rotulo a la izquierda y su importe a la derecha. Las
+  // dos alineadas por la base, que es lo que las mantiene a la misma altura si un
+  // nombre largo parte en dos renglones.
+  .order-receipt__item {
+    align-items: baseline;
+    justify-content: space-between;
+    gap: var(--sf-space-3);
+    line-height: 1;
+  }
+
+  .order-receipt__label {
+    display: flex;
+    gap: var(--sf-space-2);
+    min-width: 0;
+  }
+
+  // El nombre se apaga al gris de la cantidad: aqui los dos son el mismo rotulo
+  // —"×2 Tacos de Pastor"—, y lo que se destaca en la linea es el importe.
+  .order-receipt__name {
+    color: var(--sf-muted);
+  }
+
+  .order-receipt__price {
+    display: block;
+    font-weight: var(--sf-weight-semibold);
+    color: var(--sf-ink);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  // El rotulo del metodo y su icono se van: lo que decian lo dice ahora la propia
+  // linea, "Metodo de pago: Transferencia".
+  .order-receipt__method .section-label,
+  .order-receipt__method-icon {
+    display: none;
+  }
+
+  // Y sin el icono, el hueco de 6 pasa a ser el que separa dos palabras: el que
+  // queda entre "Metodo de pago:" y el metodo.
+  .order-receipt__method-name {
+    gap: var(--sf-space-1);
+    font-size: var(--sf-font-size-base);
+    line-height: 1;
+  }
+
+  // El total remata la cuenta con el 18 en dorado. No es el 20/800 del detalle del
+  // pedido del checkout: alli la cifra compite con la tarjeta de resumen que tiene
+  // al lado, y aqui es el unico importe de la pantalla.
+  .order-receipt__total {
+    font-size: 18px;
+    font-weight: var(--sf-weight-extrabold);
+    color: var(--sf-gold);
+    font-variant-numeric: tabular-nums;
+  }
 }

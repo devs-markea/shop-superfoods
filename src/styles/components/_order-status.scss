@@ -82,3 +82,49 @@
   line-height: var(--sf-line-height-base);
   color: var(--sf-muted);
 }
+
+// --- Desktop -------------------------------------------------------------
+// El sello encoge y el titular crece: en una columna de 580 con el pie debajo, un
+// circulo de 80 pesa mas que el titulo que corona, y era al reves. Spec:
+//   sello    64 con relleno de 16 - icono de 28
+//   titular  Inter 800 32/100% centrado #111827
+//   aviso    Inter 400 16/100% centrado #6C757D
+//
+// El 32 es el del nombre del platillo en la ficha de desktop, y el 800 el peso
+// del folio que este mismo bloque ya rotula: los dos estan en casa. El #111827 es
+// --sf-ink y el #6C757D es --sf-muted exacto.
+//
+// El hueco de 24 del bloque, el de 8 de los rotulos y el centrado no cambian, asi
+// que no se repiten. El folio tampoco: sus 40 en dorado siguen siendo la cifra
+// mas grande de /confirmado, que es lo que tiene que ser.
+@include media-breakpoint-up(md) {
+  .order-status__seal {
+    flex: 0 0 64px;
+    width: 64px;
+    height: 64px;
+    padding: var(--sf-space-4);
+  }
+
+  // El icono del sello, y solo el: --lg son los 40 del circulo de 80 de movil.
+  .order-status__seal .icon {
+    width: 28px;
+    height: 28px;
+  }
+
+  .order-status__title {
+    font-size: 32px;
+    font-weight: var(--sf-weight-extrabold);
+    // 100% del tamano: es un titular de una linea.
+    line-height: 1;
+  }
+
+  // El aviso NO se compone al 100% de la spec. Ese valor vale para el titular,
+  // que cabe en una linea; este se parte en dos en cuanto la copia crece —"Te
+  // avisaremos por WhatsApp cuando tu pedido este listo. Lo pagas en efectivo al
+  // recogerlo."— y entonces las dos lineas se tocarian. Se compone al 20 de la
+  // escala, que es lo que ese 100% quiere decir en un texto que puede envolver.
+  .order-status__note {
+    font-size: var(--sf-font-size-lg);
+    line-height: var(--sf-line-height-base);
+  }
+}
