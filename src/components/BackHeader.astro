@@ -3,9 +3,15 @@ import BackButton from './BackButton.astro';
 
 interface Props {
   backHref?: string;
+  /**
+   * La cabecera se retira de md hacia arriba. Para las pantallas que tienen
+   * cabecera propia de desktop (.navbar-desktop): dos cabeceras seguidas serian
+   * una de mas, y ahi el control de vuelta lo releva el logo de la barra.
+   */
+  mobileOnly?: boolean;
 }
 
-const { backHref = '/' } = Astro.props;
+const { backHref = '/', mobileOnly = false } = Astro.props;
 
 // Cabecera sin titulo: solo el control de vuelta. La usa /confirmado,
 // donde el titular ("Pedido confirmado") es el propio contenido y repetirlo
@@ -16,6 +22,6 @@ const { backHref = '/' } = Astro.props;
 // Spec: height 64 - padding 12/20 - control de 40.
 ---
 
-<header class="topbar topbar--compact">
+<header class:list={['topbar', 'topbar--compact', mobileOnly && 'topbar--mobile']}>
   <BackButton href={backHref} />
 </header>

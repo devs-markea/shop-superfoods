@@ -16,14 +16,33 @@ const { bank, clabe } = Astro.props;
 // Spec: tarjeta gap 12 - padding 16 - radius 16 - borde 1px #EAECF0 - bg #FFFFFF
 //       etiqueta 12/16 500 #9CA3AF - dato 14/20 600 #141821, con 2 de hueco
 //       boton de copiar de 36
+//
+// En desktop la tarjeta se encabeza y se recolorea, igual que la de la cuenta en
+// /pago/transferencia: rotulo arriba, la CLABE en dorado y el boton de copiar en
+// el gris de la pagina. Son las MISMAS piezas con otra escala —ver
+// components/_clabe-card.scss—, salvo el rotulo, que es de desktop entero.
 ---
 
 <div class="clabe-card">
-  <div class="clabe-card__field">
-    <span class="clabe-card__label">CLABE{bank && ` ${bank}`}</span>
-    <span class="clabe-card__value">{formatClabe(clabe)}</span>
-  </div>
+  {/*
+    Solo desktop. En movil la tarjeta va detras de los pasos, que ya dicen que
+    hay que transferir, y la etiqueta de la fila dice el resto: el rotulo seria
+    un renglon de mas en una pantalla que se lee de un vistazo.
+  */}
+  <h2 class="section-label d-none d-md-block">Datos para Transferencia</h2>
 
-  {/* Se copia en crudo, no el texto agrupado: es lo que acepta la banca. */}
-  <CopyButton value={clabe} label="Copiar la CLABE" size="lg" />
+  {/*
+    El dato y su accion. La fila solo existe en desktop, que es donde hay un
+    rotulo del que separarse; en movil es `display: contents` y los dos siguen
+    siendo hijos de la tarjeta, con su reparto de siempre.
+  */}
+  <div class="clabe-card__row">
+    <div class="clabe-card__field">
+      <span class="clabe-card__label">CLABE{bank && ` ${bank}`}</span>
+      <span class="clabe-card__value">{formatClabe(clabe)}</span>
+    </div>
+
+    {/* Se copia en crudo, no el texto agrupado: es lo que acepta la banca. */}
+    <CopyButton value={clabe} label="Copiar la CLABE" size="lg" />
+  </div>
 </div>

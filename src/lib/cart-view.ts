@@ -135,27 +135,38 @@ function escape(value: string): string {
   return value.replace(/[&<>"']/g, (char) => ESCAPES[char] ?? char);
 }
 
+/** El separador de siempre: el del pedido y el de las unidades de un grupo. */
+const SEPARATOR = ' · ';
+
 /**
  * Resumen legible de una configuracion: "Grande · Guacamole x2". Es lo que
  * distingue dos lineas del mismo platillo, y dentro de un grupo, una unidad de
  * otra.
+ *
+ * El separador se puede cambiar porque el detalle de las pantallas de cierre lo
+ * pide con guiones ("Grande - Guacamole x2"), no con puntos. Lo que no cambia es
+ * como se nombra una opcion repetida ("Guacamole x2"): esa regla se escribe una
+ * vez, aqui, y por eso el detalle no se monta su propia cadena.
  */
-export function describeSelection(selection: {
-  variantName: string | null;
-  options: CartOption[];
-}): string {
-  const options = describeOptions(selection.options);
+export function describeSelection(
+  selection: {
+    variantName: string | null;
+    options: CartOption[];
+  },
+  separator: string = SEPARATOR,
+): string {
+  const options = describeOptions(selection.options, separator);
 
   if (!selection.variantName) return options;
 
-  return options ? `${selection.variantName} · ${options}` : selection.variantName;
+  return options ? `${selection.variantName}${separator}${options}` : selection.variantName;
 }
 
 /** Solo las personalizaciones: "Guacamole x2 · Queso". Vacio si no hay. */
-export function describeOptions(options: CartOption[]): string {
+export function describeOptions(options: CartOption[], separator: string = SEPARATOR): string {
   return options
     .map((option) => (option.quantity > 1 ? `${option.label} x${option.quantity}` : option.label))
-    .join(' · ');
+    .join(separator);
 }
 
 /**

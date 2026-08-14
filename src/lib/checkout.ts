@@ -80,6 +80,17 @@ export interface OrderLine {
    * congela el nombre de la promocion, no su etiqueta.
    */
   promotion?: { label?: string; name?: string } | null;
+  /**
+   * Importe de la linea, que el resumen de desktop rotula a la derecha del
+   * nombre. Mismo nombre que en el carrito (`CartItem.lineTotal`), que es de
+   * donde salen las lineas antes de cerrar el pedido.
+   *
+   * Opcional porque no se puede afirmar que `GET /api/orders/{id}` lo traiga:
+   * hasta ahora estas pantallas solo leian cantidad y nombre. Sin el, la linea
+   * se queda con su rotulo y sin importe —que es exactamente lo que se ve hoy—
+   * en lugar de rotular un cero que nadie pago.
+   */
+  lineTotal?: number;
 }
 
 /**

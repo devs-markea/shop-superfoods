@@ -33,6 +33,11 @@ const icons: Record<PaymentMethod, IconName> = {
 // Spec: tarjeta gap 16 - padding 20 - radius 20 - bg #FFFFFF
 //       lineas gap 12, 14/20 400 (cantidad #6C757D, nombre #141821)
 //       pie: metodo a la izquierda e importe 20/700 a la derecha
+//
+// En desktop la tarjeta se encabeza, se enmarca y el pie se aprieta en una sola
+// linea: el rotulo del metodo y el icono se van, y lo que queda es "Metodo de
+// pago: X" con el importe al otro extremo. Cada linea del pedido gana ademas su
+// importe a la derecha. Ver components/_order-receipt.scss.
 ---
 
 <div class="order-receipt">
@@ -45,8 +50,24 @@ const icons: Record<PaymentMethod, IconName> = {
       <ul class="order-receipt__items list-unstyled">
         {items.map((item) => (
           <li class="order-receipt__item">
-            <span class="order-receipt__quantity">×{item.quantity}</span>
-            <span class="order-receipt__name">{item.name}</span>
+            {/*
+              Cantidad y nombre, juntos. El grupo solo existe en desktop, que es
+              donde la linea se reparte entre el rotulo y su importe; en movil es
+              `display: contents` y los dos siguen siendo hijos de la linea, con
+              su hueco de 8 intacto.
+            */}
+            <span class="order-receipt__label">
+              <span class="order-receipt__quantity">×{item.quantity}</span>
+              <span class="order-receipt__name">{item.name}</span>
+            </span>
+
+            {/*
+              Solo desktop, y solo si la linea trae importe: en movil la cuenta la
+              cierra el total de abajo. Ver OrderLine en src/lib/checkout.ts.
+            */}
+            {item.lineTotal !== undefined && (
+              <span class="order-receipt__price">{formatPrice(item.lineTotal)}</span>
+            )}
           </li>
         ))}
       </ul>
@@ -61,6 +82,13 @@ const icons: Record<PaymentMethod, IconName> = {
 
       <span class="order-receipt__method-name">
         <Icon name={icons[method]} class="order-receipt__method-icon" />
+
+        {/*
+          Solo desktop: alli el rotulo de arriba no se pinta —la fila es una sola
+          linea— y sin el, "Transferencia" a secas no dice de que es.
+        */}
+        <span class="order-receipt__method-term d-none d-md-inline">Metodo de pago:</span>
+
         <span>{PAYMENT_LABEL[method]}</span>
       </span>
     </div>

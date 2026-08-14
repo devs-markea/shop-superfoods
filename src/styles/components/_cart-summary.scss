@@ -36,8 +36,9 @@
   }
 
   // Element: title — Inter 700 18/100%. El 18 no esta en la escala de tamanos
-  // (12/14/16/24) y no la abre: es el de este rotulo y el del nombre de la
-  // tarjeta de platillo, y de nada mas.
+  // (12/14/16/24) y no la abre: es el del nombre de la tarjeta de platillo y el
+  // de los dos rotulos que encabezan una tarjeta del checkout de desktop —este y
+  // el del detalle del pedido—, y de nada mas.
   .cart-summary__title {
     margin: 0;
     font-size: 18px;
@@ -119,9 +120,11 @@
   }
 
   // Element: total — Inter 700 16/100% el concepto, Inter 800 20/100% el importe.
-  // El 20 y el 800 son los de la cifra que remata la cuenta y no se repiten en
-  // ningun otro sitio de la tienda; el peso se descarga con la fuente (ver
-  // --sf-weight-extrabold en _tokens.scss).
+  // El 20 y el 800 son los de la cifra que remata una cuenta, y por eso los
+  // comparte el "Total a pagar" del detalle del pedido en las dos pantallas de
+  // cierre: es la misma cifra en la otra columna. En ningun otro sitio de la
+  // tienda aparecen. El peso se descarga con la fuente (ver --sf-weight-extrabold
+  // en _tokens.scss).
   .cart-summary__total-term {
     margin: 0;
     font-size: var(--sf-font-size-lg);

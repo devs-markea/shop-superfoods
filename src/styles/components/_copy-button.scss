@@ -11,6 +11,13 @@
 //
 // El hover invierte el dorado en lugar de oscurecer el tinte: es el mismo par de
 // colores que ya usa el boton principal.
+//
+// Los dos colores de REPOSO se leen de dos variables propias, con el dorado de
+// siempre por defecto. Asi una tarjeta puede retintar el boton cambiando el punto
+// de partida —lo hace .bank-account en desktop, donde pasa al gris de la pagina
+// para no repetir el dorado de la CLABE que tiene al lado— sin pelearse por
+// especificidad con el hover ni con el "copiado", que los pinta este bloque y
+// tienen que seguir diciendo lo mismo en todas las pantallas.
 // ---------------------------------------------------------------------------
 
 .copy-button {
@@ -21,8 +28,8 @@
   width: 32px;
   height: 32px;
   border-radius: var(--sf-radius-sm);
-  background-color: var(--sf-gold-tint);
-  color: var(--sf-gold);
+  background-color: var(--sf-copy-button-bg, var(--sf-gold-tint));
+  color: var(--sf-copy-button-color, var(--sf-gold));
   transition:
     background-color var(--sf-transition),
     color var(--sf-transition);

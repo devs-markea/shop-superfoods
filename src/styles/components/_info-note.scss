@@ -31,3 +31,32 @@
   font-weight: var(--sf-weight-medium);
   line-height: var(--sf-line-height-sm);
 }
+
+// --- Desktop -------------------------------------------------------------
+// El aviso de las dos pantallas de cierre. Spec: gap 12 - padding 16 -
+// radius 12 - bg #D5AA531A - texto Inter 500 14/100% #D5AA53, y el icono
+// centrado contra el texto en lugar de anclado a su primera linea.
+//
+// El gap, el relleno y los dos colores no se repiten: ya son los de la spec
+// desde movil. Lo que cambia es el radius —12 en lugar de 16—, el tamano del
+// texto y donde se apoya el icono.
+//
+// Va scopeado a esas dos pantallas y no al bloque entero porque el otro aviso
+// que usa .info-note es el de la zona de reparto de /datos, que tiene su propia
+// pantalla y su propia spec: reescribir el bloque aqui le cambiaria la caja de
+// paso.
+@include media-breakpoint-up(md) {
+  .checkout-page--confirm .info-note {
+    align-items: center;
+    border-radius: var(--sf-radius-md);
+  }
+
+  .checkout-page--confirm .info-note__text {
+    font-size: var(--sf-font-size-base);
+    // 1.2 y no el 100% de la spec: los dos avisos ocupan dos renglones en esta
+    // columna —el de la transferencia siempre, y el del efectivo cuando falta
+    // cotizar el envio— y sin interlineado se tocarian. Es un multiplo y no una
+    // medida: el tamano de este texto ya cambia entre movil y desktop.
+    line-height: 1.2;
+  }
+}

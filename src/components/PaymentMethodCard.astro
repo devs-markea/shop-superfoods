@@ -8,20 +8,33 @@ interface Props {
   title: string;
   /** El medio, bajo el titulo: "Efectivo en mano". */
   note: string;
+  /**
+   * Lo que dice ese mismo hueco en desktop, donde la tarjeta es mas ancha y la
+   * frase de abajo se retira: alli cabe la explicacion entera junto al titulo, y
+   * dejar "Efectivo en mano" a secas desaprovecharia la unica linea que queda.
+   *
+   * Sin esta prop, `note` vale para los dos anchos y la frase se queda.
+   */
+  wideNote?: string;
   /** Cuando y donde se entrega el dinero, en una frase. */
   description: string;
 }
 
-const { icon, title, note, description } = Astro.props;
+const { icon, title, note, wideNote, description } = Astro.props;
 
 // Como se paga el pedido, ya cerrado: la contraparte de <BankAccount> en el flujo
 // de efectivo. Ocupa el mismo sitio de la pantalla, arriba del todo, porque es lo
 // que hay que leer antes de confirmar.
 //
-// Contenedor reutilizable: el icono y los tres textos llegan por props, asi sirve
-// para cualquier metodo. No es <PaymentOption> —que se le parece en la caja del
-// icono y en los dos textos de al lado—: aquella es un radio que se elige, y esta
-// un dato que ya no se toca.
+// Contenedor reutilizable: el icono y los textos llegan por props, asi sirve para
+// cualquier metodo. No es <PaymentOption> —que se le parece en la caja del icono y
+// en los dos textos de al lado—: aquella es un radio que se elige, y esta un dato
+// que ya no se toca.
+//
+// UN MARCADO, DOS PANTALLAS: con `wideNote` las dos frases van en el marcado y
+// cada ancho ensena la suya. La de abajo, la larga de movil, se retira en desktop
+// —lo mismo que dice ya la de arriba— y con ella el segundo renglon de la tarjeta.
+// Ver components/_payment-method.scss.
 ---
 
 <div class="payment-method">
@@ -33,7 +46,10 @@ const { icon, title, note, description } = Astro.props;
 
       <span class="payment-method__text">
         <span class="payment-method__title">{title}</span>
-        <span class="payment-method__note">{note}</span>
+
+        <span class:list={['payment-method__note', wideNote && 'd-md-none']}>{note}</span>
+
+        {wideNote && <span class="payment-method__note d-none d-md-block">{wideNote}</span>}
       </span>
     </div>
 
