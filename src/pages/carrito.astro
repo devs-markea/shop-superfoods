@@ -153,7 +153,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 const closed = isClosed(schedule);
 ---
 
-<Layout title="Mi pedido — Shop Superfoods" description="Revisa tu pedido antes de pagar.">
+<Layout title="Mi pedido — Shop Superfoods" description="Revisa tu pedido antes de pagar." noindex>
   {/* Una cabecera por pantalla: la barra de 48 con el total en movil, y de md
       hacia arriba la barra de la tienda, la misma de la portada y de la ficha. */}
   <TopBar title="Mi pedido" total={total} mobileOnly />

@@ -7,9 +7,9 @@
 //
 // Es UN bloque y no uno por pantalla porque el reparto es identico: la barra de
 // la tienda arriba, el pie abajo, y en medio una columna centrada con los
-// subcontenedores de la pantalla —sello, resumen o pasos, la cuenta— y el enlace
-// al estado del pedido cerrandola. Lo unico que cambia de una a otra es que se
-// pone dentro.
+// subcontenedores de la pantalla —sello, resumen o pasos, la cuenta— y la accion
+// de la pantalla cerrandola. Lo unico que cambia de una a otra es que se pone
+// dentro.
 //
 // En movil no existe, y esas pantallas no cambian: la cabecera de 64, la columna
 // de siempre y la barra de accion fija al fondo. El envoltorio que se anade a esa
@@ -77,12 +77,12 @@
     margin-inline: auto;
   }
 
-  // Element: cta-button — 320x46, padding 14/32, radius 12, fondo #16A34A y
-  // label Inter 600 15/100% en blanco.
+  // Element: cta-button — 320x46, padding 14/32, radius 12 y label Inter 600
+  // 15/100%.
   //
-  // El #16A34A es --sf-success, el verde con el que la tienda dice que algo salio
-  // bien: el mismo del sello que corona esta pantalla y el de la tarjeta de
-  // resumen del checkout. No es el de WhatsApp, que identifica un canal.
+  // El color lo pone el mismo .btn-primary que el resto de acciones del sistema:
+  // este control hace lo que la barra de movil, y ahi la accion es dorada salvo
+  // cuando lleva al chat de la tienda (ver el modifier de abajo).
   //
   // El 15 no esta en la escala de tamanos (12/14/16/24) y no la abre, como el 13
   // del pie o el 28 de los titulos del checkout. El alto de 46 manda sobre el
@@ -90,19 +90,8 @@
   // sumar los dos, asi que el 14 se declara igual —es lo que sostiene el boton si
   // el label se parte— y el 46 lo remata.
   //
-  // Se sobreescriben las custom properties de .btn en lugar del background, para
-  // que hover y activo sigan la mecanica de Bootstrap. Misma tecnica que el boton
-  // de WhatsApp de la barra de accion.
+  // El gap de 8 separa el icono del label, el mismo que en la barra.
   .confirmation-page__cta-button {
-    --bs-btn-bg: var(--sf-success);
-    --bs-btn-border-color: var(--sf-success);
-    --bs-btn-hover-bg: var(--sf-success-hover);
-    --bs-btn-hover-border-color: var(--sf-success-hover);
-    --bs-btn-active-bg: var(--sf-success-hover);
-    --bs-btn-active-border-color: var(--sf-success-hover);
-    --bs-btn-color: var(--sf-white);
-    --bs-btn-hover-color: var(--sf-white);
-    --bs-btn-active-color: var(--sf-white);
     --bs-btn-padding-y: 14px;
     --bs-btn-padding-x: var(--sf-space-8);
     --bs-btn-font-size: 15px;
@@ -110,9 +99,28 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    gap: var(--sf-space-2);
     width: 100%;
     height: 46px;
     line-height: 1;
+  }
+
+  // Modifier: abrir WhatsApp — el verde del canal, no el del sello que corona la
+  // pantalla: el boton no dice que algo salio bien, dice a donde lleva. Es el
+  // mismo verde y la misma tecnica que el boton de WhatsApp de la barra de
+  // accion, que es el control que este releva en desktop: se sobreescriben las
+  // custom properties de .btn en lugar del background, para que hover y activo
+  // sigan la mecanica de Bootstrap.
+  .confirmation-page__cta-button--whatsapp {
+    --bs-btn-bg: var(--sf-whatsapp);
+    --bs-btn-border-color: var(--sf-whatsapp);
+    --bs-btn-hover-bg: var(--sf-whatsapp-hover);
+    --bs-btn-hover-border-color: var(--sf-whatsapp-hover);
+    --bs-btn-active-bg: var(--sf-whatsapp-hover);
+    --bs-btn-active-border-color: var(--sf-whatsapp-hover);
+    --bs-btn-color: var(--sf-white);
+    --bs-btn-hover-color: var(--sf-white);
+    --bs-btn-active-color: var(--sf-white);
   }
 
   // Element: cta-note — Inter 400 12/100% centrado #6C757D. Es el mismo aviso que

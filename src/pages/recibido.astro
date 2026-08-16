@@ -6,6 +6,7 @@ import OrderStatus from '../components/OrderStatus.astro';
 import Steps from '../components/Steps.astro';
 import ClabeCard from '../components/ClabeCard.astro';
 import ActionBar from '../components/ActionBar.astro';
+import ConfirmationCta from '../components/ConfirmationCta.astro';
 import ScheduleSheet from '../components/ScheduleSheet.astro';
 import LocationSheet from '../components/LocationSheet.astro';
 import Footer from '../components/Footer.astro';
@@ -13,11 +14,12 @@ import { getCart, type Cart } from '../lib/cart.ts';
 import { getOrder } from '../lib/orders.ts';
 import { resolveCartToken } from '../lib/cart-session.ts';
 import { ORDER_COOKIE, parseOrderPointer } from '../lib/checkout-draft.ts';
-import { PAYMENT_LABEL } from '../lib/checkout.ts';
+import { PAYMENT_LABEL, type StoreOrder } from '../lib/checkout.ts';
 import { fillMessage, whatsAppUrl } from '../lib/whatsapp.ts';
 import { formatPrice } from '../lib/price.ts';
 import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
 import { ALL_CATEGORIES, getCategories, getProducts } from '../lib/catalog.ts';
+import { TEST_MODE } from 'astro:env/server';
 
 // UNA PANTALLA, DOS FORMAS
 //
@@ -26,14 +28,43 @@ import { ALL_CATEGORIES, getCategories, getProducts } from '../lib/catalog.ts';
 //
 // En desktop se monta como el resto de la tienda —la misma barra de tienda
 // arriba, el mismo pie abajo— y el contenido pasa a una columna centrada con 40
-// entre sus piezas, rematada por el enlace al estado del pedido. Ver
-// components/_confirmation-page.scss.
+// entre sus piezas, rematada por la misma accion que en movil lleva la barra:
+// abrir WhatsApp. Ver components/_confirmation-page.scss.
 
 // Depende de la sesion: el mensaje de WhatsApp lleva el folio del pedido, y quien
 // reciba la captura tiene que saber a que pedido corresponde.
 export const prerender = false;
 
 const token = resolveCartToken(Astro.cookies);
+
+// QUIEN PUEDE ESTAR AQUI
+//
+// Esta pantalla va DESPUES de cerrar el pedido, y lo unico que prueba que el
+// cierre ocurrio es el puntero: ni el carrito ni el borrador sirven, porque los
+// dos existen desde antes de comprar. Sin el, lo que se pintaba era un "Pedido
+// recibido" de un pedido que no existe, con los pasos y la CLABE de la tienda
+// invitando a transferir sin nadie a quien mandarle el comprobante.
+//
+// Se vuelve al menu, que es adonde lleva ya el control de vuelta de la cabecera.
+// Con el 302 que pone Astro.redirect por defecto y no un 301: la regla depende de
+// la sesion, y un 301 se queda cacheado en el navegador para siempre.
+//
+// La comprobacion va aqui arriba, antes de pedir nada: es local y no cuesta, asi
+// que quien no deberia estar se va sin gastarle a la API cuatro llamadas.
+//
+// En modo de pruebas no se guarda nada, y las pantallas se sirven como esten: es
+// la unica forma de revisar el diseno sin pasar por una compra. Ver TEST_MODE en
+// astro.config.mjs.
+const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
+
+if (!TEST_MODE) {
+  if (!pointer) return Astro.redirect('/');
+
+  // Mercado Pago tiene su propia pantalla de cierre, y no es esta: aqui veria la
+  // copia de la transferencia —los tres pasos y la cuenta a la que pagar— despues
+  // de haber pagado ya con tarjeta.
+  if (pointer.method === 'mercado_pago') return Astro.redirect('/confirmado');
+}
 
 // El carrito, solo para el chip de la barra de desktop. Aqui el pedido ya esta
 // hecho —el cierre lo vacio—, asi que lo normal es que llegue en cero; se lee de
@@ -69,8 +100,8 @@ const phone = store.whatsapp?.phone ?? '';
 //
 // Asi que el metodo decide la pantalla entera —pasos, tarjeta y aviso—, y sale del
 // puntero, que es lo unico que queda del cierre. Sin puntero se rotula el flujo de
-// transferencia, que es el que trae aqui a quien vuelve por el historial.
-const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
+// transferencia: en produccion no se llega —la guarda de arriba lo impide—, pero
+// es lo que se revisa en modo de pruebas.
 const cash = pointer?.method === 'efectivo';
 
 // En efectivo, el modo de entrega parte otra vez la copia: al recoger hay que ir al
@@ -79,22 +110,42 @@ const cash = pointer?.method === 'efectivo';
 // era lo unico que habia.
 const cashPickup = cash && pointer?.deliveryType !== 'delivery';
 
-// El pedido solo se lee si hay a quien escribir: sin telefono configurado el boton
-// no navega, y entonces no hay nada que rellenar.
-let whatsapp: string | null = null;
+// El pedido, releido de la API. Hace dos cosas: pone el folio y el total en el
+// mensaje de WhatsApp, y remata la guarda de arriba.
+//
+// La API responde 404 igual si el pedido no existe que si es de otra sesion, y
+// getOrder() traduce las dos a null: eso es un puntero que no vale, y se sale al
+// menu. Un fallo de la API es otra cosa —lanza— y ahi la pantalla se sirve igual:
+// el que falla es el servidor, no quien mira, y lo que se viene a buscar aqui —la
+// CLABE, o donde recoger— no depende de haber podido leer el pedido. Echar a un
+// comprador de su propio acuse porque la API tosio seria peor que servirle esto
+// sin folio.
+let order: StoreOrder | null = null;
 
-if (phone && pointer) {
+if (pointer) {
+  let failed = false;
+
   try {
-    const order = await getOrder(pointer.id, token);
+    order = await getOrder(pointer.id, token);
+  } catch (error) {
+    console.error('[recibido] fallo GET /api/orders', error);
+    failed = true;
+  }
 
-    if (order) {
-      // Con efectivo no hay comprobante que mandar: el mensaje es el del pedido
-      // recien hecho, la misma plantilla que usa el cierre de Mercado Pago.
-      const template = cash
-        ? store.whatsapp?.templates?.orderPlaced
-        : store.whatsapp?.templates?.paymentProof;
+  if (!order && !failed && !TEST_MODE) return Astro.redirect('/');
+}
 
-      whatsapp = whatsAppUrl(
+// Con efectivo no hay comprobante que mandar: el mensaje es el del pedido recien
+// hecho, la misma plantilla que usa el cierre de Mercado Pago.
+const template = cash
+  ? store.whatsapp?.templates?.orderPlaced
+  : store.whatsapp?.templates?.paymentProof;
+
+// El mensaje solo se arma si hay a quien escribir y de que hablar: sin telefono
+// configurado el boton no navega, y sin pedido leido no hay folio que poner.
+const whatsapp =
+  phone && order && pointer
+    ? whatsAppUrl(
         phone,
         fillMessage(template ?? '', {
           folio: order.id,
@@ -106,14 +157,8 @@ if (phone && pointer) {
           estado: order.statusLabel,
           metodo: PAYMENT_LABEL[pointer.method],
         }),
-      );
-    }
-  } catch (error) {
-    // Sin mensaje se sigue mostrando la pantalla: lo importante es el dato del pago
-    // —la CLABE o el local—, y el chat se puede abrir a mano.
-    console.error('[recibido] fallo GET /api/orders', error);
-  }
-}
+      )
+    : null;
 
 // La copia de los tres cierres, junta: se lee de un tiron en que se diferencian.
 //
@@ -161,7 +206,7 @@ const hasLocation = Boolean(address || mapsUrl);
 const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 ---
 
-<Layout title="Pedido recibido — Shop Superfoods" description={copy.description}>
+<Layout title="Pedido recibido — Shop Superfoods" description={copy.description} noindex>
   {/*
     Vuelve al menu y no a la pantalla de pago: el pedido ya esta hecho, y volver
     atras invitaria a confirmarlo otra vez.
@@ -208,21 +253,19 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 
       {/*
         Ultimo subcontenedor, SOLO desktop: ahi es donde releva a la barra de
-        accion del fondo, que no se pinta. Lleva a /confirmado, que es la pantalla
-        que relee el pedido en cada visita y dice como esta —el puntero del cierre
-        sigue en la cookie, asi que no hace falta pasarle nada por la URL—.
-
-        El aviso es el mismo que la barra pone bajo su boton en movil: el pedido
-        queda pendiente hasta que el pago se confirme, y eso no cambia con el
-        ancho de la pantalla.
+        accion del fondo, que no se pinta. Lleva al mismo sitio que ella —el chat
+        de la tienda, con el mensaje de este flujo ya escrito: el comprobante en
+        transferencia, el pedido recien hecho en efectivo— y con el mismo aviso
+        debajo. Se escriben con los mismos valores a proposito: el ancho de la
+        pantalla cambia la forma del control, no lo que hace.
       */}
-      <div class="confirmation-page__cta">
-        <a class="confirmation-page__cta-button btn btn-primary" href="/confirmado">
-          Ver estado del pedido
-        </a>
-
-        <p class="confirmation-page__cta-note">{copy.barNote}</p>
-      </div>
+      <ConfirmationCta
+        label="Abrir WhatsApp"
+        icon="whatsapp"
+        variant="whatsapp"
+        href={whatsapp ?? undefined}
+        note={copy.barNote}
+      />
     </div>
 
     {/*
