@@ -1,0 +1,363 @@
+---
+import Icon from './Icon.astro';
+import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
+
+// El mapa de /datos, en linea: el panel que releva al boton que abria la hoja.
+//
+// Es el MISMO selector de siempre —un mapa con el pin clavado en el centro, se
+// mueve el mapa hasta el domicilio y se acepta— sacado de la hoja y puesto en el
+// formulario, en el hueco del boton: mismo ancho, mas alto. Se ahorra un paso, y
+// la ubicacion se elige donde se rellena todo lo demas.
+//
+// Arriba del mapa, su cabecera: el rotulo de lo que hay que hacer y el boton que
+// confirma. Verde mientras el punto esta por elegir; en cuanto se confirma, el
+// mapa se bloquea y el verde deja su sitio al rojo, que descarta el punto y
+// devuelve el mapa al movimiento.
+//
+// SE SIRVE OCULTO
+//
+// Que haya mapa no se sabe aqui: se descubre en el navegador, al pedirle el SDK
+// a Google. Asi que este panel llega oculto y lo destapa src/lib/location-map.ts
+// cuando el mapa ya esta pintado; si Google no responde —sin clave, clave
+// rechazada, sin red— el panel se queda donde esta y reaparece el boton de
+// <LocationPicker>, que abre la hoja con el respaldo del dispositivo.
+//
+// Los dos caminos conviven en el marcado y solo cambia cual se ve.
+---
+
+<section class="location-map" hidden data-location-map data-maps-key={GOOGLE_MAPS_API_KEY}>
+  {/*
+    La cabecera. El rotulo cuenta el estado —que mover, o que ya esta
+    confirmado— y por eso se anuncia: quien no ve el mapa no tiene otra forma de
+    enterarse de que el punto quedo guardado.
+  */}
+  <div class="location-map__head d-flex align-items-center justify-content-between gap-3">
+    <p class="location-map__label section-label" aria-live="polite" data-location-map-label>
+      Mueve el mapa hasta tu domicilio
+    </p>
+
+    {/*
+      Confirmar. Nace deshabilitado: hasta que el mapa no esta pintado, lo unico
+      que hay bajo el pin es el centro de Cancun.
+    */}
+    <button
+      class="location-map__confirm btn btn-success d-inline-flex align-items-center gap-2"
+      type="button"
+      disabled
+      data-location-map-confirm
+    >
+      <Icon name="check" size="sm" />
+      <span>Confirmar ubicacion</span>
+    </button>
+
+    {/* Y su relevo, cuando ya hay punto: descarta el confirmado y desbloquea el
+        mapa para senalar otro. */}
+    <button
+      class="location-map__cancel btn btn-danger d-inline-flex align-items-center gap-2"
+      type="button"
+      hidden
+      data-location-map-cancel
+    >
+      <Icon name="close" size="sm" />
+      <span>Cambiar ubicacion</span>
+    </button>
+  </div>
+
+  {/* El buscador de Google, que se inserta al cargar el mapa. Oculto mientras no
+      llegue: un hueco vacio encima del mapa no dice nada. */}
+  <div class="location-map__search" hidden data-location-map-search></div>
+
+  <div class="location-map__stage">
+    <div class="location-map__canvas" data-location-map-canvas></div>
+
+    {/* El velo de confirmado. Apaga el mapa —que ya no se puede mover— sin
+        taparlo del todo: el pin sigue viendose encima, sobre el punto guardado.
+        Lo enciende y lo apaga el CSS con el estado del bloque, no el script. */}
+    <div class="location-map__lock" aria-hidden="true"></div>
+
+    {/* El pin, clavado en el centro. No se arrastra —lo que se mueve es el mapa
+        por debajo— asi que no recibe el puntero y no se anuncia. */}
+    <span class="location-map__pin" aria-hidden="true">
+      <Icon name="map-pin" />
+    </span>
+
+    <button
+      class="location-map__locate btn-plain"
+      type="button"
+      aria-label="Centrar el mapa en mi ubicacion"
+      data-location-map-locate
+    >
+      <Icon name="crosshair" size="sm" />
+    </button>
+
+    {/* Mientras carga el SDK. Ocupa el hueco entero del mapa para que el
+        formulario no de un salto de alto al llegar. */}
+    <p class="location-map__status" data-location-map-status>Cargando el mapa…</p>
+  </div>
+</section>
+
+<style>
+  /* -------------------------------------------------------------------------
+   * Block: location-map
+   * -------------------------------------------------------------------------
+   * El panel del mapa en /datos. A diferencia del resto de bloques del proyecto
+   * —un parcial Sass por bloque en src/styles/components/— este va en CSS puro
+   * y dentro del componente, que es como se pidio.
+   *
+   * Lo que lo mantiene dentro del sistema es lo de siempre: los tokens --sf-*,
+   * que son custom properties y no variables Sass, y las clases de Bootstrap
+   * del marcado (.btn, .btn-success, .btn-danger y las utilidades de flex).
+   * Aqui solo se escribe lo que Bootstrap no trae.
+   *
+   * La ley del bloque es la misma del selector de la hoja: el pin y el centro
+   * del mapa son EL MISMO PUNTO. De ahi las dos reglas que no se pueden tocar
+   * sin romperlo: el escenario es `position: relative` y el pin va al 50/50 con
+   * su punta en ese cruce.
+   * ------------------------------------------------------------------------- */
+
+  .location-map {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sf-space-3);
+    /* El ancho del boton al que releva (.location__button): 350 como maximo y
+       centrado. En desktop, como el boton, ocupa la columna entera. */
+    width: 100%;
+    max-width: 350px;
+    margin-inline: auto;
+  }
+
+  /* Element: la cabecera —rotulo y boton—. El reparto lo hacen las utilidades
+     de Bootstrap en el marcado; aqui solo se deja que el rotulo encoja, para que
+     sea el quien parta en dos lineas antes que el boton. */
+  .location-map__label {
+    min-width: 0;
+  }
+
+  /* Modifier: confirmado. El rotulo pasa al verde de "salio bien". */
+  .location-map__label--done {
+    color: var(--sf-success);
+  }
+
+  /* Element: confirmar.
+   *
+   * Verde de la tienda (--sf-success, el del sello de /confirmado) en lugar del
+   * de Bootstrap: es el mismo "esto salio bien" y no hay razon para tener dos
+   * verdes distintos en la misma pantalla. Se cambia por las variables que
+   * publica .btn-success, asi que el resto del boton —el blanco del rotulo y del
+   * icono, el alto de 44, el radio de 12— sigue siendo el de Bootstrap.
+   *
+   * El rojo de .btn-cancel se queda con el de Bootstrap: la marca no tiene
+   * ninguno, y este solo aparece cuando ya hay ubicacion confirmada.
+   */
+  .location-map__confirm {
+    --bs-btn-bg: var(--sf-success);
+    --bs-btn-hover-bg: #35996e;
+    --bs-btn-active-bg: #2f8a63;
+    --bs-btn-disabled-bg: var(--sf-success);
+  }
+
+  /* Los dos botones son la misma pieza en dos estados: no encogen, para que su
+     rotulo no parta en dos lineas. Quien cede el ancho es el rotulo de al lado. */
+  .location-map__confirm,
+  .location-map__cancel {
+    flex: 0 0 auto;
+  }
+
+  /* Element: el buscador de Google.
+   *
+   * El widget es suyo y vive en un shadow DOM cerrado: desde fuera no se puede
+   * escribir ni una regla dentro. Asi que la CAJA la pone este hueco —y con el
+   * formato de .field, que es el de todos los campos de la pantalla: 44 de alto,
+   * borde de 2, radio de 12, fondo blanco y el dorado al enfocar— y al widget se
+   * le pide, por las variables que publica, que no pinte la suya.
+   *
+   * Si alguna de esas variables dejara de valer, lo peor que pasa es que el
+   * widget siga pintando su propia caja blanca DENTRO de esta: se nota poco,
+   * porque las dos son blancas, y nada deja de funcionar.
+   */
+  .location-map__search {
+    display: flex;
+    align-items: center;
+    /* `min-height` y no `height`: si el widget crece, la caja crece con el en
+       lugar de recortarlo. */
+    min-height: 44px;
+    width: 100%;
+    overflow: hidden;
+    border: 2px solid var(--sf-border);
+    border-radius: var(--sf-radius-md);
+    background-color: var(--sf-surface);
+    transition: border-color var(--sf-transition);
+  }
+
+  /* Como los campos de al lado, que se enmarcan en dorado al escribir en ellos. */
+  .location-map__search:focus-within {
+    border-color: var(--sf-gold);
+  }
+
+  /* El widget, ya sin caja propia: solo el texto. Va en :global porque lo inserta
+     el script y no lleva, por tanto, la marca de estilo con la que Astro acota
+     este bloque. */
+  .location-map__search :global(gmp-place-autocomplete) {
+    /* La superficie y el borde los pone el hueco de arriba. */
+    --gmp-mat-color-surface: transparent;
+    --gmp-mat-color-outline-decorative: transparent;
+    /* Y el resto, los grises y la tipografia de la tienda. */
+    --gmp-mat-color-on-surface: var(--sf-ink);
+    --gmp-mat-color-on-surface-variant: var(--sf-ink-soft);
+    --gmp-mat-color-primary: var(--sf-gold);
+    --gmp-mat-font-family: var(--sf-font-sans);
+    --gmp-mat-font-body-medium: var(--sf-weight-semibold) var(--sf-font-size-base) /
+      var(--sf-line-height-base) var(--sf-font-sans);
+
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    background-color: transparent;
+    font-family: var(--sf-font-sans);
+    font-size: var(--sf-font-size-base);
+  }
+
+  /* Element: el hueco del mapa.
+   *
+   * `relative` para que el pin, la diana y el aviso de carga se coloquen contra
+   * el, y `overflow: hidden` para que el mapa —que pinta sus tiles hasta el
+   * borde— respete el radio. */
+  .location-map__stage {
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--sf-border);
+    border-radius: var(--sf-radius-md);
+    /* Se ve mientras cargan los tiles: gris de pagina, no blanco, para que el
+       hueco se lea como "aqui va algo" y no como una tarjeta vacia. */
+    background-color: var(--sf-body-bg);
+    transition: border-color var(--sf-transition);
+  }
+
+  /* Confirmado, el borde se pone verde: es el otro sitio —ademas del rotulo y del
+     boton— donde se ve que el punto ya esta guardado. */
+  .location-map--done .location-map__stage {
+    border-color: var(--sf-success);
+  }
+
+  /* Element: el velo de confirmado.
+   *
+   * Con el punto guardado el mapa deja de moverse, y eso hay que VERLO: un mapa
+   * que se ve igual que antes pero no responde al dedo se lee como averiado. El
+   * gris lo apaga y dice que ahi ya no hay nada que hacer hasta pulsar el boton
+   * rojo.
+   *
+   * Traslucido a proposito: debajo tienen que seguir viendose la calle y el pin,
+   * que son la prueba de que el punto guardado es el correcto. Y por encima del
+   * mapa pero por debajo del pin (z-index 1 contra 2), para no apagarlo a el.
+   */
+  .location-map__lock {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: none;
+    background-color: rgb(20 24 33 / 40%);
+  }
+
+  .location-map--done .location-map__lock {
+    display: block;
+  }
+
+  /* Element: el lienzo de Google.
+   *
+   * Mucho mas alto que el boton al que releva (44), que es de lo que va el
+   * cambio: aqui se senala una casa. El alto es fijo y en dvh con tope, para que
+   * en un movil bajo el panel no se coma el resto del formulario. */
+  .location-map__canvas {
+    width: 100%;
+    height: clamp(220px, 34dvh, 280px);
+  }
+
+  /* Element: el pin.
+   *
+   * Centrado en los dos ejes y subido su propio alto, para que la PUNTA quede en
+   * el centro exacto del mapa: es lo que hace que lo que se ve senalado y lo que
+   * se guarda sean el mismo punto.
+   *
+   * `pointer-events: none` porque no es un control: los gestos son del mapa que
+   * tiene debajo, y un pin que los intercepte congela el arrastre justo en el
+   * centro, que es donde el dedo suele estar. */
+  .location-map__pin {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    z-index: 2;
+    transform: translate(-50%, -100%);
+    color: var(--sf-gold);
+    pointer-events: none;
+    /* El pin es dorado sobre un mapa de colores cualesquiera: la sombra es lo
+       que lo despega de una avenida amarilla o de un parque verde. */
+    filter: drop-shadow(0 2px 4px rgb(20 24 33 / 45%));
+  }
+
+  /* Element: la diana que centra el mapa donde esta el comprador. Abajo a la
+     derecha, que es donde la ponen todos los mapas y donde el pulgar llega sin
+     tapar el centro. Se retira al confirmar, con el resto de los gestos. */
+  .location-map__locate {
+    position: absolute;
+    right: var(--sf-space-3);
+    bottom: var(--sf-space-3);
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: var(--sf-radius-sm);
+    background-color: var(--sf-surface);
+    color: var(--sf-ink);
+    box-shadow: var(--sf-shadow-card);
+    transition: color var(--sf-transition);
+  }
+
+  .location-map__locate:hover {
+    color: var(--sf-gold);
+  }
+
+  .location-map__locate:disabled {
+    color: var(--sf-placeholder);
+  }
+
+  /* Element: el aviso mientras carga el SDK. Ocupa el hueco entero del mapa para
+     que el formulario no de un salto de alto cuando llegue. */
+  .location-map__status {
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    color: var(--sf-muted);
+    font-size: var(--sf-font-size-base);
+    font-weight: var(--sf-weight-medium);
+    line-height: var(--sf-line-height-base);
+  }
+
+  /* --- Desktop ---------------------------------------------------------- */
+  /* El bloque .location se abre en desktop (`display: contents`) y sus piezas
+     pasan a formar parte del bloque de direccion: el panel deja el tope de 350 y
+     ocupa la columna entera, alineado con los campos que tiene debajo. Y con
+     mas alto, que ahi sobra pantalla y un mapa mas grande es menos arrastre
+     para llegar al mismo portal. */
+  @media (min-width: 768px) {
+    .location-map {
+      max-width: none;
+      margin-inline: 0;
+      /* Y un respiro por debajo. El bloque de direccion lleva un ritmo de 12,
+         que entre dos campos esta bien pero deja los campos escritos pegados al
+         mapa: con estos 12 mas, el panel se lee como una pieza aparte de la
+         direccion que se escribe debajo. En movil no hace falta —alli la columna
+         ya separa a 24— y por eso vive dentro del breakpoint. */
+      margin-bottom: var(--sf-space-3);
+    }
+
+    .location-map__canvas {
+      height: clamp(280px, 42dvh, 360px);
+    }
+  }
+</style>
