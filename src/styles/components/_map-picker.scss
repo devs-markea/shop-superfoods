@@ -106,8 +106,9 @@
   }
 }
 
-// Element: el aviso mientras carga el SDK. Ocupa el hueco entero para que la
-// hoja no de un salto de alto cuando el mapa aparece.
+// Element: el aviso sobre el hueco del mapa. Sirve para los dos momentos en los
+// que no hay mapa que ensenar —mientras carga, y si no llego a cargar— y ocupa el
+// hueco entero para que la hoja no de un salto de alto en ninguno de ellos.
 .map-picker__status {
   position: absolute;
   inset: 0;
@@ -121,6 +122,7 @@
   font-weight: var(--sf-weight-medium);
   line-height: var(--sf-line-height-base);
 }
+
 
 // Element: el buscador de Google, encima del mapa.
 //
@@ -139,14 +141,24 @@
   }
 }
 
-// Bajo el mapa no va nada: la direccion del pin no se rotula aqui (ver
-// LocationPicker.astro). El cierre de la hoja es el boton de aceptar.
+// Bajo el mapa no va nada: la direccion del pin no se rotula aqui. El cierre de
+// la hoja es el boton de aceptar. Ver LocationPicker.astro.
 
-// Element: el respaldo, cuando el mapa no se puede usar. Es la hoja de antes del
-// mapa —abrir Maps y pegar el enlace—, con el mismo ritmo que el resto de la
-// hoja.
-.map-picker__fallback {
+// Element: el respaldo, cuando el mapa no se pudo cargar. Releva al mapa entero
+// —no convive con el— y pide la posicion al dispositivo. Mismo ritmo que el resto
+// de la hoja, para que el cambio de piel no se lea como otra pantalla.
+//
+// El boton lleva icono y texto, asi que necesita la misma fila que los botones de
+// icono del proyecto: .btn de Bootstrap no centra su contenido en linea.
+.map-picker__offline {
   display: flex;
   flex-direction: column;
   gap: var(--sf-space-4);
+
+  .btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sf-space-2);
+  }
 }

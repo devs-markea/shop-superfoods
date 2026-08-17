@@ -36,7 +36,8 @@ let pending: Promise<typeof google.maps> | null = null;
  *
  * Rechaza —sin ruido en consola por su cuenta— cuando no se puede usar: sin
  * clave, con una clave rechazada, sin red o si tarda demasiado. Quien llama
- * decide que hacer con eso; en esta tienda, ofrecer la hoja de pegar el enlace.
+ * decide que hacer con eso; en esta tienda, decirlo en la hoja y dejar que el
+ * pedido siga con la direccion escrita.
  */
 export function loadGoogleMaps(key: string | undefined): Promise<typeof google.maps> {
   if (pending) return pending;

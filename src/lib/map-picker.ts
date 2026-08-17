@@ -38,18 +38,28 @@
 // confirma el sitio es el mapa, con sus nombres de calle pintados y el pin sobre
 // el techo; la direccion escrita aparece al aceptar, en /datos, ya resuelta.
 //
-// SIN MAPA SE SIGUE PUDIENDO
+// SI EL MAPA NO CARGA, EL RESPALDO ES EL DISPOSITIVO
 //
-// Sin clave configurada, con una clave rechazada o sin red, la hoja cae a lo que
-// habia antes: abrir Google Maps aparte y pegar aqui el enlace. Es el mismo
-// trabajo —traer un punto de Maps— por el camino que no depende de nadie.
+// Sin clave, con una clave rechazada, sin red o con el script de Google bloqueado,
+// la hoja se queda sin mapa. Entonces —y SOLO entonces— ofrece la posicion del
+// dispositivo, que es el otro sitio de donde puede salir un punto sin pedirle al
+// comprador que copie nada.
+//
+// Con el filtro de precision puesto, que ahi importa mas que en ningun otro sitio:
+// no hay mapa donde ver si el punto cae en su calle o en otra ciudad, asi que lo
+// unico que separa un GPS de una posicion deducida de la IP es `coords.accuracy`.
+// Lo que pase de MAX_ACCURACY_METERS no se acepta, y se dice por que.
+//
+// Si tampoco hay posicion utilizable, la hoja lo cuenta y ya: la ubicacion es
+// OPCIONAL. Lo que hace falta para que salga el pedido es la direccion escrita del
+// formulario de detras, y lo unico que se pierde es la cotizacion previa del
+// envio, de la que ya avisa el resumen con su "Por cotizar".
 //
 // Solo navegador. Lo consume src/scripts/delivery-form.ts, que es quien sabe que
 // hacer con el punto: rotularlo, cotizarlo y guardarlo.
 // ---------------------------------------------------------------------------
 
 import { loadGoogleMaps } from './google-maps.ts';
-import { isShortMapsLink, parseCoords } from './shipping.ts';
 
 /** Centro de Cancun. Donde abre el mapa cuando no hay punto previo. */
 const CANCUN = { lat: 21.1619, lng: -86.8515 };
@@ -57,6 +67,18 @@ const CANCUN = { lat: 21.1619, lng: -86.8515 };
 /** Zoom de ciudad, para buscar; y el de portal, cuando ya hay un punto. */
 const CITY_ZOOM = 13;
 const SPOT_ZOOM = 18;
+
+/**
+ * Hasta que imprecision se acepta una posicion del dispositivo, en metros.
+ *
+ * Un GPS da decenas de metros y una posicion por wifi, unos cientos. Lo que pasa
+ * de aqui viene de la IP del proveedor —decenas de kilometros, a veces otra
+ * ciudad— y con eso el envio se cotiza contra un trayecto que nadie va a hacer.
+ *
+ * Solo se aplica al respaldo, y ahi es la unica defensa que queda: con el mapa
+ * delante, un punto malo se ve y se corrige arrastrando; sin mapa, nadie lo mira.
+ */
+const MAX_ACCURACY_METERS = 5000;
 
 export interface MapPicker {
   /** Abre la hoja, centrada en `start` si lo hay. */
@@ -78,15 +100,16 @@ export function createMapPicker(onPick: (lat: number, lng: number) => void): Map
 
   const root = sheet.querySelector<HTMLElement>('[data-map-picker]');
   const canvas = sheet.querySelector<HTMLElement>('[data-map-canvas]');
+  const stage = sheet.querySelector<HTMLElement>('[data-map-stage]');
   const searchSlot = sheet.querySelector<HTMLElement>('[data-map-search]');
   const applyButton = sheet.querySelector<HTMLButtonElement>('[data-map-apply]');
   const locateButton = sheet.querySelector<HTMLButtonElement>('[data-map-locate]');
-  const fallback = sheet.querySelector<HTMLElement>('[data-map-fallback]');
   const status = sheet.querySelector<HTMLElement>('[data-map-status]');
 
-  const manualInput = sheet.querySelector<HTMLInputElement>('[data-manual-input]');
-  const manualError = sheet.querySelector<HTMLElement>('[data-manual-error]');
-  const manualApply = sheet.querySelector<HTMLButtonElement>('[data-manual-apply]');
+  // El respaldo, que solo se destapa si el mapa no llega a cargar.
+  const offline = sheet.querySelector<HTMLElement>('[data-map-offline]');
+  const offlineError = sheet.querySelector<HTMLElement>('[data-map-offline-error]');
+  const geolocateButton = sheet.querySelector<HTMLButtonElement>('[data-map-geolocate]');
 
   /**
    * Donde ABRE el mapa. El punto que se confirma no sale de aqui: lo dice el
@@ -103,20 +126,82 @@ export function createMapPicker(onPick: (lat: number, lng: number) => void): Map
     status.hidden = !message;
   };
 
-  /**
-   * Cae al respaldo: el mapa no se puede usar y la hoja pasa a pedir el enlace.
-   *
-   * No se cuenta por que —"la clave no esta configurada" no es asunto de quien
-   * esta comprando—: se dice que hay que indicarla por el otro camino, que es lo
-   * unico que puede hacer al respecto.
-   */
-  const useFallback = (): void => {
-    root?.setAttribute('hidden', '');
-    applyButton?.setAttribute('hidden', '');
-    fallback?.removeAttribute('hidden');
-    setStatus(null);
-    manualInput?.focus();
+  const showOfflineError = (message: string | null): void => {
+    if (!offlineError) return;
+    offlineError.textContent = message ?? '';
+    offlineError.hidden = !message;
   };
+
+  /**
+   * El mapa no se puede usar: sin clave, con una clave rechazada, sin red o
+   * demasiado lento.
+   *
+   * La hoja cambia de piel: se va el mapa con su buscador y su boton de aceptar
+   * —sin mapa, aceptar confirmaria el centro de Cancun como si fuera el domicilio
+   * de alguien— y queda el respaldo, que pide la posicion al dispositivo.
+   *
+   * No se cuenta POR QUE fallo: "la clave no esta configurada" no es asunto de
+   * quien esta comprando. Solo que no hay mapa y que hay otra forma.
+   */
+  const showFailure = (): void => {
+    searchSlot?.setAttribute('hidden', '');
+    stage?.setAttribute('hidden', '');
+    applyButton?.setAttribute('hidden', '');
+    setStatus(null);
+
+    // Sin geolocalizacion tampoco hay respaldo que ofrecer: el boton se retira en
+    // lugar de quedarse ahi para fallar al pulsarlo. El texto de la hoja sigue
+    // diciendo lo que hay que hacer, que es escribir la direccion.
+    if (!('geolocation' in navigator)) geolocateButton?.setAttribute('hidden', '');
+
+    offline?.removeAttribute('hidden');
+  };
+
+  // El respaldo en si: la posicion del dispositivo, con su filtro de precision.
+  //
+  // Aqui el punto se ACEPTA a ciegas —no hay mapa donde verlo— asi que se rechaza
+  // todo lo que no parezca un GPS de verdad. Es preferible quedarse sin cotizacion
+  // que cobrar un envio medido contra la centralita del proveedor de internet.
+  //
+  // Lo que si se puede comprobar despues: el rotulo que queda bajo el boton en
+  // /datos enlaza al punto en Google Maps.
+  geolocateButton?.addEventListener('click', () => {
+    if (!('geolocation' in navigator)) return;
+
+    geolocateButton.disabled = true;
+    showOfflineError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      ({ coords }) => {
+        geolocateButton.disabled = false;
+
+        if (coords.accuracy > MAX_ACCURACY_METERS) {
+          showOfflineError(
+            'Tu dispositivo dio una ubicacion aproximada, de varios kilometros, y con ella no podemos calcular el envio. Escribe tu direccion en el formulario y lo confirmamos al finalizar.',
+          );
+          return;
+        }
+
+        sheet.close();
+        onPick(coords.latitude, coords.longitude);
+      },
+      () => {
+        // Permiso denegado, sin senal o agotado el plazo.
+        geolocateButton.disabled = false;
+        showOfflineError(
+          'No pudimos obtener tu ubicacion. Escribe tu direccion en el formulario y confirmamos el envio al finalizar tu pedido.',
+        );
+      },
+      // enableHighAccuracy pide el sensor de verdad en lugar de la posicion
+      // deducida de la red, que es la que se va a otra ciudad. Tarda mas —de ahi
+      // los 20 segundos— y gasta mas bateria, y las dos cosas valen la pena
+      // cuando de ese punto sale un importe.
+      //
+      // maximumAge en 0: nada de reutilizar una posicion cacheada de antes, que
+      // puede ser de otro sitio.
+      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
+    );
+  });
 
   /** Arranca el mapa. Se hace una vez, y siempre con la hoja ya abierta. */
   const boot = async (key: string): Promise<void> => {
@@ -207,6 +292,10 @@ export function createMapPicker(onPick: (lat: number, lng: number) => void): Map
   // La diana: mueve la camara donde este el comprador. No elige el punto —de eso
   // se encarga el pin— asi que una lectura de las malas, deducida de la IP, se ve
   // en el mapa y se corrige arrastrando en lugar de acabar en el pedido.
+  //
+  // Y por eso AQUI no hay filtro de precision, al contrario que en el respaldo de
+  // abajo: mover la camara a un sitio equivocado no cuesta nada, el mapa esta
+  // delante. Lo que se filtra es aceptar un punto sin poder verlo.
   locateButton?.addEventListener('click', () => {
     if (!('geolocation' in navigator) || !map) return;
 
@@ -227,32 +316,11 @@ export function createMapPicker(onPick: (lat: number, lng: number) => void): Map
     );
   });
 
-  // --- El respaldo: pegar el enlace de Maps ---------------------------------
-
-  manualApply?.addEventListener('click', () => {
-    const text = manualInput?.value ?? '';
-    const spot = parseCoords(text);
-
-    if (!spot) {
-      if (manualError) {
-        // Un enlace corto no lleva el punto dentro: hay que abrirlo para que Maps
-        // lo despliegue, y eso no lo puede hacer el navegador contra otro dominio.
-        manualError.textContent = isShortMapsLink(text)
-          ? 'Ese enlace corto no trae las coordenadas. Abrelo en Maps y copia el enlace largo de la barra de direcciones.'
-          : 'No reconocimos ese enlace. Pega el enlace de Google Maps o las coordenadas, como "21.1421, -86.8235".';
-        manualError.hidden = false;
-      }
-      return;
-    }
-
-    sheet.close();
-    if (manualInput) manualInput.value = '';
-    onPick(spot.lat, spot.lng);
-  });
-
   return {
     open(start) {
-      if (manualError) manualError.hidden = true;
+      // El aviso del respaldo es del intento anterior: reabrir la hoja no puede
+      // empezar con un "no pudimos obtener tu ubicacion" de hace dos minutos.
+      showOfflineError(null);
 
       // La hoja se abre ANTES de montar el mapa, y no al reves: Google mide el
       // hueco al construirse, y dentro de un <dialog> cerrado ese hueco es cero.
@@ -282,7 +350,7 @@ export function createMapPicker(onPick: (lat: number, lng: number) => void): Map
           // cuatro, porque la salida es la misma. Se permite reintentar en la
           // siguiente apertura por si fue la red.
           booting = null;
-          useFallback();
+          showFailure();
         });
     },
   };
