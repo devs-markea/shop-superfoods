@@ -209,8 +209,12 @@ const COORD_PATTERNS = [
  * Devuelve null si no hay ninguno reconocible o si cae fuera del planeta. El
  * (0, 0) tambien se descarta: es el resultado tipico de un campo a medio pegar, y
  * esta en el Atlantico.
+ *
+ * Interna: la unica puerta de entrada es coordsFromMapsUrl(), justo debajo. Fue
+ * publica mientras la hoja de la ubicacion aceptaba texto pegado a mano; desde que
+ * el punto se senala en el mapa, nadie de fuera trae coordenadas escritas.
  */
-export function parseCoords(text: string | undefined | null): { lat: number; lng: number } | null {
+function parseCoords(text: string | undefined | null): { lat: number; lng: number } | null {
   const input = (text ?? '').trim();
   if (!input) return null;
 
@@ -229,18 +233,6 @@ export function parseCoords(text: string | undefined | null): { lat: number; lng
   }
 
   return null;
-}
-
-/**
- * Si el texto es un enlace corto de Maps (`maps.app.goo.gl`).
- *
- * Esos no llevan las coordenadas dentro: hay que seguir la redireccion para
- * saber a donde apuntan, y eso el navegador no lo puede hacer contra otro
- * dominio. Se reconocen aparte para poder decir que hay que abrirlos y copiar el
- * enlace largo, en lugar de un "no lo entendemos" que no ayuda a nadie.
- */
-export function isShortMapsLink(text: string | undefined | null): boolean {
-  return /\b(?:maps\.app\.goo\.gl|goo\.gl\/maps)\b/i.test(text ?? '');
 }
 
 /**

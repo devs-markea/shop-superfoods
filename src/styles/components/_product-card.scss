@@ -26,6 +26,10 @@
 }
 
 // Element: media — imagen 80x80 anclada arriba
+//
+// El gris de aqui es el esqueleto en reposo: la caja llega con .skeleton puesta y
+// al retirarse queda este mismo color, asi que la foto que tarda late y la que ya
+// esta se apoya en el gris de siempre. Ver components/_skeleton.scss.
 .product-card__media {
   flex: 0 0 80px;
   width: 80px;
@@ -186,6 +190,82 @@
 
   &:hover {
     box-shadow: var(--sf-shadow-card);
+  }
+}
+
+// Modifier: la tarjeta como esqueleto mientras la rejilla se rehace. Lo aplica
+// src/scripts/category-filter.ts al cambiar de categoria, y lo retira medio segundo
+// despues.
+//
+// A diferencia de la clase .skeleton de la foto, esto NO espera ninguna descarga:
+// el contenido esta debajo, entero, desde el principio. Marca un cambio que de otro
+// modo no se ve —filtrar es instantaneo, y si los platillos que quedan son los que
+// ya estaban, la rejilla se queda igual que estaba—.
+//
+// Ninguna pieza se saca del flujo: el texto se vuelve barra en su sitio y lo que no
+// puede ser barra se esconde reservando su hueco. Asi la tarjeta mide lo mismo antes
+// y despues, y al resolverse no se mueve nada.
+.product-card--loading {
+  // La foto, aunque su imagen ya este cargada: hay que esconderla para que el
+  // relleno se vea, porque la cubre entera.
+  .product-card__media {
+    @include sf-skeleton;
+  }
+
+  .product-card__image {
+    visibility: hidden;
+  }
+
+  // El titulo se pinta en el CONTENEDOR y sus hijos se esconden. En el enlace no
+  // valdria `color: transparent`: lleva .text-reset, que es una utilidad de
+  // Bootstrap y viene con !important, asi que la barra tiene que salir de la fila.
+  .product-card__title {
+    @include sf-skeleton;
+    border-radius: var(--sf-radius-sm);
+
+    > * {
+      visibility: hidden;
+    }
+  }
+
+  // Aqui si: con el texto transparente la barra mide lo que mide la linea de verdad
+  // —dos lineas en la descripcion, el ancho del importe en el precio— en lugar de
+  // una barra inventada que al resolverse cambiaria de tamano.
+  .product-card__description,
+  .product-card__price {
+    @include sf-skeleton;
+    border-radius: var(--sf-radius-sm);
+    color: transparent;
+  }
+
+  // Lo que no puede ser barra sin quedar en ridiculo: la insignia de promocion, el
+  // "Desde", el precio tachado, la aclaracion del descuento, la etiqueta de no
+  // disponible y el boton de agregar.
+  .product-card__from,
+  .price-was,
+  .product-card__deal,
+  .tag,
+  .product-card__add {
+    visibility: hidden;
+  }
+
+  // El barrido corre mas rapido que el de la foto: el suyo puede repetirse el rato
+  // que tarde una descarga, y este solo dispone de los 480ms del filtro (ver HOLD en
+  // category-filter.ts). A 1.4s la banda apenas asomaria por el borde izquierdo y lo
+  // que se veria seria un gris plano. A 700 cruza dos tercios de la caja, que es lo
+  // que se lee como "esto se esta rehaciendo".
+  //
+  // Sale corto a proposito: la banda se va a mitad de viaje, y una que termina y
+  // vuelve a empezar diria que la espera sigue.
+  //
+  // VA AL FINAL DEL BLOQUE, y no junto a cada relleno: `animation` es un atajo y
+  // repone la duracion por defecto, asi que un include posterior se llevaria por
+  // delante esta linea. Con la misma especificidad decide el orden.
+  .product-card__media,
+  .product-card__title,
+  .product-card__description,
+  .product-card__price {
+    animation-duration: 700ms;
   }
 }
 
