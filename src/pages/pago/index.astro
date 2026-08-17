@@ -8,6 +8,7 @@ import PaymentSummary from '../../components/PaymentSummary.astro';
 import CartSummary from '../../components/CartSummary.astro';
 import LegalNote from '../../components/LegalNote.astro';
 import ActionBar from '../../components/ActionBar.astro';
+import DeviceFingerprint from '../../components/DeviceFingerprint.astro';
 import ScheduleSheet from '../../components/ScheduleSheet.astro';
 import LocationSheet from '../../components/LocationSheet.astro';
 import Footer from '../../components/Footer.astro';
@@ -259,3 +260,10 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   // Abre las hojas del horario y la ubicacion desde la barra de desktop.
   import '../../scripts/sheet';
 </script>
+
+{/*
+  La huella de dispositivo de Mercado Pago. Esta es una de las dos pantallas que
+  la montan: aqui nace el cobro del checkout. Ver el componente, que explica que
+  es, que no es —no es el SDK y no lleva clave— y hasta donde viaja el valor.
+*/}
+<DeviceFingerprint />
