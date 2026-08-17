@@ -1,0 +1,63 @@
+---
+import BrandIcon, { type BrandName } from './BrandIcon.astro';
+
+// El control de las pantallas de cierre EN DESKTOP: cierra la columna y releva a
+// la barra de accion del fondo, que de md hacia arriba no se pinta.
+//
+// No es otra accion: es la MISMA que la barra —mismo rotulo, mismo icono, mismo
+// destino y mismo aviso—, solo que con la forma de la columna (320 centrados en
+// lugar de una barra fija). Por eso recibe las mismas props que ActionBar y en la
+// pantalla los dos se escriben con los mismos valores: lo que cambia con el ancho
+// es la forma del control, nunca lo que hace.
+//
+// Ver components/_confirmation-page.scss.
+
+interface Props {
+  /** Texto del boton. */
+  label: string;
+  /** Si se pasa, el control es un enlace en lugar de un submit. */
+  href?: string;
+  /** Icono opcional a la izquierda del label, separado 8px. */
+  icon?: BrandName;
+  /**
+   * Color del boton. Dorado por defecto; `whatsapp` cuando lleva al chat de la
+   * tienda, igual que en la barra.
+   */
+  variant?: 'primary' | 'whatsapp';
+  /** Aviso corto bajo el boton, centrado. */
+  note?: string;
+}
+
+const { label, href, icon, variant = 'primary', note } = Astro.props;
+
+const buttonClass = [
+  'confirmation-page__cta-button',
+  'btn',
+  'btn-primary',
+  variant === 'whatsapp' && 'confirmation-page__cta-button--whatsapp',
+]
+  .filter(Boolean)
+  .join(' ');
+---
+
+<div class="confirmation-page__cta">
+  {
+    href ? (
+      <a class={buttonClass} href={href}>
+        {icon && <BrandIcon name={icon} />}
+        <span>{label}</span>
+      </a>
+    ) : (
+      // Sin destino el control queda inerte igual que en la barra: un submit
+      // fuera de un formulario no navega ni recarga, que es lo que se quiere
+      // cuando la tienda no tiene telefono configurado. Dentro del formulario del
+      // reintento de /confirmado, en cambio, este mismo boton es el que cobra.
+      <button class={buttonClass} type="submit">
+        {icon && <BrandIcon name={icon} />}
+        <span>{label}</span>
+      </button>
+    )
+  }
+
+  {note && <p class="confirmation-page__cta-note">{note}</p>}
+</div>

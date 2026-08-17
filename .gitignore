@@ -2,7 +2,8 @@
 dist/
 # generated types
 .astro/ 
-  
+   
+elementos-shared/
 # dependencies
 node_modules/
 docs/

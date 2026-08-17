@@ -14,14 +14,15 @@
 //   - mercado_pago:  no hay pantalla intermedia. El pedido se cierra aqui mismo y
 //     la siguiente pantalla ya es el acuse.
 //
-// Pendiente: el importe libre de "Otro" (no viene en la spec) y la redireccion a
-// la pasarela de Mercado Pago, que no forma parte de las cuatro APIs.
+// Pendiente: la redireccion a la pasarela de Mercado Pago, que no forma parte de
+// las cuatro APIs.
 
 import { formatPrice } from '../lib/price';
 import { paintCartSummary } from '../lib/cart-summary';
 import { shippingFromState } from '../lib/shipping';
 import { toPaymentMethod, type PaymentMethod } from '../lib/checkout';
-import { confirmDraft, patchDraft } from '../lib/checkout-draft';
+import { DELIVERY_SCREEN, confirmDraft, patchDraft } from '../lib/checkout-draft';
+import { parseTipAmount } from '../lib/tips';
 
 // Metodos que confirman en su propia pantalla, y cual. El pedido se cierra alli:
 // lo que cambia entre las dos es lo que hay que leer antes de confirmar —una cuenta
@@ -55,9 +56,14 @@ if (form) {
 
   const amount = (name: string): number => Number.parseFloat(form.dataset[name] ?? '') || 0;
 
+  // La propina es SIEMPRE la del radio marcado, tambien cuando se escribio a
+  // mano: "Otro" lleva el importe libre en su `value`, no un 0 fijo. Asi el
+  // total, el borrador y el checkout leen todos el mismo sitio, y el campo del
+  // importe libre no es un caso aparte para nadie mas que para el bloque de
+  // abajo, que es quien lo mantiene al dia.
   const selectedTip = (): number => {
     const selected = form.querySelector<HTMLInputElement>('[data-tip]:checked');
-    return Number.parseFloat(selected?.value ?? '') || 0;
+    return parseTipAmount(selected?.value) ?? 0;
   };
 
   const recalculate = (): void => {
@@ -83,6 +89,87 @@ if (form) {
 
   form.addEventListener('change', recalculate);
   recalculate();
+
+  // --- El importe libre de "Otro" ----------------------------------------
+  //
+  // Dos elementos y un solo dato: lo que se teclea en el campo se copia al
+  // `value` del radio, que es de donde lo lee todo lo demas. El campo no tiene
+  // `name` y no viaja en el formulario; es un teclado para el radio.
+  //
+  // El panel se abre y se cierra solo, con CSS (ver components/_tip.scss). Aqui
+  // no se toca: lo unico que hace falta de este lado es el valor.
+  const customOption = form.querySelector<HTMLInputElement>('[data-tip-custom]');
+  const customAmount = form.querySelector<HTMLInputElement>('[data-tip-amount]');
+  const customLabel = form.querySelector<HTMLElement>('[data-tip-custom-label]');
+
+  if (customOption && customAmount) {
+    customAmount.addEventListener('input', () => {
+      // Solo digitos, y sin ceros a la izquierda: la propina es un entero en
+      // pesos. El `maxlength` del campo pone el techo, asi que lo que se puede
+      // teclear es exactamente lo que parseTipAmount() acepta.
+      //
+      // Lo que haya tras una coma o un punto se descarta ENTERO en vez de
+      // limpiarse: pegar "12.50" y quedarse con sus digitos daria 1250, cien
+      // veces la propina que se queria dejar. Cortando por el separador da 12,
+      // que se queda corto —y quedarse corto en un cobro se corrige mirando; el
+      // 1250 se descubre en el estado de cuenta—.
+      const digits = customAmount.value
+        .split(/[.,]/)[0]
+        .replace(/\D/g, '')
+        .replace(/^0+(?=\d)/, '');
+
+      // Solo si cambio: reescribir el valor en cada pulsacion mandaria el cursor
+      // al final y no se podria corregir un digito del medio.
+      if (digits !== customAmount.value) customAmount.value = digits;
+
+      customOption.value = digits;
+
+      // Escribir es elegir. Si se llega al campo con otro importe marcado —por
+      // el tabulador, o volviendo sobre lo escrito— la eleccion pasa a ser esta,
+      // que si no el total no cuadraria con lo que se esta viendo.
+      customOption.checked = true;
+
+      // Ninguno de los dos cambios de arriba dispara `change`, asi que la cuenta
+      // se rehace desde aqui.
+      recalculate();
+    });
+
+    // Elegir "Otro" con el dedo o el raton deja el cursor donde hay que
+    // escribir, sin tener que buscar el campo. Pero SOLO asi:
+    //
+    // Los importes son un grupo de radios, y dentro de un grupo las flechas
+    // mueven Y eligen. Si el foco saltara tambien entonces, recorrer los
+    // importes con el teclado terminaria siempre dentro del campo de texto y
+    // habria que salir con Mayus+Tab para seguir mirando: se sale, pero nadie
+    // espera que mirar la ultima opcion le meta en un formulario.
+    //
+    // De ahi la marca del puntero. Se pone al pulsar sobre el rotulo —que es lo
+    // que se toca, porque el radio esta oculto— y se levanta con cualquier tecla,
+    // para que una pulsacion vieja no acabe robando el foco de una eleccion
+    // hecha con flechas mucho despues.
+    let byPointer = false;
+
+    customLabel?.addEventListener('pointerdown', () => {
+      byPointer = true;
+    });
+
+    form.addEventListener('keydown', () => {
+      byPointer = false;
+    });
+
+    customOption.addEventListener('change', () => {
+      if (!customOption.checked || !byPointer) return;
+      byPointer = false;
+
+      // El panel se abre con CSS, y hasta que el navegador rehaga los estilos el
+      // campo sigue en `visibility: hidden`, que no se puede enfocar. Leer una
+      // medida fuerza ese recalculo aqui mismo. Sigue siendo el mismo gesto del
+      // usuario —nada de esperar a un frame—, que es lo que hace que el teclado
+      // del movil se abra en lugar de quedarse esperando otro toque.
+      void customAmount.offsetWidth;
+      customAmount.focus();
+    });
+  }
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -114,6 +201,19 @@ if (form) {
     const outcome = await confirmDraft(method);
 
     if (!outcome.ok) {
+      // Al borrador le falta algo de la entrega, y esta pantalla no lo pide: aqui
+      // se elige propina y metodo. El aviso nombraria campos que no estan a la
+      // vista, asi que se le lleva al formulario que los tiene.
+      //
+      // Los botones no se vuelven a habilitar, igual que al salir a la pasarela:
+      // lo que sigue es dejar esta pantalla.
+      if (outcome.incomplete) {
+        window.location.assign(DELIVERY_SCREEN);
+        return;
+      }
+
+      // Lo demas si es de aqui —la API rechazo el pedido, o no hubo red— y se
+      // queda escrito donde se pulso.
       showError(outcome.message);
       for (const button of buttons) button.disabled = false;
       return;

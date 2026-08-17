@@ -165,7 +165,12 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 const closed = isClosed(schedule);
 ---
 
-<Layout title={title} description={product?.description}>
+{/*
+  La descripcion puede llegar vacia, y entonces se pasa `undefined` en lugar de
+  "": una cadena vacia pintaria una meta sin contenido, y lo que se quiere ahi es
+  el respaldo del Layout.
+*/}
+<Layout title={title} description={product?.description || undefined}>
   {/* Solo la barra de desktop: en movil la cabecera de esta pantalla es la foto,
       con su control de volver, y dos cabeceras seguidas serian una de mas. */}
   <NavbarDesktop

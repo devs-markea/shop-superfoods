@@ -10,6 +10,10 @@
 //       activo:   borde 2px #D5AA53 - bg #FFFFFF - caja del icono #D5AA531A
 //       inactivo: borde     #EAECF0 - bg #FFFFFF - caja del icono #F8F9FB
 //
+//       caja de una marca (el logo de Mercado Pago), que es apaisada:
+//       movil:   68x40 - radius 20 - bg #F8F9FB - logo 68x28
+//       desktop: 76x32 - sin caja                - logo 76x32
+//
 // El borde se mantiene en 2px en los dos estados. La spec da 1px para el
 // inactivo, pero cambiar de grosor al seleccionar desplazaria el contenido un
 // pixel; el 2px es ademas el que declara el contenedor base y el que usan los
@@ -49,6 +53,22 @@
   transition: background-color var(--sf-transition);
 }
 
+// Modifier: la caja de una marca. El logo es apaisado y no cabe en el cuadrado
+// de 40, asi que en movil la caja se estira a una pastilla de 68x40 —mismo
+// fondo, radio 20— y el logo entra a su tamano de archivo. No hace falta
+// margen: el aire de los lados lo trae dibujado el propio SVG.
+.payment-option__media--logo {
+  flex: 0 0 68px;
+  width: 68px;
+  height: 40px;
+  border-radius: var(--sf-radius-xl);
+}
+
+.payment-option__logo {
+  width: 68px;
+  height: 28px;
+}
+
 // Element: textos
 .payment-option__body {
   display: flex;
@@ -86,7 +106,10 @@
 .btn-check:checked + .payment-option {
   border-color: var(--sf-gold);
 
-  .payment-option__media {
+  // La caja de una marca no se tine de dorado: el logo va con sus colores y el
+  // fondo dorado detras los pone a competir. Que el metodo esta elegido lo dice
+  // el borde, que es lo que se lee de la tarjeta entera.
+  .payment-option__media:not(.payment-option__media--logo) {
     background-color: var(--sf-gold-tint);
   }
 }
@@ -102,5 +125,24 @@
 
   &:hover {
     border-color: var(--sf-border);
+  }
+}
+
+// --- Desktop -------------------------------------------------------------
+@include media-breakpoint-up(md) {
+  // Aqui la marca va sin caja: fuera el fondo y el radio, y el logo crece a
+  // 76x32. Sigue reservando su ancho con `flex-basis` para que el titulo no se
+  // le monte encima.
+  .payment-option__media--logo {
+    flex-basis: 76px;
+    width: 76px;
+    height: 32px;
+    border-radius: 0;
+    background-color: transparent;
+  }
+
+  .payment-option__logo {
+    width: 76px;
+    height: 32px;
   }
 }

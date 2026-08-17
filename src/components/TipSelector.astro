@@ -1,10 +1,13 @@
 ---
+import { isCustomTip, TIP_MAX_DIGITS } from '../lib/tips.ts';
+
 interface Props {
   /** Importe preseleccionado, en MXN. */
   selected?: number;
   /**
-   * Importes configurados por el negocio, ya ordenados por la API. Sin ninguno no
-   * hay selector: quien decide si se pide propina es el panel, no esta pantalla.
+   * Importes que se ofrecen, ya normalizados por src/lib/tips.ts: enteros,
+   * ordenados, sin repetidos y **con el 0 delante**. Sin ninguno no hay selector:
+   * quien decide si se pide propina es el panel, no esta pantalla.
    */
   amounts: number[];
 }
@@ -15,8 +18,15 @@ const { selected = 0, amounts } = Astro.props;
 // de importes del proyecto: son botones estrechos y son cantidades redondas.
 const amountLabel = (amount: number) => `$${amount}`;
 
-// Como el switch y los chips, son radios: la seleccion unica la garantiza el name
-// compartido, sin JavaScript.
+// Si el importe que traemos no es ninguno de los botones, se escribio en "Otro":
+// entonces esa opcion nace marcada y su campo, abierto y con el valor dentro. El
+// panel se despliega sin JavaScript y sin parpadeo, porque el radio ya llega
+// marcado del servidor y el CSS lee ese estado con :has().
+const custom = isCustomTip(selected, amounts);
+const customValue = custom ? String(selected) : '';
+
+// Como el switch y los chips, son radios: la seleccion unica la garantiza el
+// name compartido, sin JavaScript.
 ---
 
 <div class="tip">
@@ -26,6 +36,10 @@ const amountLabel = (amount: number) => `$${amount}`;
     {
       amounts.map((amount) => (
         <>
+          {/* El aria-label del 0: "$0" se lee bien con los ojos, entre otros
+              importes y bajo el rotulo "Propina", pero suelto en un lector de
+              pantalla no dice nada. Y es justo la opcion que hay que poder
+              encontrar. */}
           <input
             class="btn-check"
             type="radio"
@@ -34,6 +48,7 @@ const amountLabel = (amount: number) => `$${amount}`;
             value={amount}
             checked={amount === selected}
             autocomplete="off"
+            aria-label={amount === 0 ? 'Sin propina' : undefined}
             data-tip
           />
           <label class="tip__option" for={`tip-${amount}`}>
@@ -44,18 +59,65 @@ const amountLabel = (amount: number) => `$${amount}`;
     }
 
     {/*
-      "Otro" queda seleccionable pero todavia sin importe: el campo para
-      escribirlo no viene en la spec, asi que suma 0 hasta que se defina.
+      "Otro" ya no es un boton que suma 0: su `value` ES el importe libre, y lo
+      mantiene al dia el script conforme se teclea. Asi el resto del flujo no se
+      entera de que existe un campo —el total, el borrador y el checkout siguen
+      leyendo el radio marcado, como con cualquier otro importe—.
+
+      Nace vacio, que para parseTipAmount() es "todavia no hay importe" y se
+      resuelve como 0: elegir "Otro" y no escribir nada no cobra nada.
     */}
     <input
       class="btn-check"
       type="radio"
       name="tip"
       id="tip-custom"
-      value="0"
+      value={customValue}
+      checked={custom}
       autocomplete="off"
       data-tip
+      data-tip-custom
     />
-    <label class="tip__option" for="tip-custom">Otro</label>
+    <label class="tip__option" for="tip-custom" data-tip-custom-label>Otro</label>
+  </div>
+
+  {/*
+    El campo del importe libre. Vive fuera de .tip__options —que es la fila de
+    botones— y se abre y se cierra con la opcion "Otro". Ver components/_tip.scss:
+    la animacion es de CSS y la dispara el propio radio, no una clase.
+  */}
+  <div class="tip__custom">
+    <div class="tip__custom-clip">
+      <div class="tip__custom-body">
+        {/* Como en /datos: la etiqueta se oculta en movil —donde rotula el
+            placeholder— y se pinta de md hacia arriba, pero existe siempre para
+            que el campo llegue nombrado al lector de pantalla. */}
+        <label class="field-label" for="tip-amount">Otra cantidad</label>
+
+        <div class="tip__amount">
+          <span class="tip__amount-currency" aria-hidden="true">$</span>
+
+          {/*
+            `text` con teclado numerico, y no `type="number"`: el numerico trae
+            la rueda del raton, las flechitas y acepta "e", "+" y comas segun el
+            navegador, y cuando lo escrito no le cuadra devuelve `value` vacio —o
+            sea, la propina desaparece mientras se corrige—. Aqui solo hacen
+            falta digitos, y de esos se encarga el script.
+          */}
+          <input
+            class="tip__amount-input"
+            type="text"
+            id="tip-amount"
+            inputmode="numeric"
+            pattern="[0-9]*"
+            maxlength={TIP_MAX_DIGITS}
+            placeholder="Otra cantidad"
+            autocomplete="off"
+            value={customValue}
+            data-tip-amount
+          />
+        </div>
+      </div>
+    </div>
   </div>
 </div>

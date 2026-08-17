@@ -5,7 +5,11 @@ interface Props {
   id: string;
   value: string;
   title: string;
-  icon: IconName;
+  /**
+   * Icono del sistema. Se puede omitir cuando el metodo llena la caja con su
+   * propia marca por el slot `media`.
+   */
+  icon?: IconName;
   /** Texto secundario bajo el titulo. */
   note?: string;
   /** Etiqueta gris en lugar del texto secundario. */
@@ -27,6 +31,16 @@ const {
 
 // Contenedor reutilizable: el icono y los textos llegan por props, asi sirve
 // para cualquier metodo de pago. El estado activo lo lleva el radio.
+//
+// La caja del icono tiene ademas un slot: los metodos de una marca —Mercado
+// Pago— ponen ahi su logo, que es un archivo con sus colores y no un trazo del
+// sistema de 20x20. Sin nada en el slot, manda el `icon` de siempre.
+//
+// Llenar el slot cambia la caja, no solo lo que lleva dentro: un logo es
+// apaisado y no cabe en el cuadrado de 40. Se deduce de aqui en lugar de pedir
+// una prop mas porque son la misma decision dicha dos veces, y dos knobs que
+// tienen que coincidir acaban no coincidiendo.
+const hasLogo = Astro.slots.has('media');
 ---
 
 <input
@@ -44,8 +58,10 @@ const {
   class:list={['payment-option', { 'payment-option--disabled': disabled }]}
   for={id}
 >
-  <span class="payment-option__media">
-    <Icon name={icon} />
+  <span
+    class:list={['payment-option__media', { 'payment-option__media--logo': hasLogo }]}
+  >
+    <slot name="media">{icon && <Icon name={icon} />}</slot>
   </span>
 
   <span class="payment-option__body">
