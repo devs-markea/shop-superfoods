@@ -1,0 +1,80 @@
+# Shop Superfoods — que puede rastrear cada quien.
+#
+# El menu y las fichas de platillo son contenido publico y se rastrean sin
+# reservas: son justamente lo que la tienda quiere que se encuentre.
+#
+# Las siete pantallas del pedido no lo son. No son contenido: son la sesion de
+# una persona —su carrito, su direccion, su pedido—, y ademas estan guardadas
+# del lado del servidor, asi que lo unico que un rastreador puede sacar de ellas
+# es un carrito vacio o una redireccion al menu.
+
+User-agent: *
+# Permanente: para los buscadores no se bloquea nada. Un `Disallow` vacio es la
+# forma canonica de decirlo —y no `Allow: /`, que empatado en longitud con el
+# `Disallow: /` de abajo GANARIA, porque ante dos reglas igual de especificas
+# manda la menos restrictiva: el bloqueo de staging se quedaria en nada—.
+Disallow:
+
+# ===========================================================================
+# STAGING — TEMPORAL. QUITAR AL PUBLICAR.
+# ===========================================================================
+#
+# Hoy la tienda solo vive en la URL de pruebas (shop-superfoods.vercel.app): no
+# hay produccion todavia. Mientras sea asi no se rastrea NADA, tampoco el menu ni
+# las fichas de platillo. Que un buscador indexe el ensayo tiene dos costes: la
+# gente llega a una tienda que no vende, y cuando exista el dominio de verdad
+# habra dos sitios con el mismo contenido compitiendo entre si.
+#
+# Al publicar hay que borrar las DOS lineas marcadas `# STAGING` de este fichero
+# —esta y la del grupo de motores de IA, mas abajo— y no hace falta tocar nada
+# mas: lo que queda debajo son las reglas definitivas.
+#
+# Mientras el bloqueo este puesto, la meta `noindex` de las pantallas del pedido
+# no se llega a leer —nadie las rastrea—, y no importa: aqui no hay nada que
+# sacar del indice porque no hay nada dentro.
+Disallow: /   # STAGING
+
+# Esas siete NO se bloquean aqui, a proposito. Van con
+# <meta name="robots" content="noindex, nofollow"> en el marcado (ver
+# src/layouts/Layout.astro), y son dos cosas distintas: un Disallow impide
+# RASTREAR y el noindex saca del INDICE. Bloquear el rastreo dejaria sin leer
+# justamente la etiqueta que las saca.
+#
+# Y hay que sacarlas, porque Google llega solo: la barra de la tienda enlaza a
+# /carrito desde todas las paginas. Con el rastreo bloqueado, esa URL puede
+# acabar listada sin contenido —"no hay descripcion disponible para este
+# resultado"—; con el rastreo permitido, el buscador lee el noindex y la retira.
+
+# --- Motores de IA ---
+#
+# Estos son otra cosa: no procesan la meta robots —algunos ni siquiera
+# renderizan el HTML— y lo unico que leen es este fichero. Asi que a ellos si se
+# les cierra el paso, que es la unica forma que hay de decirselo.
+#
+# El menu se les deja abierto: que la tienda salga citada es bueno. Lo que no
+# puede salir en ninguna respuesta es el pedido de nadie.
+User-agent: GPTBot
+User-agent: OAI-SearchBot
+User-agent: ChatGPT-User
+User-agent: ClaudeBot
+User-agent: Claude-User
+User-agent: Claude-SearchBot
+User-agent: anthropic-ai
+User-agent: PerplexityBot
+User-agent: Perplexity-User
+User-agent: Google-Extended
+User-agent: Applebot-Extended
+User-agent: CCBot
+User-agent: Bytespider
+User-agent: meta-externalagent
+User-agent: Amazonbot
+User-agent: Diffbot
+User-agent: cohere-ai
+# Mientras esto sea staging, a estos tampoco se les abre el menu: no hay tienda
+# que citar todavia. Es la segunda de las dos lineas que se borran al publicar.
+Disallow: /   # STAGING
+Disallow: /carrito
+Disallow: /datos
+Disallow: /pago
+Disallow: /recibido
+Disallow: /confirmado

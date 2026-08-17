@@ -188,7 +188,23 @@ export function toPaymentMethod(value: string | undefined): PaymentMethod | null
 
 export type CheckoutOutcome =
   | { ok: true; order: StoreOrder }
-  | { ok: false; message: string; status?: number };
+  | {
+      ok: false;
+      message: string;
+      status?: number;
+      /**
+       * El pedido no llego a salir porque al borrador le falta algo de la
+       * entrega. Se distingue del resto de fallos porque no se arregla donde se
+       * produce: las tres pantallas que cierran el pedido —el resumen y las dos
+       * de confirmacion— no tienen los campos que el aviso nombra, asi que
+       * escribirlo alli deja al comprador delante de algo que no puede atender.
+       *
+       * Quien lo reciba lleva a DELIVERY_SCREEN en lugar de rotularlo. Los demas
+       * fallos si son de la pantalla en la que ocurren —un rechazo de la API, la
+       * conexion— y se quedan escritos donde estan.
+       */
+      incomplete?: boolean;
+    };
 
 const GENERIC_ERROR = 'No pudimos crear tu pedido. Intentalo de nuevo.';
 

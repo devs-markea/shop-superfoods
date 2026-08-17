@@ -19,7 +19,17 @@ const order = form?.dataset.order;
 
 if (form && order) {
   const error = form.querySelector<HTMLElement>('[data-checkout-error]');
-  const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+  // Dos botones y no uno: el de la barra de movil y el que la releva en desktop.
+  // Solo uno se ve a la vez —lo decide el breakpoint— pero desde aqui no se sabe
+  // cual, asi que se apagan los dos.
+  const buttons = form.querySelectorAll<HTMLButtonElement>('button[type="submit"]');
+
+  const setBusy = (busy: boolean): void => {
+    buttons.forEach((button) => {
+      button.disabled = busy;
+    });
+  };
 
   const showError = (message: string | null): void => {
     if (!error) return;
@@ -31,17 +41,17 @@ if (form && order) {
     event.preventDefault();
 
     showError(null);
-    if (button) button.disabled = true;
+    setBusy(true);
 
     const attempt = await startPayment(order);
 
     if (!attempt.ok) {
       showError(attempt.message);
-      if (button) button.disabled = false;
+      setBusy(false);
       return;
     }
 
-    // El boton no se vuelve a habilitar: lo que sigue es salir de la tienda.
+    // Los botones no se vuelven a habilitar: lo que sigue es salir de la tienda.
     window.location.assign(attempt.redirectUrl);
   });
 }

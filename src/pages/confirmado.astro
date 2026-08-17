@@ -5,6 +5,7 @@ import NavbarDesktop from '../components/NavbarDesktop.astro';
 import OrderStatus from '../components/OrderStatus.astro';
 import OrderReceipt from '../components/OrderReceipt.astro';
 import ActionBar from '../components/ActionBar.astro';
+import ConfirmationCta from '../components/ConfirmationCta.astro';
 import ScheduleSheet from '../components/ScheduleSheet.astro';
 import LocationSheet from '../components/LocationSheet.astro';
 import Footer from '../components/Footer.astro';
@@ -23,6 +24,7 @@ import { fillMessage, whatsAppUrl } from '../lib/whatsapp.ts';
 import { formatPrice } from '../lib/price.ts';
 import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
 import { ALL_CATEGORIES, getCategories, getProducts } from '../lib/catalog.ts';
+import { TEST_MODE } from 'astro:env/server';
 
 // UNA PANTALLA, DOS FORMAS
 //
@@ -31,8 +33,8 @@ import { ALL_CATEGORIES, getCategories, getProducts } from '../lib/catalog.ts';
 //
 // En desktop se monta como el resto de la tienda —la misma barra de tienda
 // arriba, el mismo pie abajo— y el contenido pasa a una columna centrada con 40
-// entre sus piezas, rematada por el enlace al estado del pedido. Ver
-// components/_confirmation-page.scss.
+// entre sus piezas, rematada por la misma accion que en movil lleva la barra.
+// Ver components/_confirmation-page.scss.
 
 // Depende de la sesion: el pedido se relee en cada visita.
 export const prerender = false;
@@ -53,21 +55,46 @@ const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
 const hintedId = Astro.url.searchParams.get('order');
 const orderId = pointer?.id ?? hintedId;
 
+// QUIEN PUEDE ESTAR AQUI
+//
+// Esta pantalla va DESPUES del pago, y sin pedido al que apuntar no habia nada
+// que acusar: lo que se pintaba era un sello verde de "Pedido confirmado" con un
+// folio escrito a mano y el carrito de la sesion haciendo de resumen. Un acuse
+// creible de una compra que no ocurrio, que es la mentira mas cara del flujo.
+//
+// Sin puntero y sin el id de la vuelta de la pasarela no hay nada de donde tirar,
+// asi que se vuelve al menu —lo mismo que hace el control de vuelta— antes de
+// pedirle nada a la API.
+//
+// En modo de pruebas no se guarda nada y la pantalla se sirve como este, que es
+// como se revisa el diseno sin pasar por una compra. Ver TEST_MODE en
+// astro.config.mjs.
+if (!orderId && !TEST_MODE) return Astro.redirect('/');
+
 // Todo lo que hace falta se pide a la vez: ninguno de los cinco depende de otro.
 // Si el pedido no se puede leer, la pantalla se sirve igual —en el peor caso
 // rotula el acuse sin pedido— y lo mismo el resto: sin tienda no hay chat, sin
 // horario no hay hoja que abrir y sin catalogo el pie se queda con "Menu
 // completo".
-const orderPending: Promise<StoreOrder | null> = orderId
-  ? getOrder(orderId, token).catch((error) => {
-      console.error('[confirmado] fallo GET /api/orders', error);
-      return null;
-    })
-  : Promise.resolve(null);
+//
+// El pedido viaja con su `failed` al lado porque no leerlo significa dos cosas
+// distintas: getOrder() devuelve null en el 404 —el pedido no existe, o es de
+// otra sesion, que la API responde igual— y lanza si la lectura se cae. El
+// primero es un id que no vale y sale de la pantalla; el segundo es un fallo de
+// la casa, y por eso no echa a nadie.
+const orderPending: Promise<{ order: StoreOrder | null; failed: boolean }> = orderId
+  ? getOrder(orderId, token).then(
+      (found) => ({ order: found, failed: false }),
+      (error: unknown) => {
+        console.error('[confirmado] fallo GET /api/orders', error);
+        return { order: null, failed: true };
+      },
+    )
+  : Promise.resolve({ order: null, failed: false });
 
 // El carrito hace dos cosas: es el importe del chip de la barra de desktop —tras
 // el cierre esta vacio, que es la verdad— y es ademas lo que se lista cuando se
-// entra aqui sin pedido.
+// revisa la pantalla sin pedido.
 const cartPending = getCart(token).catch((error) => {
   console.error('[confirmado] fallo GET /api/cart', error);
   return null as Cart | null;
@@ -83,13 +110,20 @@ const categoriesPending = getProducts()
 
 // El chat de la tienda sale de la configuracion, y las hojas del pin y el reloj
 // del horario: los dos los pide la barra de desktop.
-const [store, schedule, order, cart, categories] = await Promise.all([
+const [store, schedule, read, cart, categories] = await Promise.all([
   getStoreConfig(),
   getStoreSchedule(),
   orderPending,
   cartPending,
   categoriesPending,
 ]);
+
+// Habia un id y la API dice que no es de nadie: se sale al menu, igual que si no
+// hubiera habido ninguno. Cubre tambien el `?order=` inventado a mano, que es la
+// unica parte de la URL de la que esta pantalla se fia lo justo para preguntar.
+const { order } = read;
+
+if (orderId && !order && !read.failed && !TEST_MODE) return Astro.redirect('/');
 
 // El pedido no devuelve el metodo, asi que lo rotula el que se guardo al cerrar.
 const method: PaymentMethod = pointer?.method ?? inferMethod(order);
@@ -109,8 +143,9 @@ const view: ConfirmationView = order
 let items: OrderLine[] = order?.items ?? [];
 let total = order?.total ?? 0;
 
-// Sin pedido —se entro directo, sin pasar por el pago— se pinta el carrito, para
-// que la pantalla siga siendo revisable.
+// Sin pedido se pinta el carrito, para que la pantalla siga siendo revisable. Ya
+// no es el caso de quien entra directo —ese no llega—, sino los dos que quedan:
+// el modo de pruebas y una lectura que se cayo.
 if (!order && cart) {
   const { tip } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 
@@ -128,8 +163,9 @@ if (!order && cart) {
 // el pedido sin cobrar. Lo que dice la verdad es `status`, y de eso vive esta
 // pantalla.
 //
-// Sin pedido —se entro directo— se rotula el del mockup para poder revisar el
-// diseno. Es lo unico escrito a mano que queda en el flujo.
+// Sin pedido se rotula el del mockup, para poder revisar el diseno en modo de
+// pruebas. Es lo unico escrito a mano que queda en el flujo, y desde que la
+// pantalla esta guardada solo lo ve el equipo.
 const MOCK_FOLIO = '91';
 const folio = order?.id ?? MOCK_FOLIO;
 
@@ -159,6 +195,37 @@ const whatsapp =
 // conserva el `order` de la URL para que siga funcionando si la cookie no esta.
 const selfUrl = hintedId ? `${Astro.url.pathname}?order=${encodeURIComponent(hintedId)}` : Astro.url.pathname;
 
+// La accion del acuse, en un solo sitio: la pintan dos controles —la barra fija
+// al fondo en movil y el remate de la columna en desktop— y ofrecer una cosa
+// distinta segun el ancho de la pantalla seria mentir en uno de los dos.
+//
+// Las tres salidas de src/lib/confirmation.ts:
+//
+//   pay       cobrar de nuevo sobre el mismo pedido: es un submit y no lleva
+//             destino, asi que lo recoge el formulario que envuelve la pantalla
+//   refresh   releer esta misma pantalla, que es donde el servidor vuelve a
+//             preguntar por el pedido
+//   whatsapp  el chat de la tienda, con el mensaje de este flujo ya escrito
+//
+// Sin telefono configurado el chat se queda sin destino y el control queda
+// inerte, en lugar de abrir una conversacion vacia.
+const action: {
+  label: string;
+  href?: string;
+  icon?: 'whatsapp';
+  variant?: 'whatsapp';
+} =
+  view.action.kind === 'pay'
+    ? { label: view.action.label }
+    : view.action.kind === 'refresh'
+      ? { label: 'Actualizar', href: selfUrl }
+      : {
+          label: 'Abrir WhatsApp',
+          icon: 'whatsapp',
+          variant: 'whatsapp',
+          href: whatsapp ?? undefined,
+        };
+
 // Las dos condiciones se calculan aqui, en el mismo sitio que monta las hojas: si
 // las dedujera la barra de desktop por su cuenta, podria ofrecer un boton para una
 // hoja que esta pantalla no monto.
@@ -168,7 +235,7 @@ const hasLocation = Boolean(address || mapsUrl);
 const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 ---
 
-<Layout title={`${view.title} — Shop Superfoods`} description={view.note}>
+<Layout title={`${view.title} — Shop Superfoods`} description={view.note} noindex>
   {/*
     Vuelve al menu y no al resumen de pago: el pedido ya existe, y volver atras
     invitaria a hacerlo otra vez. Reintentar el cobro no se hace ahi, sino con el
@@ -220,30 +287,17 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 
             {/*
               Ultimo subcontenedor, SOLO desktop: ahi es donde releva a la barra de
-              accion del fondo, que no se pinta. Lleva a esta misma pantalla, que es
-              la que relee el pedido en el servidor en cada visita: el estado lo
-              mueve el webhook, no el comprador, asi que "ver como esta" es
-              exactamente volver a pedirla.
-
-              El aviso solo aparece cuando el estado trae uno —el pedido se
-              conserva, actualiza en unos segundos—, que son los mismos casos en
-              los que lo lleva la barra de movil.
+              accion del fondo, que no se pinta. En este estado es el mismo submit
+              que ella —abre un cobro nuevo sobre este pedido—, y por eso tiene que
+              quedar dentro del formulario.
             */}
-            <div class="confirmation-page__cta">
-              <a class="confirmation-page__cta-button btn btn-primary" href={selfUrl}>
-                Ver estado del pedido
-              </a>
-
-              {view.actionNote && (
-                <p class="confirmation-page__cta-note">{view.actionNote}</p>
-              )}
-            </div>
+            <ConfirmationCta {...action} note={view.actionNote} />
           </div>
 
           {/* En desktop esta barra no se pinta: el envoltorio la retira de md
               hacia arriba. */}
           <div class="confirmation-page__action">
-            <ActionBar label={view.action.label} note={view.actionNote} />
+            <ActionBar {...action} note={view.actionNote} />
           </div>
         </form>
       ) : (
@@ -266,42 +320,27 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 
             <OrderReceipt items={items} total={total} method={method} />
 
-            {/* El mismo enlace del otro caso: ver components/_confirmation-page.scss. */}
-            <div class="confirmation-page__cta">
-              <a class="confirmation-page__cta-button btn btn-primary" href={selfUrl}>
-                Ver estado del pedido
-              </a>
-
-              {view.actionNote && (
-                <p class="confirmation-page__cta-note">{view.actionNote}</p>
-              )}
-            </div>
+            {/*
+              El remate de la columna en desktop, con la accion del estado: abrir
+              el chat de la tienda con el mensaje del pedido ya escrito, o releer
+              la pantalla mientras se espera al webhook.
+            */}
+            <ConfirmationCta {...action} note={view.actionNote} />
           </div>
 
           {/*
-            WhatsApp es el canal por donde sigue la conversacion, y por eso es la
-            accion de los estados en los que no hay nada que pagar. Sin telefono
-            configurado el control queda inerte —un submit fuera de un formulario
-            no navega ni recarga— en lugar de abrir un chat vacio.
+            La misma accion, en la barra fija de movil.
 
-            "Actualizar" es un enlace a esta misma pantalla: lo que hace falta es
-            releer el pedido, y eso ya lo hace el servidor en cada visita.
+            WhatsApp es el canal por donde sigue la conversacion, y por eso es lo
+            que se ofrece en los estados en los que no hay nada que pagar; con el
+            pago aun sin acreditar, en cambio, lo unico util es releer esta
+            pantalla, que es donde el servidor vuelve a preguntar por el pedido.
 
-            En desktop ninguna de las dos se pinta: el envoltorio retira la barra de
-            md hacia arriba.
+            En desktop esta barra no se pinta: el envoltorio la retira de md hacia
+            arriba.
           */}
           <div class="confirmation-page__action">
-            {view.action.kind === 'refresh' ? (
-              <ActionBar label="Actualizar" href={selfUrl} note={view.actionNote} />
-            ) : (
-              <ActionBar
-                label="Abrir WhatsApp"
-                icon="whatsapp"
-                variant="whatsapp"
-                href={whatsapp ?? undefined}
-                note={view.actionNote}
-              />
-            )}
+            <ActionBar {...action} note={view.actionNote} />
           </div>
         </>
       )

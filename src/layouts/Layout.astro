@@ -5,10 +5,24 @@ import '../styles/main.scss';
 interface Props {
   title: string;
   description?: string;
+  /**
+   * Fuera de los buscadores.
+   *
+   * Lo piden las siete pantallas del pedido —el carrito, los datos de entrega,
+   * las tres del pago y los dos acuses—, que no son contenido de la tienda sino
+   * la sesion de una persona: su carrito, su direccion, su pedido. No hay
+   * ninguna version de ellas que le sirva a quien llegue desde una busqueda, y
+   * lo que un rastreador puede sacar es un carrito vacio o una redireccion al
+   * menu.
+   */
+  noindex?: boolean;
 }
 
-const { title, description = 'Shop Superfoods — pedido a domicilio o para recoger.' } =
-  Astro.props;
+const {
+  title,
+  description = 'Shop Superfoods — pedido a domicilio o para recoger.',
+  noindex = false,
+} = Astro.props;
 
 const canonical = new URL(Astro.url.pathname, Astro.site);
 ---
@@ -24,15 +38,42 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta name="theme-color" content="#ffffff" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" href="/favicon.ico" />
-    <link rel="canonical" href={canonical} />
 
     <title>{title}</title>
     <meta name="description" content={description} />
 
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonical} />
+    {
+      /*
+        Las dos caras de la misma decision, y por eso van juntas.
+
+        Indexable: el canonical dice cual es la URL buena de esta pagina y las
+        etiquetas Open Graph, como se ve cuando alguien la comparte.
+
+        Fuera del indice: nada de eso, porque las tres existen para que las
+        consuma un tercero. Lo que se emite es `noindex`, que saca la pagina de
+        los resultados, y `nofollow`, porque de una pantalla de pedido no sale
+        ningun enlace que un buscador tenga que seguir —los del menu y el pie
+        llegan por su cuenta desde la portada—.
+
+        Se emite la etiqueta y NO se bloquea en robots.txt: son cosas distintas
+        y solo esta saca del indice. Ver public/robots.txt, donde esta escrito
+        por que.
+      */
+    }
+    {
+      noindex ? (
+        <meta name="robots" content="noindex, nofollow" />
+      ) : (
+        <Fragment>
+          <link rel="canonical" href={canonical} />
+
+          <meta property="og:type" content="website" />
+          <meta property="og:title" content={title} />
+          <meta property="og:description" content={description} />
+          <meta property="og:url" content={canonical} />
+        </Fragment>
+      )
+    }
 
     <Font cssVariable="--sf-font-inter" preload />
 
