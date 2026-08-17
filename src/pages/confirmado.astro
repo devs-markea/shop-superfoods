@@ -6,13 +6,20 @@ import OrderStatus from '../components/OrderStatus.astro';
 import OrderReceipt from '../components/OrderReceipt.astro';
 import ActionBar from '../components/ActionBar.astro';
 import ConfirmationCta from '../components/ConfirmationCta.astro';
+import DeviceFingerprint from '../components/DeviceFingerprint.astro';
 import ScheduleSheet from '../components/ScheduleSheet.astro';
 import LocationSheet from '../components/LocationSheet.astro';
 import Footer from '../components/Footer.astro';
 import { getCart, type Cart } from '../lib/cart.ts';
 import { getOrder } from '../lib/orders.ts';
 import { resolveCartToken } from '../lib/cart-session.ts';
-import { DRAFT_COOKIE, ORDER_COOKIE, parseDraft, parseOrderPointer } from '../lib/checkout-draft.ts';
+import {
+  DRAFT_COOKIE,
+  ORDER_COOKIE,
+  markPointerSeen,
+  parseDraft,
+  parseOrderPointer,
+} from '../lib/checkout-draft.ts';
 import { PAYMENT_LABEL, type OrderLine, type PaymentMethod, type StoreOrder } from '../lib/checkout.ts';
 import {
   confirmationWithoutOrder,
@@ -134,6 +141,27 @@ const method: PaymentMethod = pointer?.method ?? inferMethod(order);
 const view: ConfirmationView = order
   ? resolveConfirmation(method, order, pointer?.chargeStarted)
   : confirmationWithoutOrder();
+
+// EL ACUSE QUEDA VISTO
+//
+// Se anota en el puntero para que las pantallas del pago sepan que este pedido ya
+// se acuso. Sin la marca, volver a /pago con el carrito vacio trae aqui —que es lo
+// que hay que hacer con quien nunca llego a ver su folio, porque la pasarela lo
+// devolvio a otro navegador o cerro la pestana—; con ella, lleva al menu, para no
+// repetirle "Pedido confirmado" en cada atras.
+//
+// Tres condiciones, y ninguna sobra:
+//
+//   order    solo un pedido leido de verdad. El acuse de mentira del modo de
+//            pruebas no marca nada.
+//   pointer  sin cookie no hay donde anotarlo. Es quien llega por `?order=` sin
+//            sesion, y ahi ya no se le puede ayudar desde aqui.
+//   whatsapp la accion resuelta, que es la que dice que no queda nada pendiente.
+//            Con un cobro por reintentar o un webhook sin llegar, esta pantalla
+//            SIGUE siendo su sitio: marcarla le quitaria el boton al volver.
+if (order && pointer && !pointer.seen && view.action.kind === 'whatsapp') {
+  markPointerSeen(Astro.cookies, pointer);
+}
 
 // Con pedido, todo sale de el: el checkout vacia el carrito, asi que leerlo aqui
 // devolveria una lista vacia.
@@ -358,4 +386,20 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   import '../scripts/confirmation';
   // Abre las hojas del horario y la ubicacion desde la barra de desktop.
   import '../scripts/sheet';
+  // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
+  // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
+  // que importarlo. Ver src/lib/discover.ts.
+  import '../scripts/footer-discover';
 </script>
+
+{/*
+  La misma huella de dispositivo que /pago, y aqui SOLO cuando la pantalla ofrece
+  pagar: `pay` es el unico estado que abre un cobro nuevo
+  (POST /api/orders/{id}/payment). En los demas el acuse no cobra nada —manda a
+  WhatsApp, o relee esperando al webhook— y cargar un tercero para no usarlo
+  seria gastarle datos a alguien que ya pago.
+
+  Es ademas el intento que mas necesita la senal: aqui se llega porque el cobro
+  anterior no salio, asi que es justo el que hay que ayudar a aprobar.
+*/}
+{view.action.kind === 'pay' && <DeviceFingerprint />}

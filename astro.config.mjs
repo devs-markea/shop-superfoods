@@ -40,6 +40,26 @@ export default defineConfig({
         optional: true,
         default: false,
       }),
+
+      // Clave de NAVEGADOR de Google Maps, para el selector de ubicacion de
+      // /datos: el mapa con el pin y su buscador de direcciones. Le bastan dos
+      // APIs habilitadas —Maps JavaScript y Places (New)—; la direccion del
+      // punto la resuelve el backend al cotizar. Ver .env.example.
+      //
+      // `client` y `public` porque es exactamente eso: viaja al navegador y se
+      // ve en el codigo de la pagina. No es un secreto que se escape, es una
+      // clave que se protege por DONDE se usa —restringirla por referente HTTP
+      // al dominio de la tienda en Google Cloud— y no por ocultarla. Una clave
+      // sin esa restriccion la puede gastar cualquiera desde otro sitio.
+      //
+      // Opcional a proposito: sin ella la tienda no falla ni se queda sin
+      // ubicacion. La hoja cae a pegar el enlace de Maps a mano, que es lo que
+      // hacia antes de que hubiera mapa. Ver components/LocationPicker.astro.
+      GOOGLE_MAPS_API_KEY: envField.string({
+        context: 'client',
+        access: 'public',
+        optional: true,
+      }),
     },
   },
 

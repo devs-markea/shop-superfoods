@@ -10,7 +10,7 @@ import ActionBar from '../../components/ActionBar.astro';
 import ScheduleSheet from '../../components/ScheduleSheet.astro';
 import LocationSheet from '../../components/LocationSheet.astro';
 import Footer from '../../components/Footer.astro';
-import { getCart, type Cart } from '../../lib/cart.ts';
+import { getCart, isEmptyCart, type Cart } from '../../lib/cart.ts';
 import { resolveCartToken } from '../../lib/cart-session.ts';
 import { quoteForDraft } from '../../lib/shipping-quote.ts';
 import { DRAFT_COOKIE, draftGaps, parseDraft } from '../../lib/checkout-draft.ts';
@@ -34,15 +34,6 @@ import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts
 export const prerender = false;
 
 const draft = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
-
-// El efectivo ya no es solo del pedido para recoger: a domicilio se le paga al
-// repartidor. Asi que lo que hay que comprobar no es el modo de entrega, sino que
-// siga habiendo con que cerrar el pedido —el borrador caduca a las dos horas—:
-// sin nombre, telefono o direccion, "Confirmar pedido" solo podria fallar. Se
-// vuelve a los datos de entrega, que es donde se rellenan.
-if (draftGaps(draft).length > 0) {
-  return Astro.redirect('/datos');
-}
 
 // El modo de entrega ya no decide si esta pantalla existe, pero si lo que promete:
 // al recoger no hay reparto que cotizar.
@@ -81,6 +72,26 @@ const [store, schedule, cart, categories, quote] = await Promise.all([
   categoriesPending,
   quotePending,
 ]);
+
+// DOS GUARDAS, Y EL ORDEN IMPORTA
+//
+// Miran cosas distintas y cada una tiene su pantalla: la primera, si queda pedido
+// que pagar; la segunda, si hay con que entregarlo.
+//
+// El pedido va antes aunque cueste esperar al carrito, porque un carrito vacio no
+// se arregla en /datos: rellenar una direccion no crea lineas. Mandar alli a quien
+// no tiene pedido solo mete una pantalla de mas en el camino de vuelta al carrito,
+// que es adonde acaba yendo de todas formas.
+
+// Sin pedido no hay nada que pagar en mano: seria un "Confirmar pedido" sobre $0.
+if (isEmptyCart(cart)) return Astro.redirect('/carrito');
+
+// El efectivo ya no es solo del pedido para recoger: a domicilio se le paga al
+// repartidor. Asi que lo que hay que comprobar no es el modo de entrega, sino que
+// siga habiendo con que cerrar el pedido —el borrador caduca a las dos horas—:
+// sin nombre, telefono o direccion, "Confirmar pedido" solo podria fallar. Se
+// vuelve a los datos de entrega, que es donde se rellenan.
+if (draftGaps(draft).length > 0) return Astro.redirect('/datos');
 
 const items = cart?.items ?? [];
 const products = cart?.total ?? 0;
@@ -231,4 +242,8 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   import '../../scripts/confirm-order';
   // Abre las hojas del horario y la ubicacion desde la barra de desktop.
   import '../../scripts/sheet';
+  // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
+  // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
+  // que importarlo. Ver src/lib/discover.ts.
+  import '../../scripts/footer-discover';
 </script>

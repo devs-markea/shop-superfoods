@@ -27,5 +27,12 @@ document.addEventListener('click', (event) => {
 
   // Pulsar fuera. El <dialog> ocupa solo la hoja, asi que un click cuyo objetivo
   // ES el dialogo cayo en su fondo: dentro, el objetivo siempre es un hijo.
-  if (target instanceof HTMLDialogElement) target.close();
+  //
+  // Salvo en las hojas marcadas como persistentes, donde hay trabajo que perder:
+  // en el mapa de la ubicacion, un toque de mas fuera de la hoja tiraba el punto
+  // recien buscado. Ahi se sale por la X o con Escape —a proposito, las dos son
+  // deliberadas—, y no por rozar el fondo. Ver components/Sheet.astro.
+  if (target instanceof HTMLDialogElement && target.dataset.sheetPersistent === undefined) {
+    target.close();
+  }
 });

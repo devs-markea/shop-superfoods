@@ -208,6 +208,32 @@ export type CheckoutOutcome =
 
 const GENERIC_ERROR = 'No pudimos crear tu pedido. Intentalo de nuevo.';
 
+/**
+ * Cabecera con la huella de dispositivo de Mercado Pago, si esta pantalla la
+ * pidio y llego a calcularse.
+ *
+ * El valor lo genera `security.js` en el navegador y lo deja en la global
+ * `MP_DEVICE_SESSION_ID`. Sirve para que Mercado Pago reconozca el dispositivo
+ * desde el que se compra: un comprador habitual pagando desde otro aparato no es
+ * necesariamente un fraude, y con esta senal la pasarela puede afinar en lugar de
+ * rechazar un cobro legitimo.
+ *
+ * Solo se manda si existe, y no se espera por ella: el script es de un tercero y
+ * carga en diferido, asi que puede no haber terminado cuando se pulsa. Un cobro
+ * sin huella se procesa igual —es una senal, no un requisito—, y bloquear la
+ * compra por un script ajeno costaria mas que la aprobacion que gana.
+ *
+ * De aqui la cabecera todavia tiene DOS saltos hasta Mercado Pago: el proxy de
+ * este front, que la nombra a mano, y Laravel, que es quien crea el cobro y quien
+ * tiene que reenviarla como `X-meli-session-id`. Sin ese ultimo salto el valor
+ * llega arriba y se queda ahi.
+ */
+function deviceHeader(): Record<string, string> {
+  const value = (globalThis as { MP_DEVICE_SESSION_ID?: unknown }).MP_DEVICE_SESSION_ID;
+
+  return typeof value === 'string' && value ? { 'X-Meli-Session-Id': value } : {};
+}
+
 /** El del cobro: el pedido ya existe, y lo que fallo es pagarlo. */
 const PAYMENT_ERROR = 'No pudimos abrir el pago. Intentalo de nuevo.';
 
@@ -263,6 +289,7 @@ export async function placeOrder(
         'Content-Type': 'application/json',
         Accept: 'application/json',
         'Idempotency-Key': idempotencyKey,
+        ...deviceHeader(),
       },
       body: JSON.stringify(request),
     });
@@ -307,7 +334,10 @@ export async function startPayment(orderId: string): Promise<PaymentAttempt> {
   try {
     response = await fetch(`/api/orders/${encodeURIComponent(orderId)}/payment`, {
       method: 'POST',
-      headers: { Accept: 'application/json' },
+      // Aqui tambien: esto crea un cobro NUEVO, asi que es otro momento en el que
+      // Mercado Pago decide si aprueba. Y es el que mas lo necesita —el anterior
+      // ya fallo—, de ahi que el acuse cargue `security.js` cuando ofrece pagar.
+      headers: { Accept: 'application/json', ...deviceHeader() },
     });
   } catch {
     return { ok: false, message: 'No pudimos contactar con la tienda. Revisa tu conexion.' };

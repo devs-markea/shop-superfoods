@@ -5,6 +5,7 @@ import OrderBar from '../components/OrderBar.astro';
 import Hero from '../components/Hero.astro';
 import ProductCard from '../components/ProductCard.astro';
 import StoreClosedNotice from '../components/StoreClosedNotice.astro';
+import CartFab from '../components/CartFab.astro';
 import Footer from '../components/Footer.astro';
 import {
   ALL_CATEGORIES,
@@ -15,6 +16,7 @@ import {
 import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
 import { getCart } from '../lib/cart.ts';
 import { peekCartToken } from '../lib/cart-session.ts';
+import { DISCOVER_KEY } from '../lib/discover.ts';
 import { isClosed } from '../lib/schedule.ts';
 import { formatPrice } from '../lib/price.ts';
 import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
@@ -170,11 +172,82 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
           }
         </div>
       </section>
+
+      {/*
+        El pase de "Descubre": la categoria que dejo escrita el pie de otra
+        pantalla (ver src/lib/discover.ts).
+
+        INLINE Y BLOQUEANTE, y aqui abajo, no arriba. Es la unica forma de que el
+        filtro llegue antes del primer pintado: los <script> de mas abajo los
+        empaqueta Astro como modulos, que son diferidos y corren cuando el HTML ya
+        esta parseado entero —para entonces la rejilla completa puede estar en
+        pantalla y filtrarla se veria como un salto—. Detras del </ul> porque las
+        celdas y los chips tienen que estar ya parseados para poder tocarlos.
+
+        `define:vars` es lo que hace que la clave llegue de su modulo en lugar de
+        repetirla escrita a mano aqui. Ya implica `is:inline`, que se escribe
+        igualmente para que se lea que este bloque no se procesa: nada de
+        TypeScript ni de imports dentro, es JavaScript tal cual sale al navegador.
+      */}
+      <script is:inline define:vars={{ discoverKey: DISCOVER_KEY }}>
+        (() => {
+          let pending = null;
+
+          // Puede lanzar —modo privado, almacenamiento bloqueado—. Y se retira al
+          // leerlo, sirva o no: el pase es la continuacion de un click, no una
+          // preferencia. Si sobreviviera, la portada abriria filtrada manana.
+          try {
+            pending = window.sessionStorage.getItem(discoverKey);
+            if (pending) window.sessionStorage.removeItem(discoverKey);
+          } catch {
+            pending = null;
+          }
+
+          if (!pending) return;
+
+          // Se valida contra los chips de ESTA pagina, no contra el nombre que
+          // viajo: entre que se pinto aquel pie y el click, el panel pudo
+          // renombrar la categoria o despublicarla. Sin la comprobacion se
+          // ocultarian todas las celdas y la portada saldria vacia sin nada que lo
+          // explicara —el filtro no tiene estado "sin resultados" precisamente
+          // porque hasta ahora los chips solo podian venir del mismo catalogo que
+          // las tarjetas—.
+          let chip = null;
+
+          for (const radio of document.querySelectorAll('input[name="category"]')) {
+            if (radio.value === pending) {
+              chip = radio;
+              break;
+            }
+          }
+
+          if (!chip) return;
+
+          chip.checked = true;
+
+          // Ocultar aqui y no dejarselo a category-filter.ts: ese es un modulo y
+          // llega tarde. Hace exactamente esto mismo, asi que cuando arranque
+          // encontrara su trabajo hecho y no cambiara nada —lee el chip marcado y
+          // vuelve a aplicar lo aplicado—.
+          const list = document.querySelector('[data-product-list]');
+          if (!list) return;
+
+          for (const cell of list.querySelectorAll('[data-category]')) {
+            cell.hidden = cell.dataset.category !== pending;
+          }
+        })();
+      </script>
     </div>
 
     {/* La hoja del horario que abre su boton la monta la cabecera, que ya la
         necesita para el reloj. */}
     {closed && schedule && <StoreClosedNotice schedule={schedule} />}
+
+    {/* La via al pedido en movil: el mismo carrito de la barra de desktop, que
+        aqui no se pinta. Las unidades son las que ya se pidieron para esa barra,
+        asi que no cuesta una llamada mas. En que pantallas se ve —y que pasa con
+        la tienda cerrada, que ocupa este mismo borde— lo decide el bloque. */}
+    <CartFab count={cart?.itemsCount ?? 0} />
   </main>
 
   <Footer store={store} categories={published} />
@@ -186,4 +259,5 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
   import '../scripts/delivery-mode';
   import '../scripts/add-button';
   import '../scripts/sheet';
+  import '../scripts/footer-discover';
 </script>

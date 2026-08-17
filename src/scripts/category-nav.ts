@@ -76,7 +76,36 @@ function initScrollIntoView(track: HTMLElement): void {
   });
 }
 
+// Lo mismo, pero para el chip que ya llega marcado sin que nadie haya pulsado
+// nada: lo hace el pase de "Descubre" (ver src/lib/discover.ts), que marca el chip
+// antes de pintar y por tanto sin evento `change` que el escuchador de arriba
+// pueda recoger. Un chip marcado fuera de cuadro deja la rejilla filtrada sin
+// nada que diga por quien.
+//
+// A mano y no con scrollIntoView: aqui se corre al cargar, y esa llamada tambien
+// puede desplazar la pagina en vertical para acercar el carrusel. Esto mueve solo
+// la pista, que es lo unico que hay que corregir. Es la regla de `inline:
+// 'nearest'` —acercar el borde que se salio, y nada mas— con las medidas en
+// pantalla, que no dependen de quien sea el `offsetParent` de la etiqueta.
+//
+// A partir de lg no hace nada: los chips se reparten en varias lineas y el
+// carrusel deja de tener scroll (ver components/_category-nav.scss).
+function revealChecked(track: HTMLElement): void {
+  const checked = track.querySelector<HTMLInputElement>('input[name="category"]:checked');
+  if (!checked) return;
+
+  const label = track.querySelector<HTMLElement>(`label[for="${checked.id}"]`);
+  if (!label) return;
+
+  const bounds = track.getBoundingClientRect();
+  const chip = label.getBoundingClientRect();
+
+  if (chip.left < bounds.left) track.scrollLeft -= bounds.left - chip.left;
+  else if (chip.right > bounds.right) track.scrollLeft += chip.right - bounds.right;
+}
+
 for (const track of document.querySelectorAll<HTMLElement>('[data-carousel]')) {
   initDragScroll(track);
   initScrollIntoView(track);
+  revealChecked(track);
 }

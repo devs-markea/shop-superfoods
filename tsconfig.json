@@ -1,5 +1,13 @@
 {
   "extends": "astro/tsconfigs/strict",
   "include": [".astro/types.d.ts", "**/*"],
-  "exclude": ["dist"]
+  "exclude": ["dist"],
+  "compilerOptions": {
+    // El SDK de Google Maps se carga en tiempo de ejecucion —lo inyecta
+    // src/lib/google-maps.ts al abrir la hoja de la ubicacion— asi que no hay
+    // ningun `import` del que TypeScript pueda deducir el namespace `google`.
+    // Se declara aqui para que el selector del mapa se compruebe como el resto
+    // del codigo en lugar de escribirse a ciegas.
+    "types": ["google.maps"]
+  }
 }

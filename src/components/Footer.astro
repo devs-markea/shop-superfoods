@@ -36,10 +36,14 @@ const copyright = name
 // categorias PUBLICADAS, que es lo que hay de verdad que descubrir, y hasta tres:
 // la columna es un resumen, no un indice.
 //
-// Todavia no navegan. El filtro de la portada son los chips de la barra —radios
-// name="category", ver src/scripts/category-filter.ts— y no hay forma de marcar
-// uno desde una URL, asi que un enlace aqui no filtraria nada. Enlaza solo "Menu
-// completo", que es la portada y si tiene direccion.
+// Los cuatro navegan a la portada, que es donde vive el filtro —los chips de la
+// barra, radios name="category"—. Los tres de categoria llevan ademas su nombre
+// en un `data-`, y de ahi lo toma src/scripts/footer-discover.ts para dejarlo
+// pasado a la portada por sessionStorage: asi la direccion sigue siendo `/` a
+// secas en lugar de arrastrar un parametro. Ver src/lib/discover.ts.
+//
+// El `href` no es decorativo: sin JavaScript el enlace sigue llevando al menu
+// completo, y con el boton central o un Ctrl+click se abre en otra pestana.
 const discover = categories.slice(0, 3);
 
 // Las redes: de las tres, solo WhatsApp tiene dato. Facebook e Instagram no se
@@ -69,7 +73,7 @@ const socials: Array<{ label: string; href: string | null }> = [
       <nav class="footer__nav" aria-labelledby="footer-discover">
         <h2 class="footer__heading" id="footer-discover">Descubre</h2>
 
-        <ul class="footer__links list-unstyled">
+        <ul class="footer__links list-unstyled" data-discover>
           <li>
             <a class="footer__link" href="/">Menu completo</a>
           </li>
@@ -77,7 +81,9 @@ const socials: Array<{ label: string; href: string | null }> = [
           {
             discover.map((category) => (
               <li>
-                <span class="footer__link">{category}</span>
+                <a class="footer__link" href="/" data-discover-category={category}>
+                  {category}
+                </a>
               </li>
             ))
           }
