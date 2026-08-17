@@ -14,7 +14,7 @@ import LocationSheet from '../components/LocationSheet.astro';
 import Footer from '../components/Footer.astro';
 import Icon from '../components/Icon.astro';
 import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
-import { getShippingQuote } from '../lib/shipping-quote.ts';
+import { quoteForDraft } from '../lib/shipping-quote.ts';
 import { getCart } from '../lib/cart.ts';
 import { resolveCartToken } from '../lib/cart-session.ts';
 import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
@@ -79,28 +79,20 @@ const { deliveryType } = draft;
 // pantalla llegue ya correcta, sin un salto al arrancar el JavaScript.
 const pickup = deliveryType === 'pickup';
 
-// La cotizacion del envio vive en el borrador, pero esa cookie dura dos horas y el
-// navegador la vacia de mas maneras de las que parece. Cuando falta y hay una
-// ubicacion que la justifica, se recupera de la API, que la guarda mientras dure la
-// sesion del carrito —treinta dias—. Asi el importe llega en el primer render en
-// lugar de pedirle otra vez la ubicacion al comprador.
-//
-// Solo se pregunta cuando puede haber algo que recuperar: a domicilio, con
-// ubicacion compartida y sin cotizacion a mano. En el camino normal no se llama.
-const quotePending =
-  !pickup && draft.customer.locationUrl && !draft.shipping
-    ? getShippingQuote(token)
-    : Promise.resolve(null);
+// El envio de este borrador: el del borrador, o el que la API guarde para esta
+// sesion si la cookie lo perdio. Sin ubicacion compartida no hay ninguno, y esa
+// es la parte que importa AQUI: esta es la pantalla donde se comparte, y hasta
+// que se comparta la cuenta tiene que decir "Por cotizar" —no el importe de un
+// punto que el formulario ya no ensena—. Ver src/lib/shipping-quote.ts.
+const quotePending = quoteForDraft(draft, token);
 
-const [store, schedule, cart, categories, recovered] = await Promise.all([
+const [store, schedule, cart, categories, quote] = await Promise.all([
   getStoreConfig(),
   getStoreSchedule(),
   cartPending,
   categoriesPending,
   quotePending,
 ]);
-
-const quote = draft.shipping ?? recovered;
 
 const total = cart?.total ?? 0;
 const { freeShipping } = store.delivery ?? {};
