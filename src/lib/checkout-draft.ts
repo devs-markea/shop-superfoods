@@ -16,6 +16,7 @@
 
 import { placeOrder } from './checkout.ts';
 import { parseQuote, type ShippingQuote } from './shipping.ts';
+import { parseTipAmount } from './tips.ts';
 import { ulid } from './ulid.ts';
 import type {
   CheckoutCustomer,
@@ -27,6 +28,17 @@ import type {
 
 export const DRAFT_COOKIE = 'sf_checkout';
 export const ORDER_COOKIE = 'sf_order';
+
+/**
+ * Donde se rellena lo que falta cuando el cierre devuelve `incomplete`.
+ *
+ * Vive junto al aviso que lo detecta y no en cada pantalla que lo consume: el
+ * mensaje y su remedio son la misma decision, y separarlos deja dos sitios donde
+ * un dia uno diga "revisa tus datos de entrega" y el otro lleve a otra parte.
+ *
+ * Es el mismo destino que ya usa la guarda de servidor de /pago/efectivo.
+ */
+export const DELIVERY_SCREEN = '/datos';
 
 /** Dos horas: lo que dura un checkout, no una sesion. */
 const DRAFT_MAX_AGE = 60 * 60 * 2;
@@ -136,6 +148,12 @@ export function parseDraft(raw: string | undefined | null): CheckoutDraft {
       // nada marcado, porque ninguna de sus dos opciones seria la elegida, y
       // viajaria al checkout para volver como un 422.
       deliveryType: parsed.deliveryType === 'pickup' ? 'pickup' : 'delivery',
+      // La propina tambien se valida, y mas desde que se puede escribir a mano:
+      // es el unico importe del pedido que sale de esta cookie y se suma al total
+      // en tres pantallas. Un `-100` bajaria el total que se ensena y volveria de
+      // la API como un 422 en ingles; un `1e12` pintaria un disparate; un texto
+      // dejaria el total en NaN. Sin propina valida, no hay propina.
+      tip: parseTipAmount(parsed.tip) ?? 0,
       // El cliente nunca se sustituye entero: si la cookie viene a medias, los
       // campos que falten tienen que quedar vacios, no undefined.
       customer: { ...EMPTY_DRAFT.customer, ...parsed.customer },
@@ -380,6 +398,12 @@ export async function confirmDraft(method: PaymentMethod): Promise<CheckoutOutco
   if (gaps.length > 0) {
     return {
       ok: false,
+      // El borrador caduca a las dos horas, asi que aqui se llega de verdad: con
+      // la pestana dormida, o volviendo por el historial a una pantalla de cierre.
+      // El aviso nombra campos que no existen en ninguna de las tres, y por eso
+      // viaja marcado: quien lo reciba lleva a DELIVERY_SCREEN en lugar de
+      // escribirlo. Ver `incomplete` en CheckoutOutcome.
+      incomplete: true,
       message: `Falta ${listGaps(gaps)}. Revisa tus datos de entrega.`,
     };
   }

@@ -160,30 +160,51 @@ const whatsapp =
       )
     : null;
 
+// Los pasos del efectivo. El pedido ya esta hecho, pero el comprador todavia tiene
+// trabajo: esperar el aviso, contar el dinero y entregarlo en mano.
+//
+// El segundo lleva el importe porque en efectivo el monto exacto es el favor que se
+// pide: es el total del pedido releido de la API, con su envio ya dentro, no el del
+// carrito —que a estas alturas esta vacio— ni un subtotal sin envio, que mandaria
+// preparar de menos.
+//
+// Sin pedido leido —la API tosio, o es modo de pruebas sin puntero— el paso se queda
+// sin cifra en vez de inventarse una: el consejo sigue en pie y un importe erroneo
+// aqui es dinero mal contado en la puerta.
+//
+// El tercero nombra las dos entregas de una vez y no se parte por modo: quien recoge
+// y quien recibe leen el mismo paso.
+const cashSteps = [
+  'Espera la confirmacion de tu pedido por WhatsApp',
+  order
+    ? `Prepara el monto exacto: ${formatPrice(order.total)}`
+    : 'Prepara el monto exacto de tu pedido',
+  'Paga al repartidor al momento de la entrega o en el local para pick-up',
+];
+
 // La copia de los tres cierres, junta: se lee de un tiron en que se diferencian.
 //
-// En efectivo no hay pasos que dar, ni al recoger ni a domicilio: el pedido ya esta
-// hecho y lo que queda —esperar el aviso y pagar al recibirlo— cabe en el aviso del
-// sello y en el de la barra. Una tarjeta numerada para eso convertiria en tramite lo
-// que no lo es. La transferencia si los lleva, porque ahi el comprador tiene trabajo
-// pendiente: pagar y mandar el comprobante, en ese orden.
+// Los tres llevan pasos, porque en los tres queda algo pendiente y el orden es parte
+// del dato: en transferencia, pagar y mandar el comprobante; en efectivo, esperar,
+// preparar el importe y pagarlo al recibirlo. Lo que si parte el modo de entrega en
+// efectivo es el aviso del sello y el de la barra, no la tarjeta.
 const copy: {
   description: string;
   note: string;
-  steps: string[] | null;
+  steps: string[];
   barNote: string;
 } = cash
   ? cashPickup
     ? {
         description: 'Recoge tu pedido en el local y pagalo en efectivo.',
         note: 'Te avisaremos por WhatsApp cuando tu pedido este listo para recoger.',
-        steps: null,
+        steps: cashSteps,
         barNote: 'Pagaras en efectivo al recoger tu pedido',
       }
     : {
         description: 'Paga en efectivo al recibir tu pedido.',
-        note: 'Te avisaremos por WhatsApp cuando tu pedido vaya en camino.',
-        steps: null,
+        note: 'Tu pedido ha sido recibido. Prepara el monto exacto para el momento de la entrega.',
+        steps: cashSteps,
         barNote: 'Pagaras en efectivo al recibir tu pedido',
       }
   : {
@@ -235,7 +256,12 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
       */}
       <OrderStatus state="pending" title="Pedido recibido" note={copy.note} />
 
-      {copy.steps && <Steps steps={copy.steps} />}
+      {/*
+        Lo que queda por hacer, numerado. La misma tarjeta en los tres cierres:
+        cambia la copia, no la pieza.
+      */}
+      <Steps steps={copy.steps} />
+
 
       {/*
         El dato que hace falta para completar el pago, sin volver atras: la cuenta

@@ -1,5 +1,6 @@
 ---
 import PaymentOption from './PaymentOption.astro';
+import MpLogo from '../assets/icons/mp-logo.svg';
 import type { DeliveryType, PaymentMethod } from '../lib/checkout.ts';
 
 interface Props {
@@ -75,8 +76,16 @@ const pickup = deliveryType === 'pickup';
           />
 
           {/*
-            Icono provisional: el de Mercado Pago es un logo propio y llegara como
-            asset. Cuando este, se anade a BrandIcon.astro y se cambia aqui.
+            El unico metodo con marca: en lugar del icono de tarjeta va su logo,
+            que llego como archivo y vive en assets/icons. No pasa por Icon.astro
+            ni por BrandIcon.astro —los dos pintan un trazo que hereda el color
+            del contenedor— porque un logo de un tercero se usa con SUS colores,
+            que aqui son ademas los que lo hacen reconocible.
+
+            El width/height es el del archivo, que es el tamano de movil; el de
+            desktop lo pone el CSS junto con la caja, porque las dos medidas
+            cambian a la vez. Oculto a lectores de pantalla, como los iconos: el
+            titulo de al lado ya dice la marca.
 
             Seleccionable: cierra el pedido en /confirmado, sin pasar por los
             datos de la cuenta. Lo que falta es el cobro real —la pasarela no forma
@@ -86,9 +95,21 @@ const pickup = deliveryType === 'pickup';
             id="payment-mercadopago"
             value="mercadopago"
             title="Mercado Pago"
-            icon="credit-card"
             checked={selected === 'mercado_pago'}
-          />
+          >
+            {/* El slot va en el Fragment y no en el logo: los atributos que se
+                le pasan al archivo terminan en su <svg>, y `slot` no pinta
+                nada ahi. El Fragment no deja marcado propio. */}
+            <Fragment slot="media">
+              <MpLogo
+                class="payment-option__logo"
+                width={68}
+                height={28}
+                aria-hidden="true"
+                focusable="false"
+              />
+            </Fragment>
+          </PaymentOption>
         </>
       )
     }

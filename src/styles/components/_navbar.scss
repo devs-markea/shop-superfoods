@@ -87,10 +87,12 @@
   }
 }
 
-// Element: navbar__logo — 24 de alto, el ancho lo da la proporcion del archivo
+// Element: navbar__logo — 16 de alto, el ancho lo da la proporcion del archivo.
+// Mas bajo que los 24 de la fila: el enlace que lo envuelve los conserva y lo
+// centra, asi que el area tactil y el alto de la barra no se mueven.
 .navbar__logo {
   width: auto;
-  height: 24px;
+  height: 16px;
 }
 
 // --- Desktop -------------------------------------------------------------

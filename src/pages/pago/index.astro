@@ -17,6 +17,7 @@ import { getShippingQuote } from '../../lib/shipping-quote.ts';
 import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
 import { resolveShipping } from '../../lib/shipping.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
+import { normalizeTipAmounts } from '../../lib/tips.ts';
 import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts';
 
 // DOS PANTALLAS, UN MARCADO
@@ -116,11 +117,19 @@ const quote = draft.shipping ?? recovered;
 
 // La propina la decide el negocio: con el interruptor apagado no se pide, y sin
 // importes no hay selector que pintar.
-const tipAmounts = store.tips?.enabled ? (store.tips.amounts ?? []) : [];
+//
+// Los importes se normalizan antes de pintarse —enteros, ordenados, sin
+// repetidos y con el 0 al frente—: ver src/lib/tips.ts, donde tambien esta el
+// motivo de que el 0 no dependa de que el negocio se acuerde de configurarlo.
+const tipAmounts = normalizeTipAmounts(store.tips?.enabled ? store.tips.amounts : []);
 const showTips = tipAmounts.length > 0;
 
-// Sin propina configurada, no hay propina que sumar.
-const tip = showTips ? (raw ? draft.tip : (tipAmounts[1] ?? tipAmounts[0])) : 0;
+// Sin propina configurada, no hay propina que sumar. Con ella y sin borrador
+// manda el primer importe, que tras normalizar es el 0: la propina se ofrece,
+// no se aplica sola. Preseleccionar el segundo importe —lo que se hacia— cobraba
+// unos pesos que nadie llego a elegir a quien no tocara el selector, y ademas
+// dependia de como viniera ordenada la lista.
+const tip = showTips ? (raw ? draft.tip : tipAmounts[0]) : 0;
 
 const method = pickup ? 'efectivo' : draft.paymentMethod;
 

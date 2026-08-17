@@ -15,7 +15,7 @@
 // de transferencia importa aparte.
 
 import { PAYMENT_LABEL, type PaymentMethod } from '../lib/checkout';
-import { confirmDraft } from '../lib/checkout-draft';
+import { DELIVERY_SCREEN, confirmDraft } from '../lib/checkout-draft';
 
 const form = document.querySelector<HTMLFormElement>('[data-confirm-form]');
 const method = form?.dataset.method as PaymentMethod | undefined;
@@ -50,6 +50,21 @@ if (form && method && method in PAYMENT_LABEL) {
     const outcome = await confirmDraft(method);
 
     if (!outcome.ok) {
+      // Al borrador le falta algo de la entrega, y esta pantalla no tiene esos
+      // campos: la cuenta bancaria o el aviso del efectivo, el detalle del pedido
+      // y un boton. Escribir aqui "falta tu nombre, la colonia y la calle" deja al
+      // comprador leyendo lo que le falta sin nada que pulsar para arreglarlo, asi
+      // que se le lleva al formulario que lo pide.
+      //
+      // Los botones no se vuelven a habilitar, igual que al confirmar: lo que
+      // sigue es salir de la pantalla.
+      if (outcome.incomplete) {
+        window.location.assign(DELIVERY_SCREEN);
+        return;
+      }
+
+      // Lo demas si es de aqui —la API rechazo el pedido, o no hubo red— y se
+      // queda escrito donde se pulso.
       showError(outcome.message);
       for (const button of buttons) button.disabled = false;
       return;
