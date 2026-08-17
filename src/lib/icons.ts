@@ -28,7 +28,8 @@ export type IconName =
   | 'check'
   | 'info'
   | 'tag'
-  | 'close';
+  | 'close'
+  | 'crosshair';
 
 export type IconSize = 'lg' | 'md' | 'sm';
 
@@ -79,6 +80,11 @@ export const ICON_PATHS: Record<IconName, string> = {
   // Cerrar. El de Bootstrap (.btn-close) es una imagen de fondo con su propio
   // grosor y su propio negro: no sigue el sistema ni hereda el color del padre.
   close: '<path d="M15 5 5 15M5 5l10 10"/>',
+  // "Centrar el mapa donde estoy", en la hoja de la ubicacion. Es la diana de
+  // toda la vida: el mismo dibujo que usa el boton de recentrar de cualquier
+  // mapa, para que se reconozca sin rotulo.
+  crosshair:
+    '<circle cx="10" cy="10" r="6.667"/><circle cx="10" cy="10" r="1.667"/><path d="M10 1.667v2.5M10 15.833v2.5M18.333 10h-2.5M4.167 10h-2.5"/>',
 };
 
 const DEFAULT_VIEWBOX = '0 0 20 20';

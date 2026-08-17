@@ -1,0 +1,47 @@
+---
+import Icon from './Icon.astro';
+
+interface Props {
+  /** Unidades en el carrito. En 0 la burbuja no se pinta. */
+  count: number;
+}
+
+const { count } = Astro.props;
+
+// El boton flotante del pedido: la via al carrito en MOVIL.
+//
+// Hasta ahora no habia ninguna desde la portada. La barra de movil son el logo y
+// los iconos de la tienda —horario y ubicacion—, y el chip con el importe es de
+// la barra de desktop, que ahi no se pinta: al pedido solo se llegaba por el
+// redirect de agregar un platillo, asi que quien volvia al menu se quedaba sin
+// puerta.
+//
+// De md hacia arriba no existe: ese chip lo releva, y dos accesos al mismo sitio
+// no son mejores que uno. Lo apaga el bloque —ver
+// src/styles/components/_cart-fab.scss—, como hace .navbar con su breakpoint: la
+// portada no tiene que saber en que pantalla se ve.
+//
+// El nombre accesible nombra lo que se ve —el pedido y sus unidades— y no el
+// importe. Por eso no reusa cartChipLabel() de src/lib/cart-view.ts: aquella
+// frase la escribe el chip de desktop, que si ensena el total.
+const label =
+  count > 0
+    ? `Mi pedido: ${count} ${count === 1 ? 'articulo' : 'articulos'}`
+    : 'Mi pedido, vacio';
+---
+
+<a class="cart-fab" href="/carrito" aria-label={label}>
+  {/* Contexto de posicion del tamano exacto del icono, igual que en la barra de
+      desktop: la burbuja se cuelga de la esquina del carrito y no de la del
+      circulo, que es mas grande y la dejaria suelta en el aire. */}
+  <span class="cart-fab__icon">
+    <Icon name="shopping-cart" class="cart-fab__glyph" />
+
+    {/* La cifra se pinta siempre y se esconde con `hidden` estando el pedido
+        vacio, como en la barra de desktop: es el mismo elemento en los dos
+        estados y no marcado que aparece y desaparece. */}
+    <span class="cart-fab__count" aria-hidden="true" hidden={count <= 0}>
+      {count}
+    </span>
+  </span>
+</a>

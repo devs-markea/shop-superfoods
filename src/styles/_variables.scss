@@ -96,6 +96,10 @@ $sf-switch-width: 350px;
 // numero suelto porque el aviso flotante de tienda cerrada se apoya encima, y
 // los dos valores tienen que moverse juntos.
 $sf-action-bar-height: 84px;
+// Diametro del boton flotante del pedido, solo movil. Idem: la portada le reserva
+// su hueco al final del catalogo para que no le tape el "+" a la ultima tarjeta,
+// asi que el circulo y ese hueco tienen que moverse juntos.
+$sf-cart-fab-size: 70px;
 
 // --- Motion ---
 $sf-transition: 160ms ease;

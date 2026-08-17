@@ -1,0 +1,47 @@
+---
+// ---------------------------------------------------------------------------
+// Huella de dispositivo de Mercado Pago (`security.js`).
+//
+// Deja en la global `MP_DEVICE_SESSION_ID` un identificador del aparato desde el
+// que se compra. Es una senal para el motor de riesgo de la pasarela: un
+// comprador habitual pagando desde otro dispositivo no es necesariamente un
+// fraude, y con este dato Mercado Pago puede afinar la evaluacion en lugar de
+// rechazar un cobro legitimo.
+//
+// NO es el SDK de Mercado Pago y no lleva ninguna clave —ni publica ni de las
+// otras—: la tienda sigue sin hablar con la pasarela, que es como esta pensado
+// este flujo. Lo unico que hace este fichero de terceros es medir el navegador.
+//
+// El valor no se queda aqui: lo recoge deviceHeader() en src/lib/checkout.ts y
+// sube como `X-Meli-Session-Id`, primero al proxy de este front —que la nombra a
+// mano, como la clave de idempotencia— y de ahi a Laravel, que es quien crea el
+// cobro y quien tiene que reenviarla a Mercado Pago.
+//
+// Lo montan las DOS pantallas desde las que nace un cobro, y solo esas:
+//
+//   /pago        el checkout con Mercado Pago
+//   /confirmado  cuando ofrece reintentar, que abre un cobro nuevo
+//
+// En el resto no se pinta. Cargar un tercero en el catalogo seria gastarle datos
+// a quien todavia esta mirando el menu, y en un acuse ya pagado no hay cobro que
+// aprobar.
+//
+// DOS DECISIONES DEL TAG
+//
+// `set:html` y no un <script> escrito aqui: `view` no es un atributo estandar y
+// el tipado de Astro lo rechaza, pero Mercado Pago lo lee tal cual. La cadena es
+// literal y no lleva nada de fuera, asi que no hay nada que escapar.
+//
+// `defer` para no competir con el pintado: el valor solo hace falta al pulsar, y
+// si no llegara a tiempo el cobro sale igual —sin huella—. Es una senal, no un
+// requisito, y bloquear una compra por un script ajeno costaria mas que la
+// aprobacion que gana.
+//
+// Documentacion: mercadopago.com/developers -> Device ID.
+// ---------------------------------------------------------------------------
+
+const SECURITY_SCRIPT =
+  '<script defer src="https://www.mercadopago.com/v2/security.js" view="checkout"><\/script>';
+---
+
+<Fragment set:html={SECURITY_SCRIPT} />

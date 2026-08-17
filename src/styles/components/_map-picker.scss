@@ -1,0 +1,152 @@
+// ---------------------------------------------------------------------------
+// Block: map-picker
+// ---------------------------------------------------------------------------
+// El selector de ubicacion de /datos: un mapa dentro de la hoja, con un pin
+// clavado en su centro. El comprador mueve el MAPA hasta su domicilio y acepta.
+//
+// No hay spec de Figma para esta pieza: se compone con el sistema que ya existe
+// —radius 12 como los campos, el dorado de marca en el pin, los grises de las
+// notas— para que no se lea como algo pegado de otro proyecto.
+//
+// La ley de este bloque es que el pin y el centro del mapa sean EL MISMO PUNTO.
+// De ahi salen las dos reglas que no se pueden tocar sin romperlo: el escenario
+// es `position: relative` y el pin va al 50/50 con su punta en ese cruce.
+// ---------------------------------------------------------------------------
+
+.map-picker {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-3);
+}
+
+// Element: el hueco del mapa.
+//
+// `relative` para que el pin, el boton de la diana y el aviso de carga se
+// coloquen contra el, y `overflow: hidden` para que el mapa —que pinta sus
+// propios tiles hasta el borde— respete el radio.
+.map-picker__stage {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--sf-border);
+  border-radius: var(--sf-radius-md);
+  // El fondo se ve mientras cargan los tiles: gris de pagina, no blanco, para
+  // que el hueco se lea como "aqui va algo" y no como una tarjeta vacia.
+  background-color: var(--sf-body-bg);
+}
+
+// Element: el lienzo de Google.
+//
+// El alto es fijo y en dvh con tope: la hoja entera vive dentro de un 85dvh, y
+// un mapa que crezca con el contenido dejaria el boton de aceptar fuera de la
+// pantalla justo en el movil donde mas se usa.
+//
+// En desktop crece con la hoja (.sheet--wide): ahi sobra alto de pantalla, y un
+// mapa mas grande es menos arrastre para llegar al mismo portal. El `clamp`
+// sigue mandando, asi que en un portatil bajo no se come el boton de aceptar.
+.map-picker__canvas {
+  width: 100%;
+  height: clamp(220px, 42dvh, 360px);
+
+  @include media-breakpoint-up(md) {
+    height: clamp(320px, 55dvh, 480px);
+  }
+}
+
+// Element: el pin.
+//
+// Centrado en los dos ejes y subido su propio alto, para que la PUNTA quede en
+// el centro exacto del mapa: es lo que hace que lo que se ve senalado y lo que
+// se guarda sean el mismo punto. Sin ese desplazamiento, el punto quedaria medio
+// pin mas abajo de donde parece.
+//
+// `pointer-events: none` porque no es un control: los gestos son del mapa que
+// tiene debajo, y un pin que los intercepte congela el arrastre justo en el
+// centro, que es donde el dedo suele estar.
+.map-picker__pin {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -100%);
+  color: var(--sf-gold);
+  pointer-events: none;
+  // Encima de los controles del mapa, que Google pinta en su propia capa.
+  z-index: 2;
+  // El pin es dorado sobre un mapa de colores cualesquiera: la sombra es lo que
+  // lo despega de una avenida amarilla o de un parque verde.
+  filter: drop-shadow(0 2px 4px rgb(20 24 33 / 45%));
+}
+
+// Element: la diana que centra el mapa donde esta el comprador.
+//
+// Abajo a la derecha, que es donde la ponen todos los mapas y donde el pulgar
+// llega sin tapar el centro. Caja de 36 y no de 44: es un atajo sobre el mapa,
+// no un control del formulario, y a 44 competiria con el pin.
+.map-picker__locate {
+  position: absolute;
+  right: var(--sf-space-3);
+  bottom: var(--sf-space-3);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--sf-radius-sm);
+  background-color: var(--sf-surface);
+  color: var(--sf-ink);
+  box-shadow: var(--sf-shadow-card);
+  transition: color var(--sf-transition);
+
+  &:hover {
+    color: var(--sf-gold);
+  }
+
+  &:disabled {
+    color: var(--sf-placeholder);
+  }
+}
+
+// Element: el aviso mientras carga el SDK. Ocupa el hueco entero para que la
+// hoja no de un salto de alto cuando el mapa aparece.
+.map-picker__status {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  color: var(--sf-muted);
+  font-size: var(--sf-font-size-base);
+  font-weight: var(--sf-weight-medium);
+  line-height: var(--sf-line-height-base);
+}
+
+// Element: el buscador de Google, encima del mapa.
+//
+// El widget es un web component de Google con su propio shadow DOM, asi que de
+// aqui solo se puede gobernar la caja: el ancho, y las variables que el propio
+// componente publica para su tipografia y su radio.
+.map-picker__search {
+  --gmp-mat-color-primary: var(--sf-gold);
+
+  width: 100%;
+
+  gmp-place-autocomplete {
+    width: 100%;
+    font-family: var(--sf-font-sans);
+    border-radius: var(--sf-radius-md);
+  }
+}
+
+// Bajo el mapa no va nada: la direccion del pin no se rotula aqui (ver
+// LocationPicker.astro). El cierre de la hoja es el boton de aceptar.
+
+// Element: el respaldo, cuando el mapa no se puede usar. Es la hoja de antes del
+// mapa —abrir Maps y pegar el enlace—, con el mismo ritmo que el resto de la
+// hoja.
+.map-picker__fallback {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sf-space-4);
+}
