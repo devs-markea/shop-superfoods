@@ -1,6 +1,7 @@
 ---
 import Icon from './Icon.astro';
 import Sheet from './Sheet.astro';
+import LocationMap from './LocationMap.astro';
 import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 
 // Spec: gap 16 — etiqueta + boton dorado + pista.
@@ -27,16 +28,26 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 //
 // DE DONDE SALE EL PUNTO
 //
-// Lo senala el comprador en un mapa, aqui dentro. El boton abre una hoja con el
-// mapa y un pin clavado en su centro: se mueve el mapa hasta el domicilio y se
-// acepta. Ni el pedido ni el envio dependen ya de lo que el navegador crea que
-// sabe —ver src/lib/map-picker.ts, donde esta el porque—.
+// Lo senala el comprador en un mapa, aqui dentro: se mueve el mapa hasta el
+// domicilio y se acepta. Ni el pedido ni el envio dependen ya de lo que el
+// navegador crea que sabe —ver src/lib/map-picker.ts, donde esta el porque—.
 //
-// Si el mapa no carga —sin clave, clave rechazada, sin red— la hoja cambia de piel
-// y ofrece el respaldo: la posicion del dispositivo, con filtro de precision. Y si
-// tampoco hay posicion utilizable, lo dice y ya: esto es opcional, lo que el pedido
-// necesita es la direccion escrita, y lo unico que se pierde es la cotizacion
-// previa del envio.
+// Y hay DOS caminos hasta ese mapa, segun conteste Google:
+//
+//   con mapa   el panel de <LocationMap> se pinta aqui mismo, en el hueco del
+//              boton, y se confirma con su boton verde. Es el camino normal.
+//   sin mapa   —sin clave, clave rechazada, sin red— el panel se retira y queda
+//              este boton, que abre la hoja de abajo. Alli el respaldo es la
+//              posicion del dispositivo, con filtro de precision.
+//
+// Cual de los dos manda no se sabe en el servidor: se descubre al pedirle el SDK
+// a Google. Asi que los dos se sirven y lo decide src/lib/location-map.ts, que
+// destapa el panel y retira las piezas marcadas con `data-location-fallback` —el
+// boton, su pista y el enlace de quitar, que en el panel es el boton rojo—.
+//
+// Y si tampoco hay posicion utilizable, lo dice y ya: esto es opcional, lo que el
+// pedido necesita es la direccion escrita, y lo unico que se pierde es la
+// cotizacion previa del envio.
 ---
 
 <div class="location" data-location>
@@ -48,10 +59,15 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     aria-describedby="location-label"
     aria-haspopup="dialog"
     data-share-location
+    data-location-fallback
   >
     <Icon name="map-pin" />
     <span>Elegir ubicacion en el mapa</span>
   </button>
+
+  {/* El mapa en linea, que releva al boton cuando Google responde. Se sirve
+      oculto: si hay mapa o no se descubre en el navegador. */}
+  <LocationMap />
 
   <input type="hidden" name="locationUrl" data-location-url />
 
@@ -66,17 +82,23 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
       <span data-location-label></span>
     </a>
 
+    {/* Con el panel puesto lo hace su boton rojo, que ademas desbloquea el mapa
+        para senalar otro punto: dos formas de quitar la misma ubicacion, una al
+        lado de la otra, solo pueden confundir. */}
     <button
       class="location__clear btn-plain"
       type="button"
       aria-label="Quitar la ubicacion"
       data-location-clear
+      data-location-fallback
     >
       Quitar
     </button>
   </p>
 
-  <p class="location__hint d-md-none">Mueve el mapa hasta tu domicilio</p>
+  {/* La pista del boton. El panel lleva la suya en la cabecera, y ademas la
+      cambia al confirmar, asi que esta se retira con el resto del camino. */}
+  <p class="location__hint d-md-none" data-location-fallback>Mueve el mapa hasta tu domicilio</p>
 </div>
 
 {/*
