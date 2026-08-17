@@ -4,7 +4,7 @@
 // Filtro de categoria. Igual que el switch, pasa de <button> + JS a radios:
 // la seleccion unica la garantiza el name compartido, sin JavaScript.
 //
-// Spec: height 36 - padding 8/16 - radius 100 - label Inter 600 14/20
+// Spec: height 36 - padding 8/16 - radius 100 - label Inter 500 14/20
 // Activo:   bg #D5AA53 - label #FFFFFF
 // Inactivo: bg #FFFFFF - border 1px #EAECF0 - label #6C757D
 // ---------------------------------------------------------------------------
@@ -28,6 +28,10 @@
     color var(--sf-transition);
 
   &.btn {
+    // Peso propio, un escalon por debajo del 600 que .btn trae de
+    // $btn-font-weight: el chip es una etiqueta de filtro, no un boton de accion.
+    // Aqui dentro y no en .chip porque hace falta ganarle a .btn en especificidad.
+    font-weight: 500;
     border-radius: var(--sf-radius-pill);
   }
 
