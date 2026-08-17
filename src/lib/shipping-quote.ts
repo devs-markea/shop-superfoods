@@ -14,6 +14,7 @@
 // ---------------------------------------------------------------------------
 
 import { cartFetch } from './cart.ts';
+import { hasSharedLocation, type CheckoutDraft } from './checkout-draft.ts';
 import { quoteFromResponse, type ShippingQuote, type ShippingQuoteResponse } from './shipping.ts';
 
 /**
@@ -37,4 +38,32 @@ export async function getShippingQuote(token: string): Promise<ShippingQuote | n
     console.error('[envio] fallo GET /api/shipping/quote', error);
     return null;
   }
+}
+
+/**
+ * El envio que puede ensenar este borrador, ya recuperado si hacia falta.
+ *
+ * Reune las dos mitades de la misma decision, que antes escribia cada pantalla
+ * por su cuenta:
+ *
+ *   1. Sin ubicacion compartida no hay cotizacion que ensenar —ni la del
+ *      borrador ni la de la sesion—, porque el envio se cotiza contra un punto y
+ *      este pedido no lleva ninguno. Ver hasSharedLocation().
+ *   2. Con ubicacion y sin importe a mano, se recupera de la API: la cookie del
+ *      borrador dura dos horas y la sesion del carrito treinta dias, asi que la
+ *      copia se pierde mucho antes que el original.
+ *
+ * Al recoger tampoco se pregunta: ahi no hay envio del que hablar, y la
+ * cotizacion que quede en el borrador es de una eleccion anterior.
+ *
+ * Devuelve una promesa sin esperarla dentro a proposito: las pantallas la
+ * arrancan junto a las demas lecturas y la esperan todas juntas.
+ */
+export async function quoteForDraft(
+  draft: CheckoutDraft,
+  token: string,
+): Promise<ShippingQuote | null> {
+  if (draft.deliveryType === 'pickup' || !hasSharedLocation(draft)) return null;
+
+  return draft.shipping ?? (await getShippingQuote(token));
 }

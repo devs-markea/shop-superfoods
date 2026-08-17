@@ -29,7 +29,7 @@ import {
   type CartLinesView,
 } from '../lib/cart-view';
 import { paintCartSummary } from '../lib/cart-summary';
-import { patchDraft, readDraft } from '../lib/checkout-draft';
+import { hasSharedLocation, patchDraft, readDraft } from '../lib/checkout-draft';
 import { freeShippingLabel, resolveShipping, type FreeShippingRule } from '../lib/shipping';
 
 // Los comentarios se guardan al salir del campo, no al enviar: "Continuar" es un
@@ -95,6 +95,12 @@ if (summary) {
   // eligen en el listado y en /datos—, asi que el borrador se lee una vez.
   const draft = readDraft();
 
+  // Sin ubicacion compartida no hay envio que ensenar, aunque la cookie recuerde
+  // un importe: es la misma regla con la que el servidor acaba de pintar esta
+  // tarjeta (hasSharedLocation), y las dos tienen que decir lo mismo o el envio
+  // cambiaria solo al mover una cantidad.
+  const quote = hasSharedLocation(draft) ? draft.shipping : null;
+
   const setError = (message: string | null): void => {
     if (!errorSlot) return;
     errorSlot.textContent = message ?? '';
@@ -135,7 +141,7 @@ if (summary) {
       products: cart.total,
       shipping: resolveShipping({
         pickup: draft.deliveryType === 'pickup',
-        quote: draft.shipping,
+        quote,
         products: cart.total,
         freeShipping,
       }),

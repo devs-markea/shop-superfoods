@@ -19,7 +19,7 @@ import {
 import { imageResolver, renderLines } from '../lib/cart-view.ts';
 import { assetBase } from '../lib/api.ts';
 import { resolveCartToken } from '../lib/cart-session.ts';
-import { getShippingQuote } from '../lib/shipping-quote.ts';
+import { quoteForDraft } from '../lib/shipping-quote.ts';
 import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
 import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
 import { ALL_CATEGORIES, getCategories, getProducts } from '../lib/catalog.ts';
@@ -88,18 +88,12 @@ const linesHtml = cart ? renderLines(cart, imageResolver(base)) : '';
 const draft = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 const pickup = draft.deliveryType === 'pickup';
 
-// La cotizacion del envio vive en el borrador, pero esa cookie dura dos horas y el
-// navegador la vacia de mas maneras de las que parece. Cuando falta y hay una
-// ubicacion que la justifica, se recupera de la API, que la guarda mientras dure la
-// sesion del carrito. Asi el importe llega en el primer render.
-//
-// Solo se pregunta cuando puede haber algo que recuperar: en el camino normal, con
-// la cotizacion ya en el borrador, no se llama.
-const quote =
-  draft.shipping ??
-  (!pickup && draft.customer.locationUrl
-    ? await getShippingQuote(resolveCartToken(Astro.cookies))
-    : null);
+// El envio de este borrador: el del borrador, o el que la API guarde para esta
+// sesion si la cookie lo perdio —dura dos horas, y el navegador la vacia de mas
+// maneras de las que parece—. Sin ubicacion compartida no hay ninguno, que aqui es
+// el caso normal: la ubicacion se comparte en /datos. Ver
+// src/lib/shipping-quote.ts.
+const quotePending = quoteForDraft(draft, resolveCartToken(Astro.cookies));
 
 // El envio gratis lo decide el negocio, y son tres respuestas distintas:
 //
@@ -111,10 +105,11 @@ const quote =
 // total que devuelve cada operacion de carrito, y el modo en data-free-shipping,
 // que es lo que le falta para volver a resolver el envio de la tarjeta: cruzar el
 // umbral con un "+" cambia el importe a "Gratis" sin recargar.
-const [store, schedule, categories] = await Promise.all([
+const [store, schedule, categories, quote] = await Promise.all([
   getStoreConfig(),
   getStoreSchedule(),
   categoriesPending,
+  quotePending,
 ]);
 
 const { freeShipping } = store.delivery ?? {};
