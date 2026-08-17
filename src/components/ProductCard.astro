@@ -60,8 +60,27 @@ const displayName =
   product.name.length > NAME_MAX ? `${product.name.slice(0, NAME_MAX).trimEnd()}...` : product.name;
 ---
 
-<article class:list={['product-card', 'card', !orderable && 'product-card--unavailable']}>
-  <div class="product-card__media">
+<!-- data-card: por aqui la alcanza el filtro para ponerle y quitarle el estado de
+     carga (src/scripts/category-filter.ts). La celda de la rejilla lleva la
+     categoria, pero el estado es de la tarjeta, que es quien tiene partes que
+     volver barras. -->
+<article
+  class:list={['product-card', 'card', !orderable && 'product-card--unavailable']}
+  data-card
+>
+  {/* La caja de la foto arranca como esqueleto y lo suelta cuando la imagen llega
+      (src/scripts/image-skeleton.ts). Es lo unico de la tarjeta que se hace
+      esperar de verdad: el resto lo trae el HTML ya escrito.
+
+      Cubre las dos esperas reales con la misma clase, porque el estado es de cada
+      foto: la de la carga inicial, y la de la foto que solo empieza a descargarse
+      cuando un filtro devuelve su celda a la rejilla —una imagen `lazy` dentro de
+      una celda con `hidden` no se pide, porque no tiene caja que pueda acercarse al
+      viewport—.
+
+      El esqueleto del cambio de categoria es otra cosa y va aparte, en
+      .product-card--loading: ahi no se espera ninguna descarga. */}
+  <div class="product-card__media skeleton" data-skeleton>
     <img
       class="product-card__image"
       src={productImageSrc(product)}

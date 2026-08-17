@@ -1,0 +1,58 @@
+// ---------------------------------------------------------------------------
+// Block: skeleton
+// ---------------------------------------------------------------------------
+// El relleno de lo que todavia no ha llegado: un gris con una banda clara que lo
+// cruza. Se pone en la caja que ya reserva el sitio, no en una copia del
+// contenido, asi que no hay dos marcados que mantener a la par.
+//
+// Hoy lo lleva la foto de la tarjeta de platillo (ver _product-card.scss), que es
+// lo unico de la portada que llega DESPUES del HTML: el nombre, la descripcion y
+// el precio los pinta el servidor, y un esqueleto sobre ellos taparia un texto
+// que ya esta.
+//
+// Se retira quitando la clase, y lo hace src/scripts/image-skeleton.ts cuando la
+// imagen carga —o falla—. Debajo queda el gris propio de la caja, que es el mismo
+// color: al retirarse no cambia nada de sitio ni de tono, solo se detiene.
+//
+// El barrido va en el FONDO de la caja y no en un ::after, para que la foto —un
+// hijo— siempre pinte por encima. Asi, si el script no llegara a correr, lo que
+// queda es una animacion invisible detras de una foto opaca en lugar de una banda
+// blanca cruzandola para siempre.
+//
+// No lleva reglas de `prefers-reduced-motion`: el bloque de _base.scss ya deja
+// toda animacion en 0.01ms y una sola vuelta, asi que con movimiento reducido esto
+// es exactamente el gris plano de antes.
+// ---------------------------------------------------------------------------
+
+// La pintura, en un mixin porque la piden dos sitios: esta clase —la caja de la
+// foto, que espera una descarga de verdad— y el estado de carga del filtro, que la
+// pone en cinco elementos de la tarjeta y no puede depender de que la clase siga
+// puesta (ver .product-card--loading en _product-card.scss).
+@mixin sf-skeleton {
+  background-color: var(--sf-border);
+  background-image: linear-gradient(
+    90deg,
+    rgb(255 255 255 / 0%) 0%,
+    rgb(255 255 255 / 55%) 50%,
+    rgb(255 255 255 / 0%) 100%
+  );
+  background-repeat: no-repeat;
+  // La banda mide media caja. Con eso, los porcentajes de position dejan de ser
+  // evidentes: el desplazamiento es P x (ancho de la caja - ancho de la banda), o
+  // sea P x medio ancho. De ahi los valores del keyframe —-100% la deja justo
+  // fuera por la izquierda y 200% justo fuera por la derecha—, y no 0% y 100%,
+  // que la dejarian asomando en los dos extremos.
+  background-size: 50% 100%;
+  background-position: -100% 0;
+  animation: sf-skeleton 1.4s ease-in-out infinite;
+}
+
+.skeleton {
+  @include sf-skeleton;
+}
+
+@keyframes sf-skeleton {
+  to {
+    background-position: 200% 0;
+  }
+}

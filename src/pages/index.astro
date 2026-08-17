@@ -256,6 +256,9 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 <script>
   import '../scripts/category-nav';
   import '../scripts/category-filter';
+  // Retira el esqueleto de cada foto cuando llega. Solo esta pantalla lo necesita:
+  // es la unica que pinta tarjetas de platillo.
+  import '../scripts/image-skeleton';
   import '../scripts/delivery-mode';
   import '../scripts/add-button';
   import '../scripts/sheet';

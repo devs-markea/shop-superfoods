@@ -381,9 +381,7 @@ if (form) {
   };
 
   /**
-   * Toma un punto, lo rotula y lo cotiza. Es el camino comun del pin del mapa y
-   * del respaldo de pegar el enlace: de donde salieron las coordenadas ya no
-   * importa a partir de aqui.
+   * Toma el punto que se acepto en el mapa, lo rotula y lo cotiza.
    */
   const useLocation = async (lat: number, lng: number): Promise<void> => {
     // El formato que entiende cualquier cliente de Maps, y el que espera la API

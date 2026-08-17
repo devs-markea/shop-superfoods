@@ -52,9 +52,10 @@ export default defineConfig({
       // al dominio de la tienda en Google Cloud— y no por ocultarla. Una clave
       // sin esa restriccion la puede gastar cualquiera desde otro sitio.
       //
-      // Opcional a proposito: sin ella la tienda no falla ni se queda sin
-      // ubicacion. La hoja cae a pegar el enlace de Maps a mano, que es lo que
-      // hacia antes de que hubiera mapa. Ver components/LocationPicker.astro.
+      // Opcional a proposito: sin ella la tienda no falla, se queda sin selector
+      // de ubicacion. La hoja avisa de que el mapa no cargo y el pedido sigue con
+      // la direccion escrita, que es lo que de verdad hace falta; el envio se
+      // queda "Por cotizar". Ver components/LocationPicker.astro.
       GOOGLE_MAPS_API_KEY: envField.string({
         context: 'client',
         access: 'public',

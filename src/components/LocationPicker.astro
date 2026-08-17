@@ -32,9 +32,11 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 // acepta. Ni el pedido ni el envio dependen ya de lo que el navegador crea que
 // sabe —ver src/lib/map-picker.ts, donde esta el porque—.
 //
-// Sin clave de Google configurada, la misma hoja cae al camino de antes: abrir
-// Maps aparte y pegar aqui el enlace. Se sirve siempre en el marcado, oculto,
-// porque el fallo que lo destapa se descubre en el navegador y no aqui.
+// Si el mapa no carga —sin clave, clave rechazada, sin red— la hoja cambia de piel
+// y ofrece el respaldo: la posicion del dispositivo, con filtro de precision. Y si
+// tampoco hay posicion utilizable, lo dice y ya: esto es opcional, lo que el pedido
+// necesita es la direccion escrita, y lo unico que se pierde es la cotizacion
+// previa del envio.
 ---
 
 <div class="location" data-location>
@@ -96,7 +98,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
         no llegue: un hueco vacio encima del mapa no dice nada. */}
     <div class="map-picker__search" hidden data-map-search></div>
 
-    <div class="map-picker__stage">
+    <div class="map-picker__stage" data-map-stage>
       <div class="map-picker__canvas" data-map-canvas></div>
 
       {/*
@@ -132,42 +134,39 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     */}
   </div>
 
+  {/*
+    Aceptar. Si el mapa no llega a cargar, el script lo retira junto al mapa y su
+    buscador: sin mapa este boton confirmaria el centro de Cancun como si fuera el
+    domicilio de alguien. En su lugar se destapa el respaldo de abajo.
+  */}
   <button class="btn btn-primary" type="button" data-map-apply>Usar esta ubicacion</button>
 
   {/*
-    El respaldo, cuando el mapa no se puede usar: sin clave configurada, con una
-    clave que Google rechaza, o sin red. Es el camino que tenia esta hoja antes
-    del mapa y hace el mismo trabajo —traer un punto de Maps—, asi que se queda
-    como red de seguridad en lugar de dejar la pantalla sin ubicacion.
+    El respaldo, y solo para cuando el mapa no se puede usar: sin clave, con una
+    clave que Google rechaza, sin red o con el script bloqueado. Se sirve oculto
+    porque ese fallo se descubre en el navegador y no aqui.
+
+    Pide la posicion al dispositivo, que es el otro sitio de donde puede salir un
+    punto sin hacer copiar nada. Va con filtro de precision —ver
+    MAX_ACCURACY_METERS en src/lib/map-picker.ts—: aqui el punto se acepta sin
+    verlo, asi que una posicion deducida de la IP se rechaza en lugar de acabar
+    cotizando un envio a otra ciudad.
+
+    Y si tampoco hay posicion, no pasa nada grave: lo dice y el pedido sigue con la
+    direccion escrita, que es la obligatoria.
   */}
-  <div class="map-picker__fallback" hidden data-map-fallback>
+  <div class="map-picker__offline" hidden data-map-offline>
     <p class="sheet__text">
-      Abre Google Maps, busca tu domicilio y manten pulsado el punto exacto. Copia las coordenadas o
-      el enlace y pegalos aqui.
+      No pudimos cargar el mapa. Puedes usar la ubicacion de tu dispositivo, o cerrar esta ventana y
+      escribir tu direccion en el formulario: en ese caso confirmamos el costo de envio al finalizar
+      tu pedido.
     </p>
 
-    <a
-      class="btn btn-outline-secondary"
-      href="https://www.google.com/maps/@21.1619,-86.8515,13z"
-      target="_blank"
-      rel="noopener"
-    >
-      Abrir Google Maps
-    </a>
+    <button class="btn btn-primary" type="button" data-map-geolocate>
+      <Icon name="crosshair" size="sm" />
+      <span>Usar mi ubicacion actual</span>
+    </button>
 
-    <label class="visually-hidden" for="field-manual-location">Enlace o coordenadas</label>
-    <input
-      class="field form-control"
-      id="field-manual-location"
-      type="text"
-      inputmode="text"
-      autocomplete="off"
-      placeholder="21.1421, -86.8235"
-      data-manual-input
-    />
-
-    <p class="form-error" role="alert" hidden data-manual-error></p>
-
-    <button class="btn btn-primary" type="button" data-manual-apply>Usar esta ubicacion</button>
+    <p class="form-error" role="alert" hidden data-map-offline-error></p>
   </div>
 </Sheet>
