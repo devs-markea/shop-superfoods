@@ -26,6 +26,7 @@ import {
   readDraft,
 } from '../lib/checkout-draft';
 import { bindDeliverySwitch, checkedDeliveryType } from '../lib/delivery-switch';
+import { mountLocationMap } from '../lib/location-map';
 import { createMapPicker } from '../lib/map-picker';
 import {
   coordsFromMapsUrl,
@@ -250,12 +251,43 @@ if (form) {
   clearButton?.addEventListener('click', clearLocation);
 
   /**
-   * Rellena un campo vacio. No pisa lo que el comprador haya escrito: la
-   * geocodificacion ayuda, no corrige.
+   * Si la ubicacion escribe la direccion. APAGADO por ahora.
+   *
+   * Se queda todo montado —el buscador sigue pidiendo la direccion de la
+   * sugerencia, que viaja gratis en la misma consulta, y la cotizacion sigue
+   * devolviendo la suya— y lo unico que hace este interruptor es no tocar los
+   * campos. Ponerlo en `true` lo devuelve entero, sin nada mas que cambiar.
    */
-  const fillIfEmpty = (name: string, text: string | undefined): void => {
+  const FILL_ADDRESS_FROM_LOCATION = false;
+
+  /** Escribe un campo. Sin texto no hace nada: no se vacia lo que ya hubiera. */
+  const writeField = (name: string, text: string | undefined): void => {
     const field = form.querySelector<HTMLInputElement>(`[name="${name}"]`);
-    if (field && !field.value.trim() && text) field.value = text;
+    if (field && text) field.value = text;
+  };
+
+  /**
+   * La direccion de un punto, en los campos que la admiten: colonia y calle.
+   *
+   * PISA lo que hubiera escrito. La direccion escrita y la ubicacion son la misma
+   * casa contada de dos maneras, asi que mover el punto y dejar la calle anterior
+   * es mandar el pedido a dos sitios; manda el punto, que es el que el comprador
+   * acaba de confirmar viendolo en el mapa.
+   *
+   * Lo que NO hace es vaciar: si de la ubicacion nueva no sale colonia —no toda
+   * direccion la trae—, se queda la que estuviera en lugar de borrarla.
+   *
+   * El NUMERO no entra, venga de donde venga. Google lo devuelve del portal que
+   * indexo, y en Cancun eso acaba siendo el numero de al lado, el de la manzana o
+   * ninguno; ademas es el unico dato de la direccion que el comprador tiene
+   * delante sin discusion —y el que distingue su casa de la del vecino—. Se
+   * escribe a mano, con el interior si lo hay.
+   */
+  const fillAddress = (address: { neighborhood?: string; street?: string } | null): void => {
+    if (!FILL_ADDRESS_FROM_LOCATION) return;
+
+    writeField('neighborhood', address?.neighborhood);
+    writeField('street', address?.street);
   };
 
   // --- La ubicacion compartida ---
@@ -406,10 +438,9 @@ if (form) {
     // el punto, y lo que viaja al pedido es el enlace de Maps.
     saveLocation(url, address?.label || `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
 
-    // Ayudan, no corrigen: solo entran donde el comprador no haya escrito.
-    fillIfEmpty('neighborhood', address?.neighborhood);
-    fillIfEmpty('street', address?.street);
-    fillIfEmpty('number', address?.exteriorNumber);
+    // Y la direccion que resolvio el backend pasa a los campos escritos, si eso
+    // esta encendido: hoy no lo esta. Ver fillAddress().
+    fillAddress(address ?? null);
   };
 
   // --- Elegir la ubicacion en el mapa ---
@@ -447,6 +478,40 @@ if (form) {
   // continuo antes de que llegara la anterior, y cuando el borrador se perdio y
   // el servidor tampoco pudo recuperarla de la API.
   if (savedSpot && !quote) void askQuote(savedSpot.lat, savedSpot.lng);
+
+  // --- El mapa, sin hoja ---
+  // Si Google responde, el mapa no vive en una hoja: se pinta aqui mismo, en el
+  // hueco del boton, y el punto se confirma con el boton verde de su cabecera.
+  // El boton —y con el la hoja de arriba— queda para cuando Google NO responde.
+  // Ver src/lib/location-map.ts, que es quien decide cual de los dos se ve.
+  //
+  // Lo que sale de los dos caminos es lo mismo, un punto, y lo recibe la misma
+  // funcion: aqui no hay dos maneras de guardar una ubicacion.
+  //
+  // Se monta cuando hay a donde entregar. Al recoger, el bloque de direccion
+  // esta oculto entero: Google mediria un hueco de cero y pintaria un mapa gris,
+  // ademas de gastar la descarga del SDK en un pedido que no lleva direccion. Si
+  // el switch cambia de idea, se monta entonces.
+  const startLocationMap = (): void => {
+    if (checkedDeliveryType(form) !== 'delivery') return;
+
+    form.removeEventListener('change', startLocationMap);
+
+    void mountLocationMap({
+      // Abre donde ya se eligio, si se eligio: volver a esta pantalla no puede
+      // empezar por buscar la ciudad otra vez.
+      start: coordsFromMapsUrl(locationUrl?.value),
+      onConfirm: (lat, lng) => void useLocation(lat, lng),
+      onCancel: () => clearLocation(),
+      // Buscar una direccion en el mapa ya dice la colonia y la calle, sin
+      // esperar a confirmar el punto ni a que conteste la cotizacion. Queda
+      // conectado, pero hoy no escribe nada: ver fillAddress().
+      onAddress: (hint) => fillAddress(hint),
+    });
+  };
+
+  form.addEventListener('change', startLocationMap);
+  startLocationMap();
 
   // --- Continuar ---
   // Sigue siendo un submit, no un enlace, para que los campos required se

@@ -60,6 +60,7 @@
 // ---------------------------------------------------------------------------
 
 import { loadGoogleMaps } from './google-maps.ts';
+import { mountPlaceSearch } from './place-search.ts';
 
 /** Centro de Cancun. Donde abre el mapa cuando no hay punto previo. */
 const CANCUN = { lat: 21.1619, lng: -86.8515 };
@@ -226,56 +227,16 @@ export function createMapPicker(onPick: (lat: number, lng: number) => void): Map
     // No hay listener de `idle`: el punto no se va apuntando conforme el mapa se
     // mueve, se lee UNA VEZ al aceptar. Escucharlo obligaba a mantener una copia
     // del centro al dia, y una copia es justamente lo que puede quedarse atras.
-    await mountSearch(maps);
-  };
 
-  /**
-   * El buscador de direcciones, encima del mapa.
-   *
-   * Es lo que hace que el selector sirva sin GPS: escribir "Bonampak 12" lleva el
-   * mapa al portal y de ahi solo queda ajustar. Se limita a Mexico porque es
-   * donde entrega la tienda, y una lista de sugerencias del mundo entero solo
-   * puede confundir.
-   *
-   * Si esta pieza no esta disponible —la clave sin Places habilitado, o una
-   * version del SDK que no la traiga— el mapa se queda sin buscador y sigue
-   * funcionando: arrastrar y hacer zoom no depende de ella.
-   */
-  const mountSearch = async (maps: typeof google.maps): Promise<void> => {
-    if (!searchSlot) return;
-
-    try {
-      const places = (await maps.importLibrary('places')) as google.maps.PlacesLibrary;
-      const { PlaceAutocompleteElement } = places;
-
-      if (!PlaceAutocompleteElement) return;
-
-      const search = new PlaceAutocompleteElement({
-        includedRegionCodes: ['mx'],
-        locationBias: { center: CANCUN, radius: 50_000 },
+    // El buscador de direcciones, encima del mapa: es lo que hace que el
+    // selector sirva sin GPS. El mismo que monta el panel en linea, y con el
+    // mismo trato —acerca la camara, no confirma nada—. Ver
+    // src/lib/place-search.ts.
+    if (searchSlot) {
+      await mountPlaceSearch(maps, searchSlot, (spot) => {
+        map?.setCenter(spot);
+        map?.setZoom(SPOT_ZOOM);
       });
-
-      search.setAttribute('placeholder', 'Busca tu calle y numero');
-      searchSlot.append(search);
-      searchSlot.hidden = false;
-
-      search.addEventListener('gmp-select', (event) => {
-        void (async () => {
-          const place = event.placePrediction.toPlace();
-          await place.fetchFields({ fields: ['location'] });
-
-          const spot = place.location;
-          if (!spot || !map) return;
-
-          // El buscador acerca, pero no confirma: el pin queda sobre el portal y
-          // sigue siendo el comprador quien acepta. Una direccion escrita puede
-          // caer en el numero de al lado.
-          map.setCenter(spot);
-          map.setZoom(SPOT_ZOOM);
-        })();
-      });
-    } catch {
-      // Sin buscador, el mapa basta.
     }
   };
 
