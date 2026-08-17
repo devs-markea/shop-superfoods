@@ -17,7 +17,14 @@
 import 'bootstrap/js/dist/dropdown.js';
 
 import { paintCartSummary } from '../lib/cart-summary';
-import { draftGaps, listGaps, patchDraft, phoneDigits, readDraft } from '../lib/checkout-draft';
+import {
+  draftGaps,
+  hasSharedLocation,
+  listGaps,
+  patchDraft,
+  phoneDigits,
+  readDraft,
+} from '../lib/checkout-draft';
 import { bindDeliverySwitch, checkedDeliveryType } from '../lib/delivery-switch';
 import {
   coordsFromMapsUrl,
@@ -86,8 +93,13 @@ if (form) {
    * ahi y el aviso si no. Se declara aqui arriba —antes que todo lo que la usa—
    * porque la tarjeta de resumen la lee desde el primer momento, y el switch de
    * entrega la consulta ya al arrancar.
+   *
+   * Sin ubicacion en el borrador se arranca sin ella, aunque la cookie recuerde
+   * un importe: es la misma regla con la que el servidor acaba de pintar la
+   * tarjeta (hasSharedLocation), y las dos tienen que decir lo mismo o el envio
+   * cambiaria solo al arrancar el JavaScript.
    */
-  let quote: ShippingQuote | null = saved.shipping;
+  let quote: ShippingQuote | null = hasSharedLocation(saved) ? saved.shipping : null;
 
   // --- Tarjeta de resumen (desktop) ---
   // La misma tarjeta de /carrito, con la cuenta del pedido. Aqui los importes de
@@ -211,6 +223,20 @@ if (form) {
     if (selected) selected.hidden = false;
   };
 
+  /**
+   * Ensena la ubicacion Y la guarda, que es lo que hace que sobreviva a la
+   * pantalla.
+   *
+   * Se guarda AL COMPARTIRLA, no al continuar. El punto y su cotizacion son un
+   * solo dato: guardar el importe y dejar el punto en un input suelto hacia que
+   * una recarga se quedara con el envio de una ubicacion que el formulario ya no
+   * ensenaba —y que el pedido, que sale sin ella, tampoco iba a llevar—.
+   */
+  const saveLocation = (url: string, label: string): void => {
+    showLocation(url, label);
+    patchDraft({ customer: { locationUrl: url }, locationLabel: label });
+  };
+
   const clearLocation = (): void => {
     if (locationUrl) locationUrl.value = '';
     if (selected) selected.hidden = true;
@@ -219,8 +245,12 @@ if (form) {
     // va el aviso, que tambien era de ese punto: quien quita una ubicacion de otra
     // ciudad vuelve a estar como quien no comparte ninguna, con la direccion
     // escrita que esta pantalla no puede comprobar.
+    //
+    // Se van las dos del borrador, no solo de la pantalla: quitarla solo aqui la
+    // dejaba guardada, y bastaba con recargar para que volviera —y con ella el
+    // importe, recuperado de la sesion—.
     quote = null;
-    patchDraft({ shipping: null });
+    patchDraft({ shipping: null, locationLabel: '', customer: { locationUrl: '' } });
     showAreaNotice(null);
 
     // Y el envio vuelve a "Por cotizar", que es lo que era antes de compartirla.
@@ -369,17 +399,23 @@ if (form) {
     // en `customer.locationUrl`.
     const url = `https://www.google.com/maps?q=${lat},${lng}`;
 
-    // El punto ya esta elegido, asi que se rotula sin esperar a nadie. Lo que
-    // falta —la direccion escrita— llega en la misma respuesta que el importe y
-    // sustituye a este texto en cuanto la API contesta.
-    showLocation(url, 'Ubicacion compartida');
+    // El punto ya esta elegido, asi que se rotula —y se guarda— sin esperar a
+    // nadie. Lo que falta —la direccion escrita— llega en la misma respuesta que
+    // el importe y sustituye a este texto en cuanto la API contesta.
+    saveLocation(url, 'Ubicacion compartida');
     showError(null);
 
     const address = (await askQuote(lat, lng))?.address;
 
+    // Por el camino se puede haber compartido otro punto —la consulta tarda, y el
+    // boton sigue vivo—: el rotulo que llega tarde no puede pisar al que la
+    // pantalla ensena ahora, y menos guardarlo. Es la misma cautela que askQuote()
+    // tiene con su contador, aqui contra la ubicacion vigente.
+    if (locationUrl && locationUrl.value !== url) return;
+
     // Sin direccion resuelta, las coordenadas: se lee peor, pero deja comprobar
     // el punto, y lo que viaja al pedido es el enlace de Maps.
-    showLocation(url, address?.label || `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
+    saveLocation(url, address?.label || `${lat.toFixed(5)}, ${lng.toFixed(5)}`);
 
     // Ayudan, no corrigen: solo entran donde el comprador no haya escrito.
     fillIfEmpty('neighborhood', address?.neighborhood);

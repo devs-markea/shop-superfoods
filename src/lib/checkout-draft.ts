@@ -268,6 +268,26 @@ export function listGaps(gaps: string[]): string {
 }
 
 /**
+ * Si este borrador lleva la ubicacion que justifica una cotizacion de envio.
+ *
+ * El envio se cotiza CONTRA UN PUNTO, asi que el punto y su importe son un solo
+ * dato repartido en dos campos: sin `locationUrl` no hay envio que ensenar por
+ * mucho que la cookie recuerde un importe. Seria el envio de una ubicacion que
+ * este pedido ya no lleva —y que el pedido, que se manda sin ella, tampoco va a
+ * llevar—: la pantalla cobraria por algo que no puede nombrar.
+ *
+ * La pregunta se hace aqui, una vez, porque la contestan seis sitios: las cinco
+ * pantallas que ensenan la cuenta y el formulario que la mueve. Escrita seis
+ * veces, un dia una de ellas se quedaria atras.
+ *
+ * La ubicacion se pide POR PEDIDO: el borrador se borra al cerrar la compra
+ * (ver confirmDraft), asi que la siguiente empieza sin punto y sin importe.
+ */
+export function hasSharedLocation(draft: CheckoutDraft): boolean {
+  return Boolean(draft.customer.locationUrl?.trim());
+}
+
+/**
  * El borrador como cuerpo del checkout. Devuelve null si falta algo obligatorio
  * o si todavia no se ha elegido metodo de pago.
  *
@@ -345,8 +365,21 @@ export function readDraft(): CheckoutDraft {
   return parseDraft(readCookie(DRAFT_COOKIE));
 }
 
+/**
+ * Lo que se le puede pasar a patchDraft().
+ *
+ * El cliente se acepta A TROZOS, al reves que el resto: hay campos suyos que se
+ * guardan solos y en otro momento —la ubicacion, en cuanto se comparte— y
+ * exigir el objeto entero obligaria a releer el borrador para reenviar el
+ * nombre y el telefono, que es justo la lectura que patchDraft() hace por
+ * dentro. Lo que no se nombra no se toca.
+ */
+export type DraftPatch = Partial<Omit<CheckoutDraft, 'customer'>> & {
+  customer?: Partial<CheckoutCustomer>;
+};
+
 /** Mezcla y guarda. Devuelve el borrador ya completo, listo para validar. */
-export function patchDraft(patch: Partial<CheckoutDraft>): CheckoutDraft {
+export function patchDraft(patch: DraftPatch): CheckoutDraft {
   const current = readDraft();
 
   const next: CheckoutDraft = {
@@ -377,6 +410,12 @@ export function saveOrderPointer(pointer: OrderPointer): void {
  *
  * Al cerrarse, el borrador deja de ser la verdad y se borra: el carrito queda
  * vacio arriba y lo unico que queda del pedido es el pedido.
+ *
+ * Con el se va la UBICACION, y con cualquier metodo: los tres cierran por aqui,
+ * asi que no hay un camino por el que un punto pueda sobrevivir a su compra. La
+ * ubicacion es de un pedido, no del navegador —quien pide dos veces puede pedir
+ * a dos sitios—, y por eso la siguiente compra vuelve a pedirla en /datos en
+ * lugar de heredar la anterior con su importe.
  *
  * El envio no viaja como importe: la API lo recalcula al cerrar, desde la misma
  * ubicacion, y lo congela en `shippingTotal`. Lo unico que se manda es la
