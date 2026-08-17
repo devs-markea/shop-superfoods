@@ -120,6 +120,37 @@ export async function getCart(token: string): Promise<Cart> {
 // ese modulo si se puede importar desde el navegador.
 export { describeSelection } from './cart-view.ts';
 
+/**
+ * Si el carrito esta vacio y no hay con que seguir el checkout.
+ *
+ * Lo miran las cuatro pantallas que van despues del pedido y las cuatro vuelven
+ * a `/carrito`. La ruta se escribe en cada una, como el resto de destinos del
+ * proyecto —`Astro.redirect('/datos')`, `backHref="/carrito"`—: aqui vive la
+ * regla, no el mapa de rutas.
+ *
+ * Las cuatro pantallas que van despues —datos, resumen y los dos cierres—
+ * existen para convertir un pedido en una compra, y sin lineas no hay pedido.
+ * Lo que se pinta entonces es un formulario que pide una direccion para nada, un
+ * resumen de $0 y un "Confirmar pedido" cuyo unico final posible es el 422 de la
+ * API —"Tu carrito esta vacio."— tres pantallas mas alla de donde se arreglaba.
+ *
+ * `null` NO cuenta como vacio, y esa es la parte que importa: es lo que
+ * devuelven las pantallas cuando la lectura se cayo, y de un fallo de la casa no
+ * se deduce que alguien no tenga pedido. Es la misma regla que separa el 404 del
+ * 503 en las pantallas de cierre: se echa a quien no tiene nada, no a quien no
+ * pudimos preguntar.
+ *
+ * Se miran las `lines` y no los `items` por lo mismo que las pinta la vista: es
+ * lo que el comprador reconoce como su pedido.
+ *
+ * No sustituye a draftGaps(): aquella comprueba los datos de ENTREGA y devuelve
+ * a /datos, que es donde se escriben. Son dos faltas distintas y cada una tiene
+ * su pantalla.
+ */
+export function isEmptyCart(cart: Cart | null): boolean {
+  return cart !== null && cart.lines.length === 0;
+}
+
 /** Cuanto falta para el envio gratis. 0 si ya se alcanzo. */
 export function remainingForFreeShipping(total: number, threshold: number): number {
   return Math.max(0, threshold - total);

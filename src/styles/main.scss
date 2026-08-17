@@ -93,6 +93,7 @@
 @import 'components/hero'; // panel de bienvenida: solo desktop
 @import 'components/navbar'; // barra de movil
 @import 'components/navbar-desktop'; // la releva de md hacia arriba
+@import 'components/cart-fab'; // boton flotante del pedido: solo movil
 @import 'components/sheet'; // hojas modales de la barra superior
 @import 'components/schedule';
 @import 'components/location-sheet';
@@ -132,6 +133,7 @@
 // Vista de datos de entrega
 @import 'components/country-select';
 @import 'components/location';
+@import 'components/map-picker'; // el mapa con el pin, dentro de la hoja
 
 // Armazon de las pantallas del checkout en desktop (/carrito y /datos). Al final
 // del grupo, como .product-page en la ficha: es quien recoloca las piezas de

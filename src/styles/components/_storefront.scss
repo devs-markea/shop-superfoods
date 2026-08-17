@@ -25,6 +25,21 @@
 // pone la pila, en un solo sitio, y no la suma de los margenes de cada bloque.
 // ---------------------------------------------------------------------------
 
+// Movil: el hueco del boton flotante del pedido. Flota sobre el catalogo (ver
+// components/_cart-fab.scss), asi que al final de la lista se quedaria encima de
+// la ultima tarjeta y justo sobre su "+", que es lo que se viene a pulsar. Lo
+// reserva <main>, que es lo que scrollea: el circulo esta fuera del flujo y no
+// puede reservarselo el.
+//
+// Se reserva el diametro mas la separacion del borde; el aire entre la ultima
+// tarjeta y el circulo lo pone el padding que la lista ya trae. En desktop no
+// hace falta —ahi no hay boton— y lo sustituye el `padding-block` de mas abajo.
+.storefront {
+  padding-bottom: calc(
+    var(--sf-cart-fab-size) + var(--sf-gutter-x) + env(safe-area-inset-bottom, 0px)
+  );
+}
+
 // display: contents: en movil el envoltorio no pinta ni ocupa nada —ni el ancho
 // ni el relleno del .container-fluid llegan a aplicarse—, asi que sus hijos
 // siguen siendo hijos de <main> a efectos de layout y la pantalla se ve

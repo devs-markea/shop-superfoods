@@ -15,7 +15,7 @@ import Footer from '../components/Footer.astro';
 import Icon from '../components/Icon.astro';
 import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
 import { quoteForDraft } from '../lib/shipping-quote.ts';
-import { getCart } from '../lib/cart.ts';
+import { getCart, isEmptyCart } from '../lib/cart.ts';
 import { resolveCartToken } from '../lib/cart-session.ts';
 import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
 import { ALL_CATEGORIES, getCategories, getProducts } from '../lib/catalog.ts';
@@ -93,6 +93,16 @@ const [store, schedule, cart, categories, quote] = await Promise.all([
   categoriesPending,
   quotePending,
 ]);
+
+// Sin pedido no hay a donde entregar nada. Pedir aqui nombre, telefono y
+// direccion para un carrito vacio es hacer rellenar un formulario que solo puede
+// acabar en el 422 de la API tres pantallas mas adelante.
+//
+// Se vuelve al pedido, que es donde se ve que no hay lineas y desde donde se
+// llega al menu. Ver isEmptyCart(): una lectura caida NO cuenta como vacia, y por
+// eso esta pantalla se sigue sirviendo cuando la API no contesta —los datos de
+// entrega se pueden rellenar sin saber el importe—.
+if (isEmptyCart(cart)) return Astro.redirect('/carrito');
 
 const total = cart?.total ?? 0;
 const { freeShipping } = store.delivery ?? {};
@@ -210,7 +220,7 @@ const areaNotice = TEST_MODE ? '' : (quote?.notice ?? '');
                   haya dos titulos para el mismo grupo. */}
               <h2 class="field-label d-none d-md-block">Direccion</h2>
 
-              <LocationPicker testMode={TEST_MODE} />
+              <LocationPicker />
 
               {/*
                 Donde entrega la tienda, cuando la ubicacion compartida cae fuera. No
@@ -269,4 +279,8 @@ const areaNotice = TEST_MODE ? '' : (quote?.notice ?? '');
   import '../scripts/delivery-form';
   // Abre las hojas del horario y la ubicacion desde la barra de desktop.
   import '../scripts/sheet';
+  // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
+  // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
+  // que importarlo. Ver src/lib/discover.ts.
+  import '../scripts/footer-discover';
 </script>

@@ -1,17 +1,7 @@
 ---
 import Icon from './Icon.astro';
 import Sheet from './Sheet.astro';
-
-interface Props {
-  /**
-   * Modo de pruebas. Cambia quien da el punto: en lugar de pedirselo al
-   * navegador, el boton abre la hoja para escribirlo a mano. Es lo que permite
-   * probar el flujo de envio desde fuera de Cancun.
-   */
-  testMode?: boolean;
-}
-
-const { testMode = false } = Astro.props;
+import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 
 // Spec: gap 16 — etiqueta + boton dorado + pista.
 // El icono es el mismo componente que usa la navbar en gris: hereda el dorado
@@ -37,13 +27,14 @@ const { testMode = false } = Astro.props;
 //
 // DE DONDE SALE EL PUNTO
 //
-// Primero del dispositivo, que es lo unico que sabe donde esta. Pero pedirselo al
-// navegador no garantiza un GPS: sin sensor, sin permiso o en un escritorio, lo
-// que responde es una posicion deducida de la IP del proveedor, que puede caer a
-// cientos de kilometros —la de un cliente de Cancun puede dar Monterrey— y con
-// ella el envio se cotizaria mal. Por eso la respuesta se mira antes de aceptarla
-// (ver src/scripts/delivery-form.ts) y, cuando no sirve, queda esta hoja: abrir
-// Maps, encontrar el domicilio y pegar el enlace.
+// Lo senala el comprador en un mapa, aqui dentro. El boton abre una hoja con el
+// mapa y un pin clavado en su centro: se mueve el mapa hasta el domicilio y se
+// acepta. Ni el pedido ni el envio dependen ya de lo que el navegador crea que
+// sabe —ver src/lib/map-picker.ts, donde esta el porque—.
+//
+// Sin clave de Google configurada, la misma hoja cae al camino de antes: abrir
+// Maps aparte y pegar aqui el enlace. Se sirve siempre en el marcado, oculto,
+// porque el fallo que lo destapa se descubre en el navegador y no aqui.
 ---
 
 <div class="location" data-location>
@@ -53,10 +44,11 @@ const { testMode = false } = Astro.props;
     class="location__button btn-plain"
     type="button"
     aria-describedby="location-label"
+    aria-haspopup="dialog"
     data-share-location
   >
     <Icon name="map-pin" />
-    <span>{testMode ? 'Indicar ubicacion (modo de pruebas)' : 'Compartir ubicacion (recomendado)'}</span>
+    <span>Elegir ubicacion en el mapa</span>
   </button>
 
   <input type="hidden" name="locationUrl" data-location-url />
@@ -82,46 +74,100 @@ const { testMode = false } = Astro.props;
     </button>
   </p>
 
-  <p class="location__hint d-md-none">o ingresa manualmente</p>
+  <p class="location__hint d-md-none">Mueve el mapa hasta tu domicilio</p>
 </div>
 
 {/*
-  La hoja de la ubicacion a mano. Es la misma en los dos casos —modo de pruebas y
-  respaldo cuando el dispositivo no da un punto fiable—, porque el trabajo es el
-  mismo: traer un punto de Google Maps.
-
-  Vive fuera de .location para no heredar su columna: el <dialog> se coloca solo.
+  La hoja del mapa. Vive fuera de .location para no heredar su columna: el
+  <dialog> se coloca solo.
 */}
-<Sheet id="location-input" title="Indicar tu ubicacion">
-  <p class="sheet__text" data-manual-intro>
-    {
-      testMode
-        ? 'Modo de pruebas: escribe el punto a mano en lugar de pedirselo al navegador.'
-        : 'Abre Google Maps, busca tu domicilio y manten pulsado el punto exacto. Copia las coordenadas o el enlace y pegalos aqui.'
-    }
-  </p>
+<Sheet id="location-input" title="Indicar tu ubicacion" wide persistent>
+  {/*
+    El mapa y sus dos controles. La clave viaja en un data-, como el resto de lo
+    que el servidor le pasa a un script de esta tienda; sin ella el bloque se
+    retira solo y queda el respaldo de abajo.
+  */}
+  <div class="map-picker" data-map-picker data-maps-key={GOOGLE_MAPS_API_KEY}>
+    <p class="sheet__text">
+      Mueve el mapa hasta tu domicilio. El pin marca el punto exacto al que llega el repartidor.
+    </p>
 
-  <a
-    class="btn btn-outline-secondary"
-    href="https://www.google.com/maps/@21.1619,-86.8515,13z"
-    target="_blank"
-    rel="noopener"
-  >
-    Abrir Google Maps
-  </a>
+    {/* El buscador de Google se inserta aqui al cargar el mapa. Oculto mientras
+        no llegue: un hueco vacio encima del mapa no dice nada. */}
+    <div class="map-picker__search" hidden data-map-search></div>
 
-  <label class="visually-hidden" for="field-manual-location">Enlace o coordenadas</label>
-  <input
-    class="field form-control"
-    id="field-manual-location"
-    type="text"
-    inputmode="text"
-    autocomplete="off"
-    placeholder="21.1421, -86.8235"
-    data-manual-input
-  />
+    <div class="map-picker__stage">
+      <div class="map-picker__canvas" data-map-canvas></div>
 
-  <p class="form-error" role="alert" hidden data-manual-error></p>
+      {/*
+        El pin, clavado en el centro. No se arrastra —lo que se mueve es el mapa
+        por debajo, ver src/lib/map-picker.ts— asi que no recibe el puntero y no
+        se anuncia: lo que dice donde esta el punto es el texto de abajo.
+      */}
+      <span class="map-picker__pin" aria-hidden="true">
+        <Icon name="map-pin" />
+      </span>
 
-  <button class="btn btn-primary" type="button" data-manual-apply>Usar esta ubicacion</button>
+      <button
+        class="map-picker__locate btn-plain"
+        type="button"
+        aria-label="Centrar el mapa en mi ubicacion"
+        data-map-locate
+      >
+        <Icon name="crosshair" size="sm" />
+      </button>
+
+      {/* Mientras carga el SDK. Se queda sobre el hueco del mapa para que la
+          hoja no de un salto de alto al llegar. */}
+      <p class="map-picker__status" hidden data-map-status></p>
+    </div>
+
+    {/*
+      Aqui NO se rotula la direccion del pin, a proposito. Lo que confirma el
+      sitio es el mapa —sus calles estan pintadas y el pin queda sobre el techo—
+      y la direccion escrita aparece al aceptar, en /datos, resuelta por el
+      backend al cotizar. Leerla tambien aqui costaba una consulta a Google en
+      CADA parada del mapa para acabar diciendo lo mismo. Ver
+      src/lib/map-picker.ts.
+    */}
+  </div>
+
+  <button class="btn btn-primary" type="button" data-map-apply>Usar esta ubicacion</button>
+
+  {/*
+    El respaldo, cuando el mapa no se puede usar: sin clave configurada, con una
+    clave que Google rechaza, o sin red. Es el camino que tenia esta hoja antes
+    del mapa y hace el mismo trabajo —traer un punto de Maps—, asi que se queda
+    como red de seguridad en lugar de dejar la pantalla sin ubicacion.
+  */}
+  <div class="map-picker__fallback" hidden data-map-fallback>
+    <p class="sheet__text">
+      Abre Google Maps, busca tu domicilio y manten pulsado el punto exacto. Copia las coordenadas o
+      el enlace y pegalos aqui.
+    </p>
+
+    <a
+      class="btn btn-outline-secondary"
+      href="https://www.google.com/maps/@21.1619,-86.8515,13z"
+      target="_blank"
+      rel="noopener"
+    >
+      Abrir Google Maps
+    </a>
+
+    <label class="visually-hidden" for="field-manual-location">Enlace o coordenadas</label>
+    <input
+      class="field form-control"
+      id="field-manual-location"
+      type="text"
+      inputmode="text"
+      autocomplete="off"
+      placeholder="21.1421, -86.8235"
+      data-manual-input
+    />
+
+    <p class="form-error" role="alert" hidden data-manual-error></p>
+
+    <button class="btn btn-primary" type="button" data-manual-apply>Usar esta ubicacion</button>
+  </div>
 </Sheet>

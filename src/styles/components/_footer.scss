@@ -121,8 +121,11 @@
     margin: 0;
   }
 
-  // Un <a> y un <span> comparten clase: solo "Menu completo" navega, y los dos
-  // tienen que pesar lo mismo mientras el filtro por URL no exista.
+  // Los cuatro rotulos de "Descubre" son enlaces: "Menu completo" a la portada
+  // entera y las tres categorias a la portada ya filtrada (ver
+  // src/lib/discover.ts). La clase sigue partida en dos porque el hover se declara
+  // sobre `a` y no sobre ella, que es lo que .footer__social-link necesita: ahi si
+  // convive un <a> con dos <span>.
   .footer__link {
     font-size: var(--sf-font-size-base);
     font-weight: var(--sf-weight-regular);

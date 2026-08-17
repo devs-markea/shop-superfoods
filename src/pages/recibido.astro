@@ -13,7 +13,7 @@ import Footer from '../components/Footer.astro';
 import { getCart, type Cart } from '../lib/cart.ts';
 import { getOrder } from '../lib/orders.ts';
 import { resolveCartToken } from '../lib/cart-session.ts';
-import { ORDER_COOKIE, parseOrderPointer } from '../lib/checkout-draft.ts';
+import { ORDER_COOKIE, markPointerSeen, parseOrderPointer } from '../lib/checkout-draft.ts';
 import { PAYMENT_LABEL, type StoreOrder } from '../lib/checkout.ts';
 import { fillMessage, whatsAppUrl } from '../lib/whatsapp.ts';
 import { formatPrice } from '../lib/price.ts';
@@ -133,6 +133,20 @@ if (pointer) {
   }
 
   if (!order && !failed && !TEST_MODE) return Astro.redirect('/');
+}
+
+// EL ACUSE QUEDA VISTO
+//
+// Lo mismo que hace /confirmado, y por lo mismo: las pantallas del pago consultan
+// esta marca para decidir a donde mandar a quien vuelve con el carrito ya vacio —a
+// su acuse si no lo ha visto, al menu si ya lo vio—.
+//
+// Aqui no hay que mirar que accion ofrece la pantalla, como alli: este acuse
+// termina siempre en "Abrir WhatsApp". El pago pasa fuera —una transferencia que
+// alguien revisa, o unos billetes en mano— y no hay nada que reintentar desde la
+// tienda, asi que en cuanto se ve, se ha visto.
+if (order && pointer && !pointer.seen) {
+  markPointerSeen(Astro.cookies, pointer);
 }
 
 // Con efectivo no hay comprobante que mandar: el mensaje es el del pedido recien
@@ -327,4 +341,8 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   import '../scripts/copy-button';
   // Abre las hojas del horario y la ubicacion desde la barra de desktop.
   import '../scripts/sheet';
+  // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
+  // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
+  // que importarlo. Ver src/lib/discover.ts.
+  import '../scripts/footer-discover';
 </script>

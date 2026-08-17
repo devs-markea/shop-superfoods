@@ -18,6 +18,9 @@ import { placeOrder } from './checkout.ts';
 import { parseQuote, type ShippingQuote } from './shipping.ts';
 import { parseTipAmount } from './tips.ts';
 import { ulid } from './ulid.ts';
+// Solo el tipo: se borra en el build, asi que este modulo sigue valiendo en un
+// <script> de cliente. Lo usa markPointerSeen(), que es de servidor.
+import type { AstroCookies } from 'astro';
 import type {
   CheckoutCustomer,
   CheckoutOutcome,
@@ -118,6 +121,23 @@ export interface OrderPointer {
    * pedirle otra vez el dinero a quien ya pago.
    */
   chargeStarted?: boolean;
+  /**
+   * Si el comprador ya vio su acuse y no quedaba nada pendiente en el.
+   *
+   * Lo marca el propio acuse al pintarse, y sirve para UNA cosa: decidir a donde
+   * mandar a quien vuelve a una pantalla del pago con el carrito ya vacio.
+   *
+   *   sin marcar   al acuse, que es donde estan su folio y su WhatsApp. Es el
+   *                caso de quien nunca llego a verlo: la pasarela lo devolvio a
+   *                otro navegador, o cerro la pestana antes de tiempo.
+   *   marcado      al menu. Ya lo vio, y repetirle "Pedido confirmado" cada vez
+   *                que pulsa atras se lee como que pago dos veces.
+   *
+   * "Sin nada pendiente" es la parte que hace que el dato signifique algo: con un
+   * cobro por reintentar o un webhook sin llegar, el acuse SIGUE siendo su sitio,
+   * asi que no se marca y volver alli le devuelve el boton. Ver ConfirmationView.
+   */
+  seen?: boolean;
 }
 
 export const EMPTY_DRAFT: CheckoutDraft = {
@@ -190,6 +210,10 @@ export function parseOrderPointer(raw: string | undefined | null): OrderPointer 
       ...(typeof parsed.chargeStarted === 'boolean'
         ? { chargeStarted: parsed.chargeStarted }
         : {}),
+      // Igual que el anterior: solo un booleano de verdad. Su ausencia es "no lo
+      // ha visto", que es el defecto seguro —manda una vez al acuse— frente a un
+      // `seen` inventado, que dejaria a alguien sin llegar nunca a su folio.
+      ...(typeof parsed.seen === 'boolean' ? { seen: parsed.seen } : {}),
     };
   } catch {
     return null;
@@ -340,6 +364,33 @@ export function toCheckoutRequest(draft: CheckoutDraft): CheckoutRequest | null 
       ...optional,
     },
   };
+}
+
+// --- Solo servidor -------------------------------------------------------
+
+/**
+ * Marca el puntero como visto, desde el frontmatter del acuse.
+ *
+ * Es la unica escritura de cookie que hace el servidor en este flujo, y va aqui y
+ * no en la pantalla porque tiene que emitirse con los MISMOS atributos que uso el
+ * navegador al crearla: otro `path` o otro `max-age` no actualizarian la cookie,
+ * crearian una segunda con el mismo nombre y el acuse leeria cualquiera de las
+ * dos. Los atributos viven en un solo sitio por eso.
+ *
+ * El valor va como JSON sin codificar: `cookies.set` de Astro ya lo codifica al
+ * serializar, igual que hace `encodeURIComponent` en el lado del navegador, asi
+ * que parseOrderPointer() lo lee igual venga de donde venga.
+ *
+ * Se conserva el resto del puntero —metodo, entrega, si el cobro arranco— porque
+ * el acuse los sigue necesitando: aqui solo se anade un dato.
+ */
+export function markPointerSeen(cookies: AstroCookies, pointer: OrderPointer): void {
+  cookies.set(ORDER_COOKIE, JSON.stringify({ ...pointer, seen: true }), {
+    path: '/',
+    maxAge: ORDER_MAX_AGE,
+    sameSite: 'lax',
+    secure: import.meta.env.PROD,
+  });
 }
 
 // --- Solo navegador ------------------------------------------------------

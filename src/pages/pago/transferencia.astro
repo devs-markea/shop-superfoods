@@ -10,7 +10,7 @@ import ActionBar from '../../components/ActionBar.astro';
 import ScheduleSheet from '../../components/ScheduleSheet.astro';
 import LocationSheet from '../../components/LocationSheet.astro';
 import Footer from '../../components/Footer.astro';
-import { getCart, type Cart } from '../../lib/cart.ts';
+import { getCart, isEmptyCart, type Cart } from '../../lib/cart.ts';
 import { resolveCartToken } from '../../lib/cart-session.ts';
 import { quoteForDraft } from '../../lib/shipping-quote.ts';
 import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
@@ -75,6 +75,11 @@ const [store, schedule, cart, categories, quote] = await Promise.all([
   categoriesPending,
   quotePending,
 ]);
+
+// Sin pedido no hay nada que transferir. Esta pantalla ensena una CLABE y un
+// importe, y con el carrito vacio ese importe seria la propina sobre $0: una
+// cuenta de la tienda invitando a pagar por nada. Se vuelve al pedido.
+if (isEmptyCart(cart)) return Astro.redirect('/carrito');
 
 const items = cart?.items ?? [];
 const products = cart?.total ?? 0;
@@ -221,4 +226,8 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   import '../../scripts/confirm-order';
   // Abre las hojas del horario y la ubicacion desde la barra de desktop.
   import '../../scripts/sheet';
+  // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
+  // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
+  // que importarlo. Ver src/lib/discover.ts.
+  import '../../scripts/footer-discover';
 </script>

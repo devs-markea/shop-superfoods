@@ -26,26 +26,16 @@ import {
   readDraft,
 } from '../lib/checkout-draft';
 import { bindDeliverySwitch, checkedDeliveryType } from '../lib/delivery-switch';
+import { createMapPicker } from '../lib/map-picker';
 import {
   coordsFromMapsUrl,
-  isShortMapsLink,
   otherSpot,
-  parseCoords,
   quoteFromResponse,
   resolveShipping,
   type FreeShippingRule,
   type ShippingQuote,
   type ShippingQuoteResponse,
 } from '../lib/shipping';
-
-/**
- * Hasta que imprecision se acepta una posicion del navegador, en metros.
- *
- * Un GPS da decenas de metros y una posicion por wifi, unos cientos. Lo que pasa
- * de aqui viene de la IP del proveedor —decenas de kilometros, a veces otra
- * ciudad— y no sirve para cobrar un envio por distancia.
- */
-const MAX_ACCURACY_METERS = 5000;
 import type { CheckoutCustomer, DeliveryType } from '../lib/checkout';
 
 const form = document.querySelector<HTMLFormElement>('[data-delivery-form]');
@@ -391,8 +381,9 @@ if (form) {
   };
 
   /**
-   * Toma un punto, lo rotula y lo cotiza. Es el camino comun del GPS y de la hoja
-   * manual: de donde salieron las coordenadas ya no importa a partir de aqui.
+   * Toma un punto, lo rotula y lo cotiza. Es el camino comun del pin del mapa y
+   * del respaldo de pegar el enlace: de donde salieron las coordenadas ya no
+   * importa a partir de aqui.
    */
   const useLocation = async (lat: number, lng: number): Promise<void> => {
     // El formato que entiende cualquier cliente de Maps, y el que espera la API
@@ -402,15 +393,15 @@ if (form) {
     // El punto ya esta elegido, asi que se rotula —y se guarda— sin esperar a
     // nadie. Lo que falta —la direccion escrita— llega en la misma respuesta que
     // el importe y sustituye a este texto en cuanto la API contesta.
-    saveLocation(url, 'Ubicacion compartida');
+    saveLocation(url, 'Ubicacion elegida');
     showError(null);
 
     const address = (await askQuote(lat, lng))?.address;
 
-    // Por el camino se puede haber compartido otro punto —la consulta tarda, y el
-    // boton sigue vivo—: el rotulo que llega tarde no puede pisar al que la
-    // pantalla ensena ahora, y menos guardarlo. Es la misma cautela que askQuote()
-    // tiene con su contador, aqui contra la ubicacion vigente.
+    // Por el camino se puede haber elegido otro punto —la consulta tarda, y la
+    // hoja se puede volver a abrir—: el rotulo que llega tarde no puede pisar al
+    // que la pantalla ensena ahora, y menos guardarlo. Es la misma cautela que
+    // askQuote() tiene con su contador, aqui contra la ubicacion vigente.
     if (locationUrl && locationUrl.value !== url) return;
 
     // Sin direccion resuelta, las coordenadas: se lee peor, pero deja comprobar
@@ -423,113 +414,35 @@ if (form) {
     fillIfEmpty('number', address?.exteriorNumber);
   };
 
-  // --- La hoja de la ubicacion a mano ---
-  // Sirve a dos casos con el mismo trabajo: el modo de pruebas, donde sustituye al
-  // navegador, y el respaldo de todos los demas, cuando el dispositivo no da un
-  // punto que valga.
-  const manualSheet = document.getElementById('location-input');
-  const manualInput = document.querySelector<HTMLInputElement>('[data-manual-input]');
-  const manualError = document.querySelector<HTMLElement>('[data-manual-error]');
-  const manualIntro = document.querySelector<HTMLElement>('[data-manual-intro]');
+  // --- Elegir la ubicacion en el mapa ---
+  //
+  // El punto lo SENALA el comprador, en un mapa dentro de la hoja: se mueve el
+  // mapa hasta el domicilio y se acepta. Ya no lo elige el navegador.
+  //
+  // El cambio no es de estilo. Pedirle la posicion al navegador devuelve un GPS
+  // solo cuando hay sensor y permiso; en un escritorio, o con el sensor apagado,
+  // lo que contesta se deduce de la IP del proveedor y puede caer en otra ciudad.
+  // De ahi salian pedidos con el envio medido contra un punto donde no vive
+  // nadie, y el comprador no tenia como enterarse: nunca vio el punto.
+  //
+  // Con el mapa lo ve antes de aceptarlo. El GPS sigue estando, pero degradado a
+  // lo que sabe hacer bien: mover la camara. Ver src/lib/map-picker.ts.
+  const picker = createMapPicker((lat, lng) => void useLocation(lat, lng));
 
-  const openManualSheet = (reason?: string): void => {
-    // El motivo por el que se abre sola —sin GPS, o con uno que no sirve— sustituye
-    // a la explicacion de la hoja: es lo primero que hay que leer ahi.
-    if (reason && manualIntro) manualIntro.textContent = reason;
-
-    if (manualError) manualError.hidden = true;
-    if (manualSheet instanceof HTMLDialogElement) manualSheet.showModal();
-    manualInput?.focus();
-  };
-
-  document.querySelector('[data-manual-apply]')?.addEventListener('click', () => {
-    const text = manualInput?.value ?? '';
-    const spot = parseCoords(text);
-
-    if (!spot) {
-      if (manualError) {
-        // Un enlace corto no lleva el punto dentro: hay que abrirlo para que Maps
-        // lo despliegue, y eso no lo puede hacer el navegador contra otro dominio.
-        manualError.textContent = isShortMapsLink(text)
-          ? 'Ese enlace corto no trae las coordenadas. Abrelo en Maps y copia el enlace largo de la barra de direcciones.'
-          : 'No reconocimos ese enlace. Pega el enlace de Google Maps o las coordenadas, como "21.1421, -86.8235".';
-        manualError.hidden = false;
-      }
-      return;
-    }
-
-    if (manualSheet instanceof HTMLDialogElement) manualSheet.close();
-    if (manualInput) manualInput.value = '';
-
-    void useLocation(spot.lat, spot.lng);
-  });
-
-  // --- Compartir ubicacion ---
-  // Se pide el permiso solo al pulsar, nunca al cargar.
   shareButton?.addEventListener('click', () => {
-    // En pruebas el punto lo escribe quien prueba: pedirselo al navegador daria
-    // el de la oficina, y lo que se quiere probar es un domicilio de Cancun.
-    if (testMode) {
-      openManualSheet();
-      return;
-    }
-
-    if (!('geolocation' in navigator)) {
-      openManualSheet('Tu navegador no puede compartir la ubicacion. Indicala en el mapa.');
-      return;
-    }
-
-    shareButton.disabled = true;
-
-    navigator.geolocation.getCurrentPosition(
-      ({ coords }) => {
-        shareButton.disabled = false;
-
-        // Lo que responde el navegador no siempre es un GPS. Sin sensor —o en un
-        // escritorio— la posicion se deduce de la IP del proveedor, y esa puede
-        // caer en otra ciudad: un cliente de Cancun aparece en Monterrey. Se nota
-        // en la precision, que entonces se mide en decenas de kilometros.
-        //
-        // Un punto asi no se guarda: el envio se cotiza por distancia, y con esa
-        // ubicacion la tienda cobraria un trayecto que nadie va a hacer. Se dice y
-        // se ofrece el mapa, que es donde se puede senalar de verdad.
-        if (coords.accuracy > MAX_ACCURACY_METERS) {
-          openManualSheet(
-            'Tu dispositivo dio una ubicacion aproximada, de varios kilometros, y con ella no podemos calcular el envio. Senalala en el mapa.',
-          );
-          return;
-        }
-
-        void useLocation(coords.latitude, coords.longitude);
-      },
-      () => {
-        // Permiso denegado, sin senal o agotado el plazo. La direccion escrita
-        // sigue bastando para pedir; lo que se pierde es la cotizacion del envio,
-        // y por eso se ofrece el mapa antes de rendirse.
-        shareButton.disabled = false;
-        openManualSheet(
-          'No pudimos obtener tu ubicacion. Puedes senalarla en el mapa, o dejarla y escribir solo la direccion.',
-        );
-      },
-      // enableHighAccuracy pide el sensor de verdad en lugar de la posicion
-      // deducida de la red, que es la que se va a otra ciudad. Tarda mas —de ahi
-      // los 20 segundos— y gasta mas bateria, y las dos cosas valen la pena
-      // cuando de ese punto sale un importe.
-      //
-      // maximumAge en 0: nada de reutilizar una posicion cacheada de antes, que
-      // puede ser de otro sitio.
-      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
-    );
+    // El mapa abre donde ya se eligio, si se eligio: volver a la hoja para
+    // corregir el portal no puede empezar por buscar la ciudad otra vez.
+    picker?.open(coordsFromMapsUrl(locationUrl?.value));
   });
 
-  // La ubicacion compartida sobrevive a la pantalla: viaja en el borrador como
+  // La ubicacion elegida sobrevive a la pantalla: viaja en el borrador como
   // enlace de Maps, que es lo que espera la API. Al volver aqui —desde el pago o
   // con el boton atras— se repone, para no tener que pedirla otra vez y para que
   // el enlace siga en el pedido.
   const savedSpot = coordsFromMapsUrl(saved.customer.locationUrl);
 
   if (savedSpot && locationUrl && !locationUrl.value) {
-    showLocation(saved.customer.locationUrl ?? '', saved.locationLabel || 'Ubicacion compartida');
+    showLocation(saved.customer.locationUrl ?? '', saved.locationLabel || 'Ubicacion elegida');
   }
 
   // Hay ubicacion y todavia no hay cotizacion: se pide ahora. Pasa cuando se

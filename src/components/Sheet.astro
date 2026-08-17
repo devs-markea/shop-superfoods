@@ -5,9 +5,29 @@ interface Props {
   /** Id con el que lo abre el boton (`data-sheet="..."`). */
   id: string;
   title: string;
+  /**
+   * Hoja ancha en desktop. Para las que no son una consulta rapida sino una
+   * pantalla en la que se trabaja —hoy solo el mapa de la ubicacion, que a 390
+   * se queda en una ventanita por la que buscar una casa es incomodo—.
+   *
+   * En movil no cambia nada: alli la hoja ya ocupa el ancho entero.
+   */
+  wide?: boolean;
+  /**
+   * No se cierra al pulsar fuera.
+   *
+   * Es para las hojas donde hay algo que perder. En una de consulta —el horario,
+   * la direccion de la tienda— pulsar fuera es la forma comoda de salir y no
+   * cuesta nada; en el mapa, un toque despistado tira el punto que se acababa de
+   * buscar y hay que empezar por la ciudad otra vez.
+   *
+   * Escape y el boton de cerrar siguen funcionando: lo que se retira es el
+   * cierre ACCIDENTAL, no la salida.
+   */
+  persistent?: boolean;
 }
 
-const { id, title } = Astro.props;
+const { id, title, wide = false, persistent = false } = Astro.props;
 
 // Hoja modal de la barra superior: horario y ubicacion.
 //
@@ -23,7 +43,12 @@ const { id, title } = Astro.props;
 // El titulo lo lee `aria-labelledby`, asi que el dialogo se anuncia por su nombre.
 ---
 
-<dialog class="sheet" id={id} aria-labelledby={`${id}-title`}>
+<dialog
+  class:list={['sheet', wide && 'sheet--wide']}
+  id={id}
+  aria-labelledby={`${id}-title`}
+  data-sheet-persistent={persistent ? '' : undefined}
+>
   <div class="sheet__header">
     <h2 class="sheet__title" id={`${id}-title`}>{title}</h2>
 
