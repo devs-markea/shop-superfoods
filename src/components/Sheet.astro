@@ -66,3 +66,116 @@ const { id, title, wide = false, persistent = false } = Astro.props;
     <slot />
   </div>
 </dialog>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: sheet  (sobre <dialog> nativo)
+     ---------------------------------------------------------------------------
+     Hoja modal que sube desde abajo. La usan el horario y la ubicacion de la barra
+     superior.
+
+     No hay spec de Figma para estas dos: se componen con el sistema que ya existe
+     —superficie blanca, radius 20 como las tarjetas del cierre, padding 20, y los
+     tipos de .section-label y .topbar__title—, para que no se lean como una pieza
+     de otro proyecto.
+
+     El <dialog> trae `display: none` cuando esta cerrado, asi que el flex solo
+     aplica al abrirlo: por eso `&[open]`.
+     --------------------------------------------------------------------------- */
+  .sheet {
+    width: 100%;
+    max-width: 390px;
+    max-height: 85dvh;
+    padding: 20px;
+    border: 0;
+    /* Esquinas arriba: abajo se pega al borde de la pantalla. */
+    border-radius: 20px 20px 0 0;
+    background-color: var(--sf-white);
+    color: var(--sf-ink);
+    /* Al fondo y centrada. `margin: auto` en los dos ejes la centraria en alto. */
+    margin: auto auto 0;
+    overflow-y: auto;
+  }
+  .sheet[open] {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .sheet::backdrop {
+    background-color: var(--sf-scrim);
+  }
+  /* Desktop: deja de ser una hoja y se centra, ya sin borde pegado abajo. */
+  @media (min-width: 768px) {
+    .sheet {
+      border-radius: 20px;
+      margin: auto;
+    }
+  }
+
+  /* Modifier: hoja ancha, SOLO en desktop.
+
+     Las hojas de consulta —horario, direccion de la tienda— se leen de un vistazo
+     y a 390 estan bien en cualquier pantalla. Esta es para la que no se consulta
+     sino que se usa: el mapa de la ubicacion, donde 390 dejaba una ventanita por
+     la que buscar una casa a base de arrastrar de a poco.
+
+     En movil no aparece: alli la hoja ya ocupa el ancho de la pantalla y el
+     modificador no tendria contra que ensancharse. */
+  @media (min-width: 768px) {
+    .sheet--wide {
+      max-width: 640px;
+    }
+  }
+  /* Element: cabecera — titulo a la izquierda, cierre a la derecha */
+  .sheet__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  /* Element: titulo — Inter 600 16/24, el mismo de la barra superior */
+  .sheet__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+    color: var(--sf-ink);
+  }
+
+  /* Element: cierre. Misma caja que el boton de copiar —32, radius 8— para que los
+     botones de icono del proyecto se parezcan entre si. Gris en reposo: es una
+     salida, no la accion de la hoja. */
+  .sheet__close {
+    display: inline-flex;
+    flex: 0 0 32px;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    color: var(--sf-muted);
+    transition: background-color 160ms ease, color 160ms ease;
+  }
+  .sheet__close:hover {
+    background-color: var(--sf-body-bg);
+    color: var(--sf-ink);
+  }
+
+  .sheet__body {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Element: parrafo explicativo dentro de una hoja. Misma tipografia que las notas
+     del resto del sistema (Inter 400 14/20 gris): acompana a los controles de la
+     hoja, no compite con su titulo. */
+  .sheet__text {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    color: var(--sf-muted);
+  }
+</style>

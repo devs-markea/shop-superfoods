@@ -1,5 +1,6 @@
 ---
 import Icon from './Icon.astro';
+import SectionLabel from './SectionLabel.astro';
 import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 
 // El mapa de /datos, en linea: el panel que releva al boton que abria la hoja.
@@ -31,10 +32,10 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     confirmado— y por eso se anuncia: quien no ve el mapa no tiene otra forma de
     enterarse de que el punto quedo guardado.
   */}
-  <div class="location-map__head d-flex align-items-center justify-content-between gap-3">
-    <p class="location-map__label section-label" aria-live="polite" data-location-map-label>
+  <div class="location-map__head d-flex align-items-center justify-content-between">
+    <SectionLabel as="p" class="location-map__label" aria-live="polite" data-location-map-label>
       Mueve el mapa hasta tu domicilio
-    </p>
+    </SectionLabel>
 
     {/*
       Confirmar. Nace deshabilitado: hasta que el mapa no esta pintado, lo unico
@@ -100,14 +101,12 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
   /* -------------------------------------------------------------------------
    * Block: location-map
    * -------------------------------------------------------------------------
-   * El panel del mapa en /datos. A diferencia del resto de bloques del proyecto
-   * —un parcial Sass por bloque en src/styles/components/— este va en CSS puro
-   * y dentro del componente, que es como se pidio.
+   * El panel del mapa en /datos. Fue el primer bloque en escribirse asi —CSS
+   * puro dentro del componente— y hoy es como esta todo el proyecto.
    *
-   * Lo que lo mantiene dentro del sistema es lo de siempre: los tokens --sf-*,
-   * que son custom properties y no variables Sass, y las clases de Bootstrap
-   * del marcado (.btn, .btn-success, .btn-danger y las utilidades de flex).
-   * Aqui solo se escribe lo que Bootstrap no trae.
+   * Lo que lo mantiene dentro del sistema son las clases de Bootstrap del marcado
+   * (.btn, .btn-success, .btn-danger y las utilidades de flex) y los valores de la
+   * spec, escritos aqui. Solo se escribe lo que Bootstrap no trae.
    *
    * La ley del bloque es la misma del selector de la hoja: el pin y el centro
    * del mapa son EL MISMO PUNTO. De ahi las dos reglas que no se pueden tocar
@@ -118,7 +117,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
   .location-map {
     display: flex;
     flex-direction: column;
-    gap: var(--sf-space-3);
+    gap: 12px;
     /* El ancho del boton al que releva (.location__button): 350 como maximo y
        centrado. En desktop, como el boton, ocupa la columna entera. */
     width: 100%;
@@ -127,8 +126,14 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
   }
 
   /* Element: la cabecera —rotulo y boton—. El reparto lo hacen las utilidades
-     de Bootstrap en el marcado; aqui solo se deja que el rotulo encoja, para que
-     sea el quien parta en dos lineas antes que el boton. */
+     de Bootstrap en el marcado; aqui solo va el hueco, porque los 12 salen de la
+     escala de la tienda y no de la de Bootstrap. */
+  .location-map__head {
+    gap: 12px;
+  }
+
+  /* Se deja que el rotulo encoja, para que sea el quien parta en dos lineas
+     antes que el boton. */
   .location-map__label {
     min-width: 0;
   }
@@ -184,9 +189,9 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     width: 100%;
     overflow: hidden;
     border: 2px solid var(--sf-border);
-    border-radius: var(--sf-radius-md);
-    background-color: var(--sf-surface);
-    transition: border-color var(--sf-transition);
+    border-radius: 12px;
+    background-color: var(--sf-white);
+    transition: border-color 160ms ease;
   }
 
   /* Como los campos de al lado, que se enmarcan en dorado al escribir en ellos. */
@@ -205,16 +210,16 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     --gmp-mat-color-on-surface: var(--sf-ink);
     --gmp-mat-color-on-surface-variant: var(--sf-ink-soft);
     --gmp-mat-color-primary: var(--sf-gold);
-    --gmp-mat-font-family: var(--sf-font-sans);
-    --gmp-mat-font-body-medium: var(--sf-weight-semibold) var(--sf-font-size-base) /
-      var(--sf-line-height-base) var(--sf-font-sans);
+    --gmp-mat-font-family: var(--sf-font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --gmp-mat-font-body-medium: 600 14px /
+      20px var(--sf-font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
 
     flex: 1 1 auto;
     min-width: 0;
     border: 0;
     background-color: transparent;
-    font-family: var(--sf-font-sans);
-    font-size: var(--sf-font-size-base);
+    font-family: var(--sf-font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    font-size: 14px;
   }
 
   /* Element: el hueco del mapa.
@@ -226,11 +231,11 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     position: relative;
     overflow: hidden;
     border: 1px solid var(--sf-border);
-    border-radius: var(--sf-radius-md);
+    border-radius: 12px;
     /* Se ve mientras cargan los tiles: gris de pagina, no blanco, para que el
        hueco se lea como "aqui va algo" y no como una tarjeta vacia. */
     background-color: var(--sf-body-bg);
-    transition: border-color var(--sf-transition);
+    transition: border-color 160ms ease;
   }
 
   /* Confirmado, el borde se pone verde: es el otro sitio —ademas del rotulo y del
@@ -291,7 +296,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     pointer-events: none;
     /* El pin es dorado sobre un mapa de colores cualesquiera: la sombra es lo
        que lo despega de una avenida amarilla o de un parque verde. */
-    filter: drop-shadow(0 2px 4px rgb(20 24 33 / 45%));
+    filter: drop-shadow(0 2px 4px var(--sf-scrim));
   }
 
   /* Element: la diana que centra el mapa donde esta el comprador. Abajo a la
@@ -299,19 +304,19 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
      tapar el centro. Se retira al confirmar, con el resto de los gestos. */
   .location-map__locate {
     position: absolute;
-    right: var(--sf-space-3);
-    bottom: var(--sf-space-3);
+    right: 12px;
+    bottom: 12px;
     z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 36px;
     height: 36px;
-    border-radius: var(--sf-radius-sm);
-    background-color: var(--sf-surface);
+    border-radius: 8px;
+    background-color: var(--sf-white);
     color: var(--sf-ink);
-    box-shadow: var(--sf-shadow-card);
-    transition: color var(--sf-transition);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
+    transition: color 160ms ease;
   }
 
   .location-map__locate:hover {
@@ -333,9 +338,9 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     justify-content: center;
     margin: 0;
     color: var(--sf-muted);
-    font-size: var(--sf-font-size-base);
-    font-weight: var(--sf-weight-medium);
-    line-height: var(--sf-line-height-base);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
   }
 
   /* --- Desktop ---------------------------------------------------------- */
@@ -353,7 +358,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
          mapa: con estos 12 mas, el panel se lee como una pieza aparte de la
          direccion que se escribe debajo. En movil no hace falta —alli la columna
          ya separa a 24— y por eso vive dentro del breakpoint. */
-      margin-bottom: var(--sf-space-3);
+      margin-bottom: 12px;
     }
 
     .location-map__canvas {

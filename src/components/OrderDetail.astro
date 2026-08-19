@@ -1,4 +1,5 @@
 ---
+import SectionLabel from './SectionLabel.astro';
 import { formatPrice } from '../lib/price.ts';
 import { formatKm, type ShippingResult } from '../lib/shipping.ts';
 import { describeSelection } from '../lib/cart-view.ts';
@@ -52,7 +53,7 @@ const {
 // UN MARCADO, DOS PANTALLAS: la foto, el importe y la configuracion existen solo
 // en desktop, y los envoltorios que los colocan son `display: contents` en movil,
 // donde la linea sigue siendo el mismo renglon de texto de siempre. Ver
-// components/_order-detail.scss.
+// los estilos de este archivo.
 //
 // El desglose aparece solo cuando hay algo que explicar. Con un descuento, un
 // envio o una propina, un unico "Total a pagar" obligaria al comprador a fiarse:
@@ -66,7 +67,7 @@ const breakdown = discount > 0 || tip > 0 || shipping.state !== 'none';
 ---
 
 <div class="order-detail">
-  <span class="section-label">Detalle del pedido</span>
+  <SectionLabel>Detalle del pedido</SectionLabel>
 
   {
     items.length > 0 ? (
@@ -179,3 +180,342 @@ const breakdown = discount > 0 || tip > 0 || shipping.state !== 'none';
     <span class="order-detail__total-value">{formatPrice(total)}</span>
   </div>
 </div>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: order-detail
+     ---------------------------------------------------------------------------
+     Recordatorio de lo pedido en la pantalla de pago.
+     Spec: gap 12 - padding 16 - radius 16 - borde 1px #EAECF0 - bg #FFFFFF
+     lineas gap 8, Inter 500 12/16 #6C757D
+     total Inter 600 14/20, concepto #141821 e importe #D5AA53
+
+     Es la unica tarjeta blanca del proyecto que se apoya en un borde en lugar de
+     en la sombra: aqui el bloque no es una superficie interactiva, solo agrupa.
+     --------------------------------------------------------------------------- */
+  .order-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--sf-border);
+    border-radius: 16px;
+    background-color: var(--sf-white);
+  }
+
+  .order-detail__items {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin: 0;
+  }
+
+  /* Element: una linea de texto del detalle ("1× Tacos de Pastor"). Tambien
+     rotula el pedido vacio, que es la misma linea sin lineas que listar. */
+  .order-detail__item {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--sf-muted);
+  }
+
+  /* Los tres envoltorios que en desktop colocan la foto, el importe y la
+     configuracion. En movil no existen: la linea es el renglon de texto de siempre
+     —nombre e insignia— y sus hijos siguen siendo hijos del <li>. */
+  .order-detail__line,
+  .order-detail__head,
+  .order-detail__info {
+    display: contents;
+  }
+
+  /* Y esto es lo que no se pinta en movil: la linea de texto no lleva foto, ni
+     importe —lo cierra el total de abajo— ni configuracion. */
+  .order-detail__media,
+  .order-detail__price,
+  .order-detail__custom {
+    display: none;
+  }
+
+  /* Element: el desglose. Aparece solo cuando hay algo que explicar —un descuento
+     o una propina—: si no, sus filas serian el total repetido. */
+  .order-detail__rows {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+  }
+
+  .order-detail__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .order-detail__term {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--sf-muted);
+  }
+
+  .order-detail__value {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 16px;
+    color: var(--sf-ink);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .order-detail__row--discount .order-detail__value,
+  .order-detail__value--free {
+    color: var(--sf-success);
+  }
+
+  /* Modifier: el envio que todavia no se pudo medir ("Por cotizar") */
+  .order-detail__value--pending {
+    font-weight: 500;
+    color: var(--sf-placeholder);
+  }
+
+  /* Element: los kilometros del envio, junto al concepto. Acompanan al importe
+     para poder cuadrarlo con la tarifa, como en el resumen de /pago. */
+  .order-detail__hint {
+    margin-left: 8px;
+    font-weight: 400;
+    color: var(--sf-placeholder);
+    white-space: nowrap;
+  }
+
+  /* La divisora discontinua es .dashed-divider: la comparte con el resumen de
+     /confirmado. */
+  /* Element: fila del total */
+  .order-detail__total {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .order-detail__total-term {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--sf-ink);
+  }
+
+  .order-detail__total-value {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--sf-gold);
+    white-space: nowrap;
+  }
+
+  /* --- Desktop -------------------------------------------------------------
+     El recordatorio deja de ser una lista de renglones y pasa a ensenar el pedido.
+     Spec:
+     rotulo         Inter 700 18/100% #111827
+     lista          gap 16
+     linea          gap 16, foto 56x56 radius 8
+     texto          gap 4: arriba nombre e importe con space-between,
+     debajo la configuracion
+     nombre         Inter 600 15/100% #111827
+     importe        Inter 700 15/100% #111827
+     configuracion  Inter 400 13/100% #6C757D
+
+     El 15 y el 13 son los de la tarjeta de la cuenta bancaria, que es la otra
+     pieza de esta columna; el 18 es el del rotulo de la tarjeta de resumen. Los
+     colores son tokens: #111827 es --sf-ink y #6C757D es --sf-muted exacto. */
+  @media (min-width: 768px) {
+    /* La tarjeta respira mas: 20 entre piezas y 24 de relleno, que es lo que pide
+       una lista de lineas de 56 de alto. El radius de 16, el borde de 1 #EAECF0 y
+       el fondo blanco ya son los de la spec desde movil y no se repiten.
+
+       Los 680 de ancho y los 386 de alto no se declaran, la misma regla que ya
+       siguen .screen-body y .order-item: 680 es lo que mide esta columna en el
+       lienzo de 1440 —1120 menos los 48 del hueco y los 390 de la tarjeta—, asi que
+       lo reparte la rejilla; y el alto lo pone el pedido, que puede tener una linea
+       o seis. */
+    .order-detail {
+      gap: 20px;
+      padding: 24px;
+    }
+    /* El rotulo encabeza una seccion de la pantalla, como en la tarjeta de la
+       cuenta, pero un punto mas grande: aqui abre la pieza mas alta de la columna. */
+    .order-detail .section-label {
+      font-size: 18px;
+      font-weight: 700;
+      /* 100% del tamano: es un rotulo de una linea. */
+      line-height: 1;
+      color: var(--sf-ink);
+    }
+    .order-detail__items {
+      gap: 16px;
+    }
+    /* La linea ya no envuelve: son dos piezas —foto y texto— y el texto encoge.
+       Envolviendo, un nombre largo mandaria el bloque entero debajo de la foto. */
+    .order-detail__item {
+      flex-wrap: nowrap;
+      gap: 16px;
+    }
+    /* Element: media — la foto, en una caja fija con el fondo del borde debajo,
+       para que una imagen que tarda o falla no encoja la linea. */
+    .order-detail__media {
+      display: block;
+      flex: 0 0 56px;
+      width: 56px;
+      height: 56px;
+      overflow: hidden;
+      border-radius: 8px;
+      background-color: var(--sf-border);
+    }
+    .order-detail__image {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    /* Element: line — el texto de la linea, que ocupa lo que deje la foto. */
+    .order-detail__line {
+      display: flex;
+      flex: 1 1 auto;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+    }
+    /* Element: head — nombre a la izquierda, importe a la derecha. */
+    .order-detail__head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    /* Element: info — el nombre con su insignia, que es lo que puede encoger. */
+    .order-detail__info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+    }
+    /* El nombre se recorta antes de empujar al importe: la fila la comparten los
+       dos, y el que tiene que leerse entero es el que se paga. */
+    .order-detail__name {
+      overflow: hidden;
+      font-size: 15px;
+      font-weight: 600;
+      line-height: 1;
+      color: var(--sf-ink);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .order-detail__price {
+      display: block;
+      font-size: 15px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--sf-ink);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    /* La configuracion se recorta igual que el nombre: es la aclaracion de la
+       linea, no puede partirla en tres renglones. */
+    .order-detail__custom {
+      display: block;
+      overflow: hidden;
+      font-size: 13px;
+      font-weight: 400;
+      line-height: 1;
+      color: var(--sf-muted);
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* El desglose se retira: las mismas cuatro filas —subtotal, descuentos, envio
+       y propina— las lleva la tarjeta de resumen de al lado, que ademas es donde
+       se confirma. Dos veces la misma cuenta en una pantalla son dos sitios donde
+       leer el mismo numero. Se queda "Total a pagar", que es lo que cierra el
+       recordatorio. */
+    .order-detail__rows {
+      display: none;
+    }
+    /* Y con el desglose fuera, el total es lo unico que queda de la cuenta: crece
+       al mismo remate que el de la tarjeta de resumen —16/700 el concepto y 20/800
+       en dorado el importe—. Que coincidan no es casualidad ni descuido: es la
+       MISMA cifra dicha en las dos columnas, lo que se va a pagar, y la de aqui no
+       puede leerse como una nota al pie de la otra.
+
+       Los colores no se repiten: el negro del concepto y el dorado del importe ya
+       son los de la spec desde movil. Lo unico que cambia es cuanto pesan. */
+    .order-detail__total-term {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1;
+    }
+    .order-detail__total-value {
+      font-size: 20px;
+      font-weight: 800;
+      line-height: 1;
+    }
+  }
+
+  /* Mismo caso que .tag: <OrderDetail> y <OrderReceipt> no coinciden en
+     ninguna pantalla, asi que cada uno lleva su copia. */
+
+  /* ---------------------------------------------------------------------------
+     Block: dashed-divider
+     ---------------------------------------------------------------------------
+     Divisora discontinua. Spec: 1px, trazos de 4 y huecos de 2, #EAECF0.
+     Separa el total del detalle en /pago/transferencia y en /confirmado.
+
+     Es un bloque propio y no un element de cada uno por el mismo motivo que
+     .section-label: son dos bloques distintos con la misma divisora, y la tecnica
+     no es una sola declaracion.
+
+     No usa `border-style: dashed`: ahi el largo de los trazos lo decide el
+     navegador. Con un degradado repetido salen los 4/2 exactos de la spec.
+     --------------------------------------------------------------------------- */
+  .dashed-divider {
+    height: 1px;
+    margin: 0;
+    border: 0;
+    opacity: 1;
+    background-image: repeating-linear-gradient(to right, var(--sf-border) 0 4px, transparent 4px 6px);
+  }
+
+  /* Viene de la familia de promociones, que comparten la portada, la ficha, el
+       pedido y el cierre. Cada consumidor lleva solo las piezas que pinta: en
+       ninguna pantalla coinciden dos, asi que nadie carga la misma regla dos
+       veces. Si se toca una, mirar quien mas la tiene. */
+
+  /* Block: promo-badge — "15%", "$50", "2x1". La etiqueta la compone el backend. */
+  .promo-badge {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 100px;
+    background-color: var(--sf-gold);
+    color: var(--sf-white);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 16px;
+    white-space: nowrap;
+  }
+
+  .promo-badge__label {
+    /* El numero es lo que se lee de lejos: el icono solo lo acompaña. */
+    letter-spacing: 0.01em;
+  }
+
+  /* Modifier: sin icono y mas apretada, para las listas de texto del cierre. */
+  .promo-badge--sm {
+    padding: 0 8px;
+  }
+</style>

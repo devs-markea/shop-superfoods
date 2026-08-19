@@ -32,3 +32,67 @@ const { value, label, size = 'md' } = Astro.props;
 
 {/* Confirmacion para lectores de pantalla: el cambio de icono no se anuncia. */}
 <p class="visually-hidden" role="status" data-copy-status></p>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: copy-button
+     ---------------------------------------------------------------------------
+     Boton de copiar al portapapeles, con confirmacion.
+     Spec: caja 32 —36 en /recibido— radius 8, fondo dorado translucido,
+     icono de dos cuadrados superpuestos con trazo de 2 en dorado.
+
+     Las specs dan tres alfas distintas para ese fondo (#D5AA531A, #D5AA5315,
+     #D5AA5320): son el mismo dorado entre el 8 y el 12 por ciento. Se usa el
+     unico tinte del sistema, --sf-gold-tint.
+
+     El hover invierte el dorado en lugar de oscurecer el tinte: es el mismo par de
+     colores que ya usa el boton principal.
+
+     Los dos colores de REPOSO se leen de dos variables propias, con el dorado de
+     siempre por defecto. Asi una tarjeta puede retintar el boton cambiando el punto
+     de partida —lo hace .bank-account en desktop, donde pasa al gris de la pagina
+     para no repetir el dorado de la CLABE que tiene al lado— sin pelearse por
+     especificidad con el hover ni con el "copiado", que los pinta este bloque y
+     tienen que seguir diciendo lo mismo en todas las pantallas.
+     --------------------------------------------------------------------------- */
+  .copy-button {
+    display: inline-flex;
+    flex: 0 0 32px;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    background-color: var(--sf-copy-button-bg, var(--sf-gold-tint));
+    color: var(--sf-copy-button-color, var(--sf-gold));
+    transition: background-color 160ms ease, color 160ms ease;
+  }
+  .copy-button:hover {
+    background-color: var(--sf-gold);
+    color: var(--sf-white);
+  }
+
+  /* Modifier: caja de 36 */
+  .copy-button--lg {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+  }
+
+  /* Element: visto de confirmacion. Oculto hasta que se copia. */
+  .copy-button__done {
+    display: none;
+  }
+
+  /* Modifier: el valor acaba de copiarse. Lo pone y lo quita el script. */
+  .copy-button--copied, .copy-button--copied:hover {
+    background-color: var(--sf-gold);
+    color: var(--sf-white);
+  }
+  .copy-button--copied .copy-button__icon {
+    display: none;
+  }
+  .copy-button--copied .copy-button__done {
+    display: block;
+  }
+</style>

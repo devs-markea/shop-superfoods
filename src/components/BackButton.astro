@@ -19,3 +19,134 @@ const { href = '/', label = 'Volver' } = Astro.props;
 <a class="topbar__back" href={href} aria-label={label}>
   <Icon name="arrow-left" />
 </a>
+
+<style is:global>
+  /* El bloque .topbar completo vive aqui, y no en cada cabecera, porque
+     este boton es lo unico que TopBar, BackHeader y ScreenHeader tienen
+     en comun: donde hay barra superior, hay flecha de vuelta. Cada
+     cabecera pone despues su propio modifier (--tall, --compact). */
+
+  /* ---------------------------------------------------------------------------
+     Block: topbar
+     ---------------------------------------------------------------------------
+     Barra superior con control de vuelta y titulo. Dos variantes:
+
+     - Base (/carrito): height 48, con total a la derecha. El titulo queda
+     "centro entre los elementos, no del layout": space-between puro, sin
+     compensar, asi que lo colocan sus vecinos.
+     - --tall (/datos): height 124, sin total y con el titulo
+     centrado en el ancho real de la barra.
+
+     Spec de ambas: space-between - padding 12/20
+     --------------------------------------------------------------------------- */
+  /* Sin background: la spec no define ninguno para este contenedor, a diferencia
+     de .navbar del listado o de .action-bar. Se ve el fondo de la pagina.
+
+     Tampoco es sticky, y va unido a lo anterior: una barra sin fondo que se queda
+     fija dejaria pasar el contenido por debajo al hacer scroll. Si en algun
+     momento se quiere fija, necesita recuperar el fondo. */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 48px;
+    /* El 20 es el gutter de la pagina en movil. Las tres cabeceras que usan este
+       bloque se montan siempre con .topbar--mobile, que se oculta de md en
+       adelante, asi que esta barra nunca ve el gutter de 32 de desktop. */
+    padding: 12px 20px;
+  }
+
+  /* Element: flecha de vuelta — caja de 24 con el icono de 20 del sistema */
+  .topbar__back {
+    display: inline-flex;
+    flex: 0 0 24px;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    color: var(--sf-ink);
+    border-radius: 8px;
+    transition: opacity 160ms ease;
+  }
+  .topbar__back:hover {
+    opacity: 0.7;
+    color: var(--sf-ink);
+  }
+  .topbar__back:active {
+    opacity: 0.5;
+  }
+
+  /* Modifier: barra alta. Mismo bloque porque comparte __back y __title; el icono
+     y el titulo siguen en la misma fila, centrados verticalmente por el
+     align-items del bloque.
+     Spec: height 124 - padding 12/20 */
+  .topbar--tall {
+    min-height: 124px;
+  }
+
+  /* Modifier: barra sin titulo (/confirmado), donde el titular es el
+     contenido y la barra solo lleva el control de vuelta.
+     Spec: height 64 - padding 12/20 - control de 40. Los 64 son exactos:
+     12 + 40 + 12.
+
+     La caja tactil crece de 24 a 40 sin tocar el icono, que sigue siendo el de 20
+     del sistema: la misma pieza con mas superficie de toque. */
+  .topbar--compact {
+    min-height: 64px;
+  }
+  .topbar--compact .topbar__back {
+    flex: 0 0 40px;
+    width: 40px;
+    height: 40px;
+  }
+
+  /* Modifier: barra que solo existe en movil.
+
+     La marca asi la pantalla que en desktop tiene cabecera propia —/carrito, con
+     la misma .navbar-desktop de la portada—, y ahi esta barra sobra entera: el
+     control de vuelta lo releva el logo, el titulo lo repite el rotulo de la
+     pantalla y el total, la tarjeta de resumen. No se apaga para todas las
+     pantallas con .topbar porque /datos y el pago siguen sin barra de desktop, y
+     sin esta se quedarian sin cabecera. */
+  @media (min-width: 768px) {
+    .topbar--mobile {
+      display: none;
+    }
+  }
+
+  /* Element: hueco simetrico al control de vuelta.
+     Con space-between, el elemento del medio solo queda centrado en el ancho de
+     la barra si el primero y el ultimo miden lo mismo. Este hueco de 24 replica
+     al .topbar__back para conseguirlo sin recurrir a posicionamiento absoluto. */
+  .topbar__spacer {
+    flex: 0 0 24px;
+    width: 24px;
+  }
+
+  /* Element: titulo — Inter 600 16/24 */
+  .topbar__title {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    line-height: 24px;
+    color: var(--sf-ink);
+  }
+
+  /* Modifier: titulo centrado en el ancho de la barra.
+     Ocupa el espacio entre el control de vuelta y el hueco simetrico, y centra su
+     texto: asi sigue centrado aunque el titulo sea largo o se parta en dos lineas. */
+  .topbar__title--centered {
+    flex: 1 1 auto;
+    text-align: center;
+  }
+
+  /* Element: total — Inter 600 14/20, dorado */
+  .topbar__total {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--sf-gold);
+    white-space: nowrap;
+  }
+</style>

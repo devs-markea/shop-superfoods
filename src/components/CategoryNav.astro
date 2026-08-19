@@ -32,3 +32,124 @@ const slug = (value: string) => `cat-${value.toLowerCase().replace(/\s+/g, '-')}
     ))
   }
 </div>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: category-nav
+     ---------------------------------------------------------------------------
+     Carrusel horizontal de chips. Se mantiene propio: el carousel de Bootstrap
+     es de diapositivas, no de scroll libre. En touch usa el scroll nativo; en
+     desktop, src/scripts/category-nav.ts anade arrastre con el raton.
+
+     Spec: height 40 - gap 8 - padding-bottom 4  (40 - 4 = 36 del chip)
+     El margin negativo + padding lateral hace que sangre hasta el borde de la
+     pantalla mientras el primer chip sigue alineado al gutter del layout.
+     --------------------------------------------------------------------------- */
+  .category-nav {
+    display: flex;
+    gap: 8px;
+    height: 40px;
+    padding-bottom: 4px;
+    margin-inline: calc(20px * -1);
+    padding-inline: 20px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    scroll-snap-type: x proximity;
+    scroll-padding-inline: 20px;
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE / Edge legacy */
+    cursor: grab;
+  }
+  .category-nav::-webkit-scrollbar {
+    display: none; /* Chrome / Safari */
+  }
+
+  /* Modifier: mientras se arrastra con el raton */
+  .category-nav--dragging {
+    cursor: grabbing;
+    scroll-behavior: auto;
+    scroll-snap-type: none;
+    user-select: none;
+  }
+
+  /* La sangria lateral va pegada al gutter de la pagina, que de md en adelante
+     pasa de 20 a 32. Es el mismo salto que dan .navbar, .product-list y el resto:
+     el primer chip tiene que seguir alineado con el contenido de al lado.
+
+     De lg en adelante el carrusel deja de sangrar —mas abajo se ponen a 0— pero
+     el scroll-padding se queda en 32, que es como estaba. */
+  @media (min-width: 768px) {
+    .category-nav {
+      margin-inline: calc(32px * -1);
+      padding-inline: 32px;
+      scroll-padding-inline: 32px;
+    }
+  }
+
+  /* --- Desktop -------------------------------------------------------------
+     Con espacio de sobra los chips se acomodan en varias lineas centradas y el
+     carrusel deja de necesitar scroll. */
+  @media (min-width: 992px) {
+    .category-nav {
+      height: auto;
+      flex-wrap: wrap;
+      justify-content: center;
+      overflow: visible;
+      margin-inline: 0;
+      padding-inline: 0;
+      padding-bottom: 0;
+      cursor: default;
+    }
+  }
+  /* ---------------------------------------------------------------------------
+     Block: chip  (sobre .btn + .btn-check de Bootstrap)
+     ---------------------------------------------------------------------------
+     Filtro de categoria. Igual que el switch, pasa de <button> + JS a radios:
+     la seleccion unica la garantiza el name compartido, sin JavaScript.
+
+     Spec: height 36 - padding 8/16 - radius 100 - label Inter 500 14/20
+     Activo:   bg #D5AA53 - label #FFFFFF
+     Inactivo: bg #FFFFFF - border 1px #EAECF0 - label #6C757D
+     --------------------------------------------------------------------------- */
+  .chip {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    height: 36px;
+    padding: 8px 16px;
+    border: 1px solid var(--sf-border);
+    background-color: var(--sf-white);
+    color: var(--sf-muted);
+    white-space: nowrap;
+    user-select: none;
+    scroll-snap-align: start;
+    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+  }
+  .chip.btn {
+    /* Un escalon por debajo del 600 de .btn: el chip es una etiqueta de filtro,
+       no un boton de accion.
+       Aqui dentro y no en .chip porque hace falta ganarle a .btn en especificidad. */
+    font-weight: 500;
+    border-radius: 100px;
+  }
+  .chip:hover {
+    border-color: var(--sf-gold);
+    color: var(--sf-ink);
+  }
+
+  /* Estado: chip activo */
+  .btn-check:checked + .chip, .btn-check:checked + .chip:hover {
+    border-color: var(--sf-gold);
+    background-color: var(--sf-gold);
+    color: var(--sf-white);
+  }
+
+  .btn-check:focus-visible + .chip {
+    outline: 2px solid var(--sf-gold);
+    outline-offset: 2px;
+  }
+</style>

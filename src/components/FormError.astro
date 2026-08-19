@@ -1,0 +1,48 @@
+---
+// Aviso de que falta algo antes de poder continuar, o de que la API rechazo el
+// pedido.
+//
+// Nace vacio y oculto SIEMPRE: quien escribe el texto y lo destapa es el script
+// de cada pantalla, que lo encuentra por la marca `data-*` que se le pasa aqui.
+// Por eso el hueco existe en el marcado desde el principio —si se creara al
+// fallar, el aviso llegaria a un `role="alert"` recien insertado y algunos
+// lectores de pantalla no lo anunciarian—.
+
+interface Props {
+  /**
+   * La marca por la que lo busca el script de la pantalla, con el `data-`
+   * incluido: "data-checkout-error", "data-delivery-error"...
+   *
+   * Se emite con valor vacio, que es lo mismo que declararla suelta en el
+   * marcado: `[data-checkout-error]` la encuentra igual y `dataset` devuelve "".
+   */
+  mark: string;
+}
+
+const { mark } = Astro.props;
+---
+
+<p class="form-error" role="alert" hidden {...{ [mark]: '' }}></p>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: form-error
+     ---------------------------------------------------------------------------
+     Sale en /datos, en las tres pantallas de pago y en /confirmado.
+
+     El color es el mismo que ya usa el error del carrito (`.order-list__error`),
+     que es lo unico parecido a un color de error que tiene el proyecto: las specs
+     no definen ninguno. Si algun dia entra un rojo de marca, se cambia en los dos.
+
+     La tipografia es la de las notas (Inter 500 12/16): el aviso acompana a un
+     campo, no compite con el.
+     --------------------------------------------------------------------------- */
+  .form-error {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--sf-indigo);
+    text-align: center;
+  }
+</style>

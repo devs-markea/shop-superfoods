@@ -25,3 +25,75 @@ const { product } = Astro.props;
     <Icon name="chevron-left" />
   </a>
 </div>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: product-hero
+     ---------------------------------------------------------------------------
+     Spec: alto 240 - degradado 180deg #F5A623 -> #D5AA53
+     El degradado vive en el contenedor, asi que si la imagen no existe (o no
+     carga) queda como fondo, tal como pide la spec.
+     --------------------------------------------------------------------------- */
+  .product-hero {
+    position: relative;
+    height: 240px;
+    overflow: hidden;
+    background: linear-gradient(180deg, var(--sf-amber) 0%, var(--sf-gold) 100%);
+  }
+
+  .product-hero__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Element: product-hero__back
+     Anadido fuera de la spec: sin el, la vista de detalle no tiene salida hacia
+     el listado. Se puede borrar sin tocar nada mas. */
+  .product-hero__back {
+    position: absolute;
+    top: 16px;
+    left: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background-color: var(--sf-white);
+    color: var(--sf-ink);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
+    transition: opacity 160ms ease;
+  }
+  .product-hero__back:hover {
+    opacity: 0.85;
+    color: var(--sf-ink);
+  }
+
+  /* --- Desktop ------------------------------------------------------------- */
+  @media (min-width: 768px) {
+    /* Ya no va a sangre: la foto vive dentro de la columna de la ficha (ver
+       pages/[slug].astro) y ahi es una superficie mas, con las esquinas
+       de 16 del resto del sistema. */
+    .product-hero {
+      height: 360px;
+      border-radius: 16px;
+    }
+    /* El control de volver se acerca a la esquina: con la foto redondeada y el
+       gutter de 32, los 32 de sangria lo dejaban flotando lejos del borde. */
+    .product-hero__back {
+      left: 16px;
+    }
+  }
+  /* Los 520x480 de la spec de desktop, de lg: es donde la foto cabe al lado del
+     texto (ver pages/[slug].astro). El ancho se pide como BASE y no como
+     medida fija porque entre lg y xl el contenido no llega a los 1120 del lienzo, y
+     entonces la foto cede lo justo para no estrechar la columna de opciones. El
+     recorte lo sigue resolviendo el object-fit de la imagen. */
+  @media (min-width: 992px) {
+    .product-hero {
+      flex: 0 1 520px;
+      height: 480px;
+    }
+  }
+</style>

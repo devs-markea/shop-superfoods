@@ -16,7 +16,7 @@
 // pestana o seguir con el JavaScript caido, y entonces la portada sale entera.
 //
 // En movil no llega a correr: el pie es `display: none` bajo md (ver
-// components/_footer.scss), asi que sus enlaces no se pueden pulsar.
+// components/Footer.astro), asi que sus enlaces no se pueden pulsar.
 //
 // LO IMPORTA CADA PANTALLA QUE MONTE EL PIE —las nueve— igual que copy-button en
 // /recibido. No se cargo desde un <script> dentro de Footer.astro, que habria sido
@@ -78,7 +78,7 @@ links?.addEventListener('click', (event) => {
     chip.dispatchEvent(new Event('change', { bubbles: true }));
 
     // Arriba, como si se llegara de otra pantalla. Sin `behavior`: asi lo decide
-    // el CSS, y con ello el bloque de `prefers-reduced-motion` de _base.scss.
+    // el CSS, y con ello el bloque de `prefers-reduced-motion` de styles/base.css.
     window.scrollTo({ top: 0 });
     return;
   }

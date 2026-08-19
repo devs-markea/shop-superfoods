@@ -27,3 +27,34 @@ const label = 'Terminos y condiciones';
   }{' '}
   de servicio.
 </p>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: legal-note
+     ---------------------------------------------------------------------------
+     Aviso legal antes de confirmar.
+     Spec: Inter 500 12/16 centrado #9CA3AF
+     --------------------------------------------------------------------------- */
+  .legal-note {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--sf-placeholder);
+    text-align: center;
+  }
+
+  /* Element: enlace a los terminos. Solo aparece si hay URL configurada; sin ella la
+     frase es texto del mismo aviso, sin subrayar, para no prometer un destino.
+
+     Subrayado y no dorado: es letra legal, no una accion del flujo, y un dorado aqui
+     competiria con el boton que tiene justo debajo. */
+  .legal-note__link {
+    color: var(--sf-muted);
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .legal-note__link:hover {
+    color: var(--sf-ink);
+  }
+</style>

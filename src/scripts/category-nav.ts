@@ -89,7 +89,7 @@ function initScrollIntoView(track: HTMLElement): void {
 // pantalla, que no dependen de quien sea el `offsetParent` de la etiqueta.
 //
 // A partir de lg no hace nada: los chips se reparten en varias lineas y el
-// carrusel deja de tener scroll (ver components/_category-nav.scss).
+// carrusel deja de tener scroll (ver components/CategoryNav.astro).
 function revealChecked(track: HTMLElement): void {
   const checked = track.querySelector<HTMLInputElement>('input[name="category"]:checked');
   if (!checked) return;

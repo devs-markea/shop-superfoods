@@ -23,7 +23,7 @@ const { itemName, quantity = 1 } = Astro.props;
 // de un `[data-choice]`: son dos gestos parecidos con dos efectos distintos y
 // mezclarlos subiria una opcion al pedir otra unidad del platillo.
 //
-// Solo se ve en desktop (ver components/_product-counter.scss). En movil la ficha
+// Solo se ve en desktop (ver los estilos de este archivo). En movil la ficha
 // se queda como estaba —barra de accion al fondo y sin contador— y el 1 de aqui
 // es el que viaja en la peticion, igual que antes de que este bloque existiera.
 //
@@ -55,3 +55,113 @@ const { itemName, quantity = 1 } = Astro.props;
     <Icon name="plus" size="sm" class="product-counter__plus" />
   </button>
 </div>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: product-counter
+     ---------------------------------------------------------------------------
+     Unidades del platillo, al lado de "Agregar". SOLO DESKTOP: en movil no se
+     pinta y el pedido entra de uno en uno, como hasta ahora.
+
+     Spec: caja 120x48 - gap 16 - padding 8 - radius 12 - borde 1 #EAECF0 - fondo
+     blanco. Restar: 32x32, borde 1.5 dorado, rectangulo 12x2. Sumar: 32x32,
+     fondo dorado, "+" blanco de 14 con trazo 2. Cifra Inter 700 16/100%.
+
+     Bloque propio y no un modificador de .stepper: cuentan cosas distintas —aquel
+     unidades de una opcion, este del platillo— y no coinciden en una sola medida
+     (28 contra 32, gap 12 contra 16, 600/14 contra 700/16, y aquel sin caja).
+
+     Los 120 salen justos: 8 + 32 + 16 + 8 + 16 + 32 + 8, con 8 para la cifra. Un
+     digito de Inter 16 mide algo mas, asi que la caja se queda en los 120 de la
+     spec y es la cifra la que se sale de su hueco, centrada y hacia los dos gaps
+     de 16 que tiene al lado. Con dos digitos sigue sobrando sitio.
+     --------------------------------------------------------------------------- */
+  .product-counter {
+    display: none;
+  }
+
+  /* --- Desktop ------------------------------------------------------------- */
+  @media (min-width: 768px) {
+    .product-counter {
+      display: flex;
+      /* No se estira ni se encoge: el que ocupa lo que sobra de la fila de compra
+         es el boton (ver pages/[slug].astro). */
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 16px;
+      width: 120px;
+      height: 48px;
+      padding: 8px;
+      border: 1px solid var(--sf-border);
+      border-radius: 12px;
+      background-color: var(--sf-white);
+    }
+    .product-counter__button {
+      display: inline-flex;
+      flex: 0 0 32px;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      border-radius: 16px;
+      transition: background-color 160ms ease, opacity 160ms ease, transform 160ms ease;
+    }
+    .product-counter__button:active {
+      transform: scale(0.92);
+    }
+    /* El piso —una unidad— y el techo se ven, no se ignoran en silencio: un
+       contador se sube pulsando repetidamente, y un boton que deja de responder
+       sin senal se lee como una averia. Misma regla que .stepper. */
+    .product-counter__button:disabled {
+      opacity: 0.4;
+      transform: none;
+      cursor: not-allowed;
+    }
+    /* Modifier: restar */
+    .product-counter__button--minus {
+      border: 1.5px solid var(--sf-gold);
+      background-color: transparent;
+    }
+    .product-counter__button--minus:hover:not(:disabled) {
+      background-color: var(--sf-gold-tint);
+    }
+    /* Rectangulo de 12x2 y no un icono de trazo: a ese grosor la rejilla de 20x20
+       con stroke 2 no da la medida de la spec. */
+    .product-counter__minus {
+      display: block;
+      width: 12px;
+      height: 2px;
+      background-color: var(--sf-gold);
+    }
+    /* Modifier: sumar */
+    .product-counter__button--plus {
+      border: 0;
+      background-color: var(--sf-gold);
+      color: var(--sf-white);
+    }
+    .product-counter__button--plus:hover:not(:disabled) {
+      background-color: var(--sf-gold-hover);
+    }
+    /* El "+" de la spec mide 14 con trazo de 2. Los tamanos de .icon escalan el
+       trazo en proporcion —a 14 de una rejilla de 20 se queda en 1.4—, asi que aqui
+       se recalcula para recuperar los 2: 2 x 20 / 14. */
+    .product-counter__plus {
+      width: 14px;
+      height: 14px;
+      stroke-width: 2.857;
+    }
+    /* Element: value — la cifra. El #111827 de la spec es el negro casi puro de
+       siempre: se usa --sf-ink (#141821), que es el del resto de la tienda, en vez
+       de abrir un token para una diferencia que no se ve. */
+    .product-counter__value {
+      flex: 1 1 auto;
+      min-width: 0;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--sf-ink);
+      text-align: center;
+      font-variant-numeric: tabular-nums;
+    }
+  }
+</style>

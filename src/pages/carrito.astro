@@ -37,7 +37,7 @@ import { formatPrice } from '../lib/price.ts';
 // a la izquierda y la tarjeta de resumen a la derecha, que es la que cierra la
 // cuenta y continua el flujo. Alli la barra del fondo no se pinta. Nada de eso
 // duplica marcado —son los mismos elementos recolocados por CSS, ver
-// components/_checkout-page.scss— salvo la tarjeta, que es una pieza nueva y de
+// styles/screens.css— salvo la tarjeta, que es una pieza nueva y de
 // desktop entera.
 
 // El carrito es de esta sesion: no hay nada que prerenderizar.
@@ -166,7 +166,7 @@ const closed = isClosed(schedule);
        la pantalla aunque el pedido tenga pocas lineas. -->
   <main class="checkout-page d-flex flex-column flex-grow-1">
     {/* La pila y la rejilla solo existen en desktop —en movil son `display:
-        contents`, ver components/_checkout-page.scss—, asi que envolver no cambia
+        contents`, ver styles/screens.css—, asi que envolver no cambia
         nada de lo que ya habia. */}
     <div class="checkout-page__stack">
       <h1 class="checkout-page__title">Mi pedido</h1>
@@ -311,3 +311,476 @@ const closed = isClosed(schedule);
   // que importarlo. Ver src/lib/discover.ts.
   import '../scripts/footer-discover';
 </script>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: order-list
+     ---------------------------------------------------------------------------
+     Lista de lineas del pedido. Spec: gap 20.
+     --------------------------------------------------------------------------- */
+  .order-list {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    margin: 0;
+    transition: opacity 160ms ease;
+  }
+
+  /* La lista espera respuesta de la API. Se bloquea ENTERA y no solo la linea
+     pulsada: en un "compra y lleva" un cambio de cantidad rehace los grupos, asi
+     que la respuesta puede reordenar y renumerar cualquier otra linea. */
+  .order-list[data-busy] {
+    opacity: 0.5;
+    pointer-events: none;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Block: order-totals — subtotal y descuentos. Solo con promociones aplicadas:
+     el total vive en la barra superior, y sin descuento el subtotal seria ese
+     mismo importe repetido.
+     --------------------------------------------------------------------------- */
+  .order-totals {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 0;
+  }
+
+  .order-totals__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .order-totals__term {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--sf-muted);
+  }
+
+  .order-totals__value {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 16px;
+    color: var(--sf-ink);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  .order-totals__row--discount .order-totals__value {
+    color: var(--sf-success);
+  }
+
+  /* Element: error — la API rechazo un cambio de cantidad o un borrado.
+     Oculto por defecto con el atributo hidden. */
+  .order-list__error {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--sf-indigo);
+    text-align: center;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Block: order-item
+     ---------------------------------------------------------------------------
+     Linea del pedido: imagen 70x70 a la izquierda, cuerpo a la derecha.
+     El cuerpo reparte en dos filas con space-between, asi que la fila de acciones
+     queda alineada al pie de la imagen sin alturas fijas.
+
+     Spec: imagen 70x70 radius 12 - cuerpo space-between - info gap 2
+     El gap entre imagen y cuerpo no viene en la spec: se usa 12, el mismo que
+     .product-card, que es la otra pareja imagen + texto del sistema.
+     --------------------------------------------------------------------------- */
+  .order-item {
+    display: flex;
+    gap: 12px;
+  }
+
+  /* Element: media — 70x70 anclada arriba */
+  .order-item__media {
+    flex: 0 0 70px;
+    width: 70px;
+    height: 70px;
+    overflow: hidden;
+    border-radius: 12px;
+    background-color: var(--sf-border);
+  }
+
+  .order-item__image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  /* Element: body — ocupa el resto y separa las dos filas */
+  .order-item__body {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+    min-width: 0;
+    min-height: 70px;
+  }
+
+  /* Element: fila superior — info a la izquierda, precio a la derecha */
+  .order-item__head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .order-item__info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  /* Element: title — nombre y, a su lado, la insignia de la promocion. El enlace
+     se recorta antes de empujarla: la fila comparte ancho con el importe de la
+     derecha, y en un movil no caben un nombre largo y una etiqueta. */
+  .order-item__title {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 0;
+    min-width: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--sf-ink);
+  }
+  .order-item__title > a {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .order-item__badge {
+    flex: 0 0 auto;
+  }
+
+  /* La personalizacion no trae spec tipografica: se usa el patron de texto
+     secundario del sistema (12/16 #6C757D), igual que .option-group__label. */
+  .order-item__custom {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 16px;
+    color: var(--sf-muted);
+  }
+
+  /* Element: aviso de la linea. El de un "compra y lleva" incompleto va en dorado
+     —es una oportunidad, no un dato—; el que explica que el resto de la fila ya
+     esta en la promocion, en gris. */
+  .order-item__hint {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--sf-gold);
+  }
+
+  .order-item__hint--muted {
+    color: var(--sf-muted);
+  }
+
+  /* Element: price — lo que se paga por la linea. Es el unico importe de la
+     esquina: el precio de lista se compara abajo, junto a la papelera, donde hay
+     sitio de sobra para los dos.
+
+     Spec: #141821. A diferencia de .product-card__price (dorado), aqui el precio
+     va en tinta: el dorado queda para el total del pedido y el aviso de envio. */
+  .order-item__price {
+    flex: 0 0 auto;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--sf-ink);
+    white-space: nowrap;
+  }
+
+  /* Element: pricing — el par de lista y final, solo cuando hay descuento. Ocupa
+     el hueco que quedaba entre la papelera y el contador. */
+  .order-item__pricing {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 8px;
+    min-width: 0;
+  }
+
+  .order-item__pricing-final {
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 16px;
+    color: var(--sf-gold);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* Element: fila inferior — papelera, el par de precios y, al fondo, la cantidad.
+     El contador se empuja con margen automatico en lugar de con space-between: asi
+     queda a la derecha lleve la fila dos elementos o tres. */
+  .order-item__actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .order-item__actions .stepper {
+    margin-inline-start: auto;
+  }
+
+  .order-item__remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    color: var(--sf-muted);
+    border-radius: 8px;
+    transition: color 160ms ease;
+  }
+  .order-item__remove:hover {
+    color: var(--sf-ink);
+  }
+
+  /* Se repite en /carrito porque alli las unidades las pinta el JS
+     (src/lib/cart-view.ts) y este componente no llega a montarse. Las dos
+     pantallas nunca coinciden, asi que cada una carga una sola copia. */
+
+  /* ---------------------------------------------------------------------------
+     Block: stepper
+     ---------------------------------------------------------------------------
+     Control de cantidad: restar - cantidad - sumar.
+     Spec: 87x28 - gap 12
+     28 + 12 + ~7 (un digito) + 12 + 28 = 87. El ancho no se fija: con dos digitos
+     el bloque crece en lugar de recortar el numero.
+
+     Restar: 28x28, borde 1.5 dorado, fondo transparente, rectangulo 10x1.5.
+     Sumar:  28x28, fondo dorado, "+" blanco.
+     --------------------------------------------------------------------------- */
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 28px;
+  }
+
+  .stepper__button {
+    display: inline-flex;
+    flex: 0 0 28px;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    transition: background-color 160ms ease, opacity 160ms ease, transform 160ms ease;
+  }
+  .stepper__button:active {
+    transform: scale(0.92);
+  }
+  /* El tope de unidades por opcion se ve: atenuado y sin respuesta al hover.
+     Es la diferencia deliberada con el checkbox, que al llegar a su maximo de
+     opciones ignora el clic sin ninguna senal. */
+  .stepper__button:disabled {
+    opacity: 0.4;
+    transform: none;
+    cursor: not-allowed;
+  }
+
+  /* Modifier: restar */
+  .stepper__button--minus {
+    border: 1.5px solid var(--sf-gold);
+    background-color: transparent;
+  }
+  .stepper__button--minus:hover:not(:disabled) {
+    background-color: var(--sf-gold-tint);
+  }
+
+  /* El menos es un rectangulo de 10x1.5, no un icono de trazo: a ese grosor el
+     sistema de 20x20 con stroke 2 no da la medida de la spec. */
+  .stepper__minus {
+    display: block;
+    width: 10px;
+    height: 1.5px;
+    background-color: var(--sf-gold);
+  }
+
+  /* Modifier: sumar */
+  .stepper__button--plus {
+    border: 0;
+    background-color: var(--sf-gold);
+    color: var(--sf-white);
+  }
+  .stepper__button--plus:hover:not(:disabled) {
+    background-color: var(--sf-gold-hover);
+  }
+
+  /* Element: cantidad — Inter 600 14/20 */
+  .stepper__value {
+    min-width: 7px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--sf-ink);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Viene de la familia de promociones, que comparten la portada, la ficha, el
+       pedido y el cierre. Cada consumidor lleva solo las piezas que pinta: en
+       ninguna pantalla coinciden dos, asi que nadie carga la misma regla dos
+       veces. Si se toca una, mirar quien mas la tiene.
+
+       Van juntas aqui porque en el pedido las lineas las pinta el JS
+       (src/lib/cart-view.ts) y ningun componente .astro llega a montarse. */
+
+  /* Block: promo-badge — "15%", "$50", "2x1". La etiqueta la compone el backend. */
+  .promo-badge {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 100px;
+    background-color: var(--sf-gold);
+    color: var(--sf-white);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 16px;
+    white-space: nowrap;
+  }
+
+  .promo-badge__label {
+    /* El numero es lo que se lee de lejos: el icono solo lo acompaña. */
+    letter-spacing: 0.01em;
+  }
+
+  /* Modifier: sin icono y mas apretada, para las listas de texto del cierre. */
+  .promo-badge--sm {
+    padding: 0 8px;
+  }
+
+  /* Block: price-was — el precio de lista. Tachado, nunca subrayado: es la
+     convencion universal y es lo que implementa la referencia del panel. */
+  .price-was {
+    color: var(--sf-muted);
+    font-size: 12px;
+    font-weight: 400;
+    text-decoration: line-through;
+    text-decoration-thickness: 1px;
+    white-space: nowrap;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Block: promo-group — el acordeon de un "compra y lleva" en el pedido.
+
+     Un grupo NO es una linea del carrito: toma unidades de varias filas, y una
+     misma fila puede aportar unidades al grupo y dejar otras fuera. Por eso el
+     desglose se pinta por unidad: es lo unico que explica que hay dentro y cual
+     sale gratis. Contar, en cambio, se cuenta una sola vez —ver el pie.
+     --------------------------------------------------------------------------- */
+  .promo-group {
+    margin-top: 4px;
+  }
+
+  .promo-group__summary {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    color: var(--sf-gold);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 16px;
+    list-style: none; /* el triangulo del navegador no sigue el sistema */
+  }
+  .promo-group__summary::-webkit-details-marker {
+    display: none;
+  }
+  /* Chevron propio, del mismo trazo que el resto de iconos. */
+  .promo-group__summary::before {
+    content: "";
+    width: 6px;
+    height: 6px;
+    border: solid currentcolor;
+    border-width: 0 1.5px 1.5px 0;
+    transform: translateY(-2px) rotate(45deg);
+    transition: transform 160ms ease;
+  }
+
+  .promo-group[open] .promo-group__summary::before {
+    transform: translateY(1px) rotate(-135deg);
+  }
+
+  .promo-group__units {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    margin: 8px 0 0;
+  }
+
+  .promo-unit {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+    font-size: 12px;
+    line-height: 16px;
+  }
+
+  /* Element: info — el platillo y, debajo, sus personalizaciones. Dos lineas
+     porque son dos cosas distintas: que te llevas y como lo pediste. */
+  .promo-unit__info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  /* "Hamburguesa - Doble": el nombre con su variante al lado. En tinta, porque
+     es lo que se lleva; las personalizaciones quedan en gris debajo. */
+  .promo-unit__label {
+    color: var(--sf-ink);
+    font-weight: 500;
+  }
+
+  .promo-unit__options {
+    color: var(--sf-muted);
+    font-weight: 400;
+  }
+
+  .promo-unit__price {
+    flex: 0 0 auto;
+    color: var(--sf-ink);
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+
+  /* La unidad regalada lo es ENTERA —variante y personalizaciones—, asi que se
+     rotula "GRATIS" a secas: no hay ningun resto que cobrar debajo. */
+  .promo-unit__free {
+    flex: 0 0 auto;
+    padding: 0 8px;
+    border-radius: 100px;
+    background-color: var(--sf-success-tint);
+    color: var(--sf-success);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  /* Los controles NO viven aqui dentro: debajo del acordeon va un unico
+     .order-item__actions —papelera, par de precios y contador— igual que en una
+     linea con descuento. Uno solo, aunque el grupo junte varias configuraciones:
+     las tres tarjetas del pedido se cuentan igual, y el acordeon queda como lo
+     que es, informativo, plegable sin llevarse por delante como cambiar el pedido. */
+</style>

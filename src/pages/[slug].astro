@@ -43,7 +43,7 @@ import {
 // portada— y por dentro se parte en dos columnas: la foto a la izquierda, y a la
 // derecha la informacion, la seleccion y la fila de compra, donde el boton pasa a
 // convivir con un contador de unidades. Nada de eso duplica marcado: son los
-// mismos elementos recolocados por CSS (ver components/_product-page.scss), asi
+// mismos elementos recolocados por CSS (ver los estilos de este archivo), asi
 // que hay un solo boton de agregar y un solo formulario que enviar.
 
 // On-demand por el mismo motivo que la portada: `available` depende del horario
@@ -186,7 +186,7 @@ const closed = isClosed(schedule);
     {
       product ? (
         // La rejilla solo existe en desktop —en movil es `display: contents`, ver
-        // components/_product-page.scss—, asi que envolver no cambia nada de lo
+        // los estilos de este archivo—, asi que envolver no cambia nada de lo
         // que ya habia.
         <div class="product-page__grid">
           <ProductHero product={product} />
@@ -312,3 +312,252 @@ const closed = isClosed(schedule);
   // que importarlo. Ver src/lib/discover.ts.
   import '../scripts/footer-discover';
 </script>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: product-detail
+     ---------------------------------------------------------------------------
+     Contenedor general del contenido. Spec: gap 24 - padding 20
+     El gap de 24 resuelve por si solo todas las distancias que pide la spec:
+     bloque -> divisor -> bloque. El primer bloque recibe sus 20px del padding.
+     --------------------------------------------------------------------------- */
+  .product-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    max-width: 720px;
+    margin-inline: auto;
+    padding: 20px;
+    background-color: var(--sf-body-bg);
+  }
+
+  /* Element: encabezado (titulo + descripcion), gap 12 */
+  .product-detail__intro {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Element: heading — nombre del platillo y, a su lado, la etiqueta de la
+     promocion. Envuelve en lugar de encoger: el titulo es de 24/32 y una etiqueta
+     larga ("Precio especial de $150.00") no cabe junto a un nombre largo en un
+     movil. Al envolver, la etiqueta cae bajo el nombre y alineada con el, que es
+     donde sigue leyendose como suya. */
+  .product-detail__heading {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .product-detail__title {
+    margin: 0;
+    font-size: 24px;
+    font-weight: 600;
+    line-height: 32px;
+    color: var(--sf-ink);
+  }
+
+  .product-detail__description {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    color: var(--sf-muted);
+  }
+
+  /* Element: promo — la etiqueta de la promocion, junto al nombre.
+
+     Es lo unico que se pinta aqui de la promocion, a proposito: el tachado y el
+     precio final van POR VARIANTE en el selector, que es donde se elige, y el
+     importe que se paga lo remata la barra de accion. Un tercer sitio con los
+     mismos dos numeros solo repetiria.
+
+     La insignia de la rejilla lleva un atajo ("15%") y aqui el rotulo entero
+     ("Descuento de 15%"), asi que necesita algo mas de aire a los lados. */
+  .product-detail__promo {
+    flex: 0 0 auto;
+    padding-inline: 12px;
+  }
+
+  /* Element: aviso de la ficha — motivo de no disponible, o el error que
+     devuelve la API al agregar. Justo encima de la barra de accion, centrado con
+     el mismo ancho maximo que el boton. */
+  .product-detail__notice {
+    width: 100%;
+    max-width: 350px;
+    margin: 0 auto;
+    padding-inline: 20px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--sf-muted);
+    text-align: center;
+  }
+
+  /* Modifier: el aviso es un fallo, no una informacion. */
+  .product-detail__notice--error {
+    color: var(--sf-indigo);
+  }
+
+  /* Element: linea divisora */
+  .product-detail__divider {
+    height: 1px;
+    margin: 0;
+    border: 0;
+    opacity: 1;
+    background-color: var(--sf-border);
+  }
+
+  /* --- Desktop -------------------------------------------------------------
+     El aire alrededor pasa a ser de la columna que lo contiene (ver
+     los estilos de este archivo). Aqui se queda el gap de 24 —como se reparte por
+     dentro— y el tope de 720, que dentro de la columna de la ficha no llega a actuar
+     nunca y sigue haciendo su trabajo en el 404, que no tiene columna. */
+  @media (min-width: 768px) {
+    .product-detail {
+      padding: 0;
+    }
+    /* El nombre del platillo manda en la columna, y en desktop lo hace de verdad:
+       Inter 800 32/32 frente al 600 24/32 del movil.
+
+       El 32 va literal —la escala de tamanos termina en el 24 de movil y este es el
+       unico titulo de la tienda que lo pide, igual que el 18 de la tarjeta—, y el
+       #111827 de la spec se resuelve con --sf-ink (#141821), el negro del resto de
+       la tienda: es la misma decision que ya tomo el contador de unidades, y abrir
+       un token para una diferencia que no se ve solo deja un nombre mas que
+       recordar.
+
+       Viste tambien el titulo del 404, que es este mismo elemento: ahi el aviso es
+       todo lo que hay en pantalla, asi que le sienta igual. */
+    .product-detail__title {
+      font-size: 32px;
+      font-weight: 800;
+      line-height: 1;
+    }
+    /* La descripcion sube de 14/20 a 16/24 y se oscurece. Lo segundo es por lo
+       primero: en una columna de 420 el parrafo ocupa varias lineas, y el gris de
+       movil (#6c757d) se apaga demasiado a ese tamano. El #4B5563 de la spec ya
+       existe como --sf-slate (#4a5568), el gris frio de la barra de desktop. */
+    .product-detail__description {
+      font-size: 16px;
+      line-height: 24px;
+      color: var(--sf-slate);
+    }
+    /* El aviso ya no vive sobre un boton centrado de 350, sino en una columna: se
+       alinea con el texto que tiene encima y ocupa lo que ella. */
+    .product-detail__notice {
+      max-width: none;
+      padding-inline: 0;
+      text-align: left;
+    }
+  }
+  /* ---------------------------------------------------------------------------
+     Block: product-page
+     ---------------------------------------------------------------------------
+     El armazon de la ficha, y solo de la ficha. Es a la vista de detalle lo que
+     .storefront es a la portada: no pinta nada, reparte.
+
+     En movil no existe: la foto, la informacion y la barra de accion se apilan
+     solas —cada pieza con su propio aire— y la barra se queda fija al fondo. Esa
+     pantalla no cambia.
+
+     De md hacia arriba <main> abre 48 arriba y abajo y la ficha pasa a ser una
+     columna centrada. De lg, donde ya caben los 520 de la foto al lado del texto, la
+     columna se parte en dos con 48 entre ellas: foto a la izquierda, informacion y
+     seleccion a la derecha. Y con las dos columnas se va la barra fija del fondo:
+     el boton baja a la fila de compra, junto al contador de unidades.
+     --------------------------------------------------------------------------- */
+  /* display: contents: en movil el envoltorio no pinta ni ocupa, asi que la foto y
+     el formulario siguen siendo hijos de <main> a efectos de layout —y con ellos
+     sigue funcionando el `margin-top: auto` que manda la barra de accion al fondo—.
+     La portada hace lo mismo con su pila. */
+  .product-page__grid {
+    display: contents;
+  }
+
+  /* Element: buy — la fila de compra: el contador y "Agregar". En movil tampoco es
+     nada, por el mismo motivo: el boton sigue siendo la barra fija y el contador no
+     se pinta (ver components/ProductCounter.astro). */
+  .product-page__buy {
+    display: contents;
+  }
+
+  /* --- Desktop ------------------------------------------------------------- */
+  @media (min-width: 768px) {
+    /* El gap es para el 404, que no monta rejilla y cuelga sus dos piezas —el aviso
+       y el boton de volver— directamente de <main>. Con la ficha no hace nada: ahi
+       <main> tiene un solo hijo. */
+    .product-page {
+      gap: 24px;
+      padding: 48px 32px;
+    }
+    /* Una sola columna hasta lg: la foto arriba y la ficha debajo, a 24. El tope de
+       720 es el ancho de lectura que traia .product-detail y que aqui pasa a ser de
+       la columna entera: sin el, en una pantalla de 900 la descripcion saldria en
+       lineas de 900. */
+    .product-page__grid {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      width: 100%;
+      max-width: 720px;
+      margin-inline: auto;
+    }
+    /* Element: panel — la columna de informacion y seleccion, que es el formulario.
+       Sus tres piezas —informacion con las opciones, el aviso y la fila de compra—
+       separadas 24, el mismo hueco con el que el bloque de informacion se reparte
+       por dentro. */
+    .product-page__panel {
+      gap: 24px;
+    }
+    /* La fila: el contador delante y el boton detras, a 24. El tope de 720 es del
+       404 otra vez —ahi la fila cuelga de <main> y se alinea con el aviso, que tiene
+       el mismo—; dentro de la columna de la ficha no llega a actuar. */
+    .product-page__buy {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      width: 100%;
+      max-width: 720px;
+      margin-inline: auto;
+    }
+    /* La barra de accion deja de ser barra. `display: contents` la borra como caja
+       —con su sticky, su borde y su fondo, que dentro de una columna no dicen
+       nada— y deja el boton como hijo directo de la fila, detras del contador. El
+       marcado no se duplica: es el mismo boton de siempre, con el mismo
+       data-total-template que recalcula src/scripts/order-form.ts. */
+    .product-page__buy .action-bar {
+      display: contents;
+    }
+    /* El boton ocupa lo que sobra de la fila y sube a 48 para casar con el alto del
+       contador que tiene al lado. Los 350 y el centrado eran de la barra fija. */
+    .product-page__buy .action-bar__button {
+      flex: 1 1 0;
+      max-width: none;
+      height: 48px;
+      margin-inline: 0;
+    }
+  }
+  /* --- Dos columnas ---------------------------------------------------------
+     De lg: 520 de foto + 48 + lo que quede para la informacion. Antes no se piden
+     porque no caben: a 768 la columna de opciones se quedaria en menos de 300 y sus
+     filas —etiqueta, precio y contador— no entran. */
+  @media (min-width: 992px) {
+    .product-page__grid {
+      flex-direction: row;
+      align-items: flex-start;
+      gap: 48px;
+      max-width: 1140px;
+    }
+    .product-page__panel {
+      /* Base de 420 y no 0: entre lg y xl el contenido no da los 1120 del lienzo, y
+         repartir la diferencia entre las dos columnas —la foto tiene su propia base,
+         ver components/ProductHero.astro— la estrecha menos que dejarla crecer
+         desde cero. */
+      flex: 1 1 420px;
+      min-width: 0;
+    }
+  }
+</style>

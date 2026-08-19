@@ -12,7 +12,8 @@ import ActionBar from '../components/ActionBar.astro';
 import ScheduleSheet from '../components/ScheduleSheet.astro';
 import LocationSheet from '../components/LocationSheet.astro';
 import Footer from '../components/Footer.astro';
-import Icon from '../components/Icon.astro';
+import FormError from '../components/FormError.astro';
+import InfoNote from '../components/InfoNote.astro';
 import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
 import { quoteForDraft } from '../lib/shipping-quote.ts';
 import { getCart, isEmptyCart } from '../lib/cart.ts';
@@ -32,7 +33,7 @@ import { TEST_MODE } from 'astro:env/server';
 // tarjeta de resumen a la derecha, que es donde se continua. Es la MISMA tarjeta
 // del pedido (<CartSummary>), con otro rotulo en el boton; alli el boton es un
 // enlace al siguiente paso y aqui un submit, porque continuar es antes que nada
-// validar los campos. Ver components/_checkout-page.scss.
+// validar los campos. Ver styles/screens.css.
 //
 // El formulario tambien se recoloca por dentro, y solo en desktop: los campos se
 // juntan en un bloque de ritmo propio, aparecen las etiquetas que en movil hacen
@@ -161,7 +162,7 @@ const areaNotice = TEST_MODE ? '' : (quote?.notice ?? '');
        la pantalla aunque el formulario sea corto. -->
   <main class="checkout-page d-flex flex-column flex-grow-1">
     {/* La pila y la rejilla solo existen en desktop —en movil son `display:
-        contents`, ver components/_checkout-page.scss—, asi que envolver no cambia
+        contents`, ver styles/screens.css—, asi que envolver no cambia
         nada de lo que ya habia. */}
     <div class="checkout-page__stack">
       <h1 class="checkout-page__title">Datos de entrega</h1>
@@ -187,13 +188,13 @@ const areaNotice = TEST_MODE ? '' : (quote?.notice ?? '');
               desktop, donde llevan un ritmo de 20 mas apretado que el 24 de la
               pantalla; en movil es `display: contents` y contacto y direccion
               siguen siendo dos hijos de .screen-body, con su 24 intacto. Ver
-              components/_checkout-page.scss. */}
+              styles/screens.css. */}
           <div class="checkout-page__fields">
             <!-- 2. Contacto (gap 8 en movil, 20 en desktop). Nombre y telefono se
                  piden SIEMPRE, tambien al recoger: el telefono es la llave con la
                  que el ERP identifica al cliente y el canal por el que se avisa
                  que el pedido esta listo. -->
-            <div class="d-flex flex-column gap-2 gap-md-5">
+            <div class="checkout-page__contact d-flex flex-column">
               <TextField
                 name="name"
                 label="Nombre completo"
@@ -212,9 +213,13 @@ const areaNotice = TEST_MODE ? '' : (quote?.notice ?? '');
 
                  En desktop es un solo grupo a 12, rotulado "Direccion": el bloque
                  de la ubicacion se abre (`display: contents`, ver
-                 components/_location.scss) y su boton queda como una pieza mas,
+                 components/LocationPicker.astro) y su boton queda como una pieza mas,
                  encima de los campos escritos. -->
-            <div class="d-flex flex-column gap-6 gap-md-3" hidden={pickup} data-address-block>
+            <div
+              class="checkout-page__address d-flex flex-column"
+              hidden={pickup}
+              data-address-block
+            >
               {/* El rotulo del grupo, solo desktop: en movil lo dice "Ubicacion",
                   dentro de <LocationPicker>. Uno en cada pantalla, para que no
                   haya dos titulos para el mismo grupo. */}
@@ -231,10 +236,13 @@ const areaNotice = TEST_MODE ? '' : (quote?.notice ?? '');
                 direccion a la que llevar nada, y el aviso desaparece con el bloque
                 sin que el script tenga que acordarse.
               */}
-              <div class="info-note" hidden={!areaNotice} data-area-notice>
-                <Icon name="info" size="sm" />
-                <p class="info-note__text" data-area-notice-text>{areaNotice}</p>
-              </div>
+              <InfoNote
+                hidden={!areaNotice}
+                mark="data-area-notice"
+                markText="data-area-notice-text"
+              >
+                {areaNotice}
+              </InfoNote>
 
               <AddressFields required={!pickup} />
             </div>
@@ -243,7 +251,7 @@ const areaNotice = TEST_MODE ? '' : (quote?.notice ?? '');
           <!-- Lo que falta para poder continuar. Lo rellena el script al intentar
                avanzar: los globos del navegador se cierran al primer toque y hay
                que dejar el aviso escrito en la pantalla. -->
-          <p class="form-error" role="alert" hidden data-delivery-error></p>
+          <FormError mark="data-delivery-error" />
         </div>
 
         <!-- En desktop esta barra no se pinta: continuar es el boton de la

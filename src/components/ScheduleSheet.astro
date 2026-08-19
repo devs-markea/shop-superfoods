@@ -36,3 +36,61 @@ const { schedule } = Astro.props;
     }
   </dl>
 </Sheet>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: schedule
+     ---------------------------------------------------------------------------
+     Tabla del horario, dentro de la hoja del reloj. Un dia por fila: nombre a la
+     izquierda, turnos a la derecha.
+
+     Sin spec de Figma: se compone con lo que ya existe. Es la misma fila que
+     .summary —concepto a un lado, dato al otro, alineados por la base— y el mismo
+     filete de 1px que separa las secciones del resto del proyecto.
+
+     Se marca como <dl>: son pares dia/horario, no una lista de cosas sueltas. Los
+     margenes que el Reboot pone a <dl> y <dd> se anulan.
+     --------------------------------------------------------------------------- */
+  .schedule {
+    margin: 0;
+  }
+
+  /* Element: fila de un dia. El filete separa, no encierra: no lo lleva la primera. */
+  .schedule__row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 16px;
+    padding-block: 12px;
+  }
+  .schedule__row + .schedule__row {
+    border-top: 1px solid var(--sf-border);
+  }
+
+  /* Element: nombre del dia — Inter 400 14/20 #6C757D */
+  .schedule__day {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    color: var(--sf-muted);
+  }
+
+  /* Element: turnos — Inter 500 14/20 #141821.
+     Es el dato que se viene a consultar: lleva el peso y el color del contenido. */
+  .schedule__shifts {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--sf-ink);
+    text-align: right;
+  }
+
+  /* Modifier: dia sin turnos. Se rotula "Cerrado" —omitirlo dejaria un hueco que se
+     lee como descuido— pero sin el peso de un dato. */
+  .schedule__shifts--closed {
+    font-weight: 400;
+    color: var(--sf-placeholder);
+  }
+</style>

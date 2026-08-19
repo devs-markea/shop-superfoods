@@ -1,6 +1,27 @@
 ---
 import { Font } from 'astro:assets';
-import '../styles/main.scss';
+
+// El orden es obligatorio: no reordenar.
+//
+// 1. Bootstrap ya compilado. Antes se importaba por partes desde su Sass, para
+//    no enviar los componentes sin usar; sin Sass eso ya no se puede hacer y se
+//    carga entero.
+// 2. Los colores de la tienda, que usan tanto los overrides como los bloques.
+// 3. Los overrides, que ajustan Bootstrap a la spec de la tienda.
+// 4. La base propia, que necesita ir despues de las utilidades de Bootstrap.
+// 5. El armazon de las pantallas del pedido: los dos unicos bloques que no
+//    tienen un componente donde vivir.
+//
+// El resto de bloques —la gran mayoria— vive en el <style> de su componente.
+//
+// La unica capa de variables es la de color. Lo demas —radios, huecos, tamanos,
+// sombras— va escrito en cada bloque, para que corregir un componente sea abrir
+// su archivo y cambiar el numero.
+import 'bootstrap/dist/css/bootstrap.min.css';
+import '../styles/colors.css';
+import '../styles/bootstrap-overrides.css';
+import '../styles/base.css';
+import '../styles/screens.css';
 
 interface Props {
   title: string;

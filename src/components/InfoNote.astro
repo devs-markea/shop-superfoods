@@ -1,0 +1,87 @@
+---
+import Icon from './Icon.astro';
+
+// Apunte al margen: dorado suave, con el icono de informacion delante. No es un
+// error ni un estado —para eso estan <FormError> y .store-closed—, es contexto
+// que el comprador agradece tener ahi mismo: donde entrega la tienda, que pasa
+// despues de transferir, cuando se cobra el envio.
+
+interface Props {
+  /** Oculta el aviso sin sacarlo del marcado, para que el script pueda destaparlo. */
+  hidden?: boolean;
+  /** Marca `data-*` del contenedor, por la que lo encuentra el script. */
+  mark?: string;
+  /** Marca `data-*` del parrafo, para el script que reescribe el texto. */
+  markText?: string;
+}
+
+const { hidden = false, mark, markText } = Astro.props;
+---
+
+<div class="info-note" hidden={hidden} {...mark ? { [mark]: '' } : {}}>
+  <Icon name="info" size="sm" />
+  <p class="info-note__text" {...markText ? { [markText]: '' } : {}}><slot /></p>
+</div>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: info-note
+     ---------------------------------------------------------------------------
+     Aviso sobre fondo de marca: icono + texto, los dos en dorado.
+     Spec: gap 12 - padding 16 - radius 16 - bg #D5AA531A - color #D5AA53
+
+     Misma caja que .shipping-progress (gold-tint, padding 16, radius 16), pero
+     aquel es una barra de progreso con su label: no hay nada que reutilizar mas
+     alla del token.
+
+     La spec no da tipografia para el texto. Se usa la de las notas del proyecto
+     (Inter 500 12/16, como .legal-note): es letra pequena explicativa, y el
+     dorado ya le da todo el peso que necesita. El icono va en 16 para que su caja
+     coincida con la primera linea del texto.
+     --------------------------------------------------------------------------- */
+  .info-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 16px;
+    border-radius: 16px;
+    background-color: var(--sf-gold-tint);
+    color: var(--sf-gold);
+  }
+
+  .info-note__text {
+    /* Sin esto el Reboot le pone margin-bottom: 1rem al <p> y estira la caja. */
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+  }
+
+  /* --- Desktop -------------------------------------------------------------
+     El aviso de las dos pantallas de cierre. Spec: gap 12 - padding 16 -
+     radius 12 - bg #D5AA531A - texto Inter 500 14/100% #D5AA53, y el icono
+     centrado contra el texto en lugar de anclado a su primera linea.
+
+     El gap, el relleno y los dos colores no se repiten: ya son los de la spec
+     desde movil. Lo que cambia es el radius —12 en lugar de 16—, el tamano del
+     texto y donde se apoya el icono.
+
+     Va scopeado a esas dos pantallas y no al bloque entero porque el otro aviso
+     que usa .info-note es el de la zona de reparto de /datos, que tiene su propia
+     pantalla y su propia spec: reescribir el bloque aqui le cambiaria la caja de
+     paso. */
+  @media (min-width: 768px) {
+    .checkout-page--confirm .info-note {
+      align-items: center;
+      border-radius: 12px;
+    }
+    .checkout-page--confirm .info-note__text {
+      font-size: 14px;
+      /* 1.2 y no el 100% de la spec: los dos avisos ocupan dos renglones en esta
+         columna —el de la transferencia siempre, y el del efectivo cuando falta
+         cotizar el envio— y sin interlineado se tocarian. Es un multiplo y no una
+         medida: el tamano de este texto ya cambia entre movil y desktop. */
+      line-height: 1.2;
+    }
+  }
+</style>

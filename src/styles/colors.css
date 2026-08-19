@@ -1,0 +1,70 @@
+/* ---------------------------------------------------------------------------
+ * Los colores de la tienda.
+ *
+ * Es la unica capa de variables que queda. El resto de valores —radios, huecos,
+ * tamanos, sombras— va escrito en cada bloque, para que corregir un componente
+ * sea abrir su archivo y cambiar el numero.
+ *
+ * Con el color no sale a cuenta: el dorado aparece en 35 archivos y la tinta en
+ * 37. Cambiar la marca a mano serian 94 y 79 sustituciones, y basta olvidar una
+ * para que quede un dorado viejo en una pantalla que nadie mira.
+ *
+ * Aqui SOLO estan los colores que se repiten en dos archivos o mas. Los de un
+ * solo uso se quedan escritos donde se usan, que es donde se entienden: el verde
+ * oscurecido del boton de confirmar del mapa, el blanco al 55% de la banda del
+ * esqueleto, el negro al 25% de la sombra del boton flotante.
+ * --------------------------------------------------------------------------- */
+
+:root {
+  /* --- Marca ------------------------------------------------------------- */
+
+  --sf-gold: #d5aa53;
+  --sf-gold-hover: #c49a45;
+  /* El dorado al 10%: fondo de los avisos, del boton de copiar y de la opcion
+     marcada en la lista de paises. */
+  --sf-gold-tint: rgb(213 170 83 / 10%);
+  /* Mas presente que el tinte: la franja de 4 que marca la tarjeta de pasos en
+     /recibido y el fondo del chip activo de la barra de desktop. */
+  --sf-gold-edge: rgb(213 170 83 / 25%);
+  /* El extremo calido del degradado que rellena una foto que no llego. Solo
+     aparece ahi, junto al dorado. */
+  --sf-amber: #f5a623;
+
+  /* --- Neutros ----------------------------------------------------------- */
+
+  --sf-ink: #141821;
+  --sf-ink-soft: #616673;
+  /* Gris de texto secundario de desktop: los rotulos apagados, la descripcion
+     del platillo y las opciones sin elegir. Viene asi del diseno y no se apoya
+     en --sf-muted ni en --sf-ink-soft: es mas frio y mas oscuro que los dos, que
+     es lo que pide un gris que va a leerse a 16. */
+  --sf-slate: #4a5568;
+  --sf-muted: #6c757d;
+  --sf-placeholder: #9ca3af;
+  --sf-border: #eaecf0;
+  --sf-body-bg: #f8f9fb;
+  --sf-white: #ffffff;
+  /* La tinta al 45%, para lo que se ve a traves: el velo de las hojas modales,
+     el del mapa bloqueado y la sombra del pin sobre el mapa. */
+  --sf-scrim: rgb(20 24 33 / 45%);
+
+  /* --- Acentos ----------------------------------------------------------- */
+
+  /* Verde de confirmacion: el sello de /confirmado y la ubicacion ya guardada.
+     No es el de WhatsApp —aquel identifica un canal, este dice que algo salio
+     bien— y por eso son dos colores y no uno. */
+  --sf-success: #3aa678;
+  /* Fondo de la etiqueta de ahorro. El verde de las promociones es senaletica
+     —"esto te cuesta menos"— y por eso se conserva del panel, a diferencia del
+     dorado del precio final, que si es tipografia de cada tienda. */
+  --sf-success-tint: rgb(58 166 120 / 12%);
+
+  /* Verde de WhatsApp. Solo para el boton de enviar el pedido: el resto de
+     acciones del sistema son doradas. */
+  --sf-whatsapp: #25d366;
+  --sf-whatsapp-hover: #1fb855;
+
+  /* El unico azul del sistema: la etiqueta de "obligatorio" de las opciones y el
+     aviso de campo que falta. */
+  --sf-indigo: #4f46e5;
+}

@@ -20,7 +20,7 @@
 // mientras dura, y si al soltarlo la foto todavia no ha llegado, esta clase sigue
 // puesta y el relleno continua—.
 
-/** La clase que pinta el relleno. Ver styles/components/_skeleton.scss. */
+/** La clase que pinta el relleno. Ver styles/components/ProductCard.astro. */
 const SKELETON = 'skeleton';
 
 function clear(target: EventTarget | null): void {

@@ -191,3 +191,157 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
     </div>
   </div>
 </header>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: navbar-desktop
+     ---------------------------------------------------------------------------
+     La barra de DESKTOP: logo - tienda y carrito.
+     Spec: space-between - padding 16/160 - borde inferior de 1
+
+     En medio iban los rotulos de seccion ("Menu" y "Mi pedido"), retirados del
+     marcado: con dos elementos el space-between los manda a los dos extremos, que
+     es el mismo reparto de antes sin el grupo del centro.
+
+     Bloque propio y no un modificador de .navbar: coinciden en el logo y en nada
+     mas. Solo una de las dos se ve, y el breakpoint md es la frontera.
+
+     Los 160 de sangria de la spec son un MAXIMO, no una medida fija: son
+     (1440 - 1120) / 2 del lienzo, y por debajo el clamp cae al gutter de la
+     pagina —escribirlos fijos dejaria 448 de contenido en una pantalla de 768—.
+     El contenido se para en 1140 para no separarse de la rejilla de platillos.
+     La misma sangria la usa el pie, que es la otra pieza a ancho completo.
+     --------------------------------------------------------------------------- */
+  .navbar-desktop {
+    display: none;
+  }
+
+  @media (min-width: 768px) {
+    .navbar-desktop {
+      position: sticky;
+      top: 0;
+      z-index: 1020;
+      display: block;
+      padding-block: 16px;
+      padding-inline: clamp(32px, calc((100% - 1120px) / 2), 160px);
+      background-color: var(--sf-white);
+      border-bottom: 1px solid var(--sf-border);
+    }
+    .navbar-desktop__inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      width: 100%;
+      max-width: 1140px;
+      margin-inline: auto;
+    }
+    /* Element: brand y logo — 28 de alto, el mismo que el carrito, que es el
+       elemento mas alto de la fila. Con el padding de 16 la barra mide 60. */
+    .navbar-desktop__brand {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      transition: opacity 160ms ease;
+    }
+    .navbar-desktop__brand:hover {
+      opacity: 0.8;
+    }
+    .navbar-desktop__logo {
+      width: auto;
+      height: 28px;
+    }
+    /* Element: store — las metas de la tienda y el carrito */
+    .navbar-desktop__store {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      min-width: 0;
+    }
+    /* El icono no lleva clase propia: el tamano lo da .icon y el color lo hereda de
+       aqui con currentColor, que es justo lo que hace falta para que el hover del
+       boton se lo lleve tambien. */
+    .navbar-desktop__meta {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1;
+      color: var(--sf-slate);
+    }
+    /* El pin y el reloj abren las mismas hojas que en movil, asi que cuando hay hoja
+       el rotulo es un <button>. Se distingue por la etiqueta y no por un
+       modificador: la diferencia ya la lleva el marcado, y una clase mas solo podria
+       contradecirlo.
+
+       No se atenua con opacity como los iconos de la barra de movil: ahi el boton es
+       solo un icono y aqui lleva texto, que en gris al 70% se lee peor. */
+    button.navbar-desktop__meta {
+      transition: color 160ms ease;
+    }
+    button.navbar-desktop__meta:hover {
+      color: var(--sf-gold);
+    }
+    /* El rotulo del pin es la direccion abreviada, que la API admite de hasta 60
+       caracteres: mas de lo que da la barra. El tope corta antes de que empuje al
+       carrito, y el `overflow: hidden` es tambien lo que deja al span encogerse por
+       debajo de su texto —en un flex item la altura minima automatica pasa a 0—, asi
+       que en una pantalla de md se acorta sola. El texto entero queda en el title. */
+    .navbar-desktop__meta-value--truncate {
+      max-width: 320px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    /* Element: cart — chip dorado con importe, icono y cantidad */
+    .navbar-desktop__cart {
+      display: inline-flex;
+      flex: 0 0 auto;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      color: var(--sf-gold);
+      background-color: var(--sf-gold-tint);
+      border-radius: 20px;
+      transition: background-color 160ms ease;
+    }
+    .navbar-desktop__cart:hover {
+      background-color: var(--sf-gold-edge);
+      color: var(--sf-gold);
+    }
+    .navbar-desktop__cart-total {
+      font-size: 14px;
+      font-weight: 600;
+      line-height: 1;
+    }
+    /* Contexto de posicion del tamano exacto del icono: la etiqueta se cuelga de
+       su esquina y no del chip, que es mas ancho por el importe. */
+    .navbar-desktop__cart-icon {
+      position: relative;
+      display: inline-flex;
+      flex: 0 0 auto;
+    }
+    /* 28x28: el unico tamano del sistema que no sale de los tres de .icon, y por
+       eso se pide aqui en lugar de abrir un modificador para un solo uso. */
+    .navbar-desktop__cart-glyph {
+      width: 28px;
+      height: 28px;
+    }
+    /* La cantidad, colgada de la esquina superior derecha del icono. Los negativos
+       caben en el padding del chip: no se sale de la pastilla. */
+    .navbar-desktop__cart-count {
+      position: absolute;
+      top: -2px;
+      right: -8px;
+      padding: 2px 6px;
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--sf-white);
+      background-color: var(--sf-gold);
+      border-radius: 10px;
+    }
+  }
+</style>
