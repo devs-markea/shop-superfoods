@@ -255,14 +255,20 @@ type OptionalCustomerKey = 'email' | (typeof ADDRESS_KEYS)[number];
  *   - El telefono tiene que ser utilizable: es la llave con la que el ERP
  *     identifica al cliente, y uno ilegible mete a compradores distintos en el
  *     mismo registro.
- *   - A domicilio, la direccion escrita entera: colonia, calle y numero exterior.
+ *   - A domicilio, la direccion escrita entera —colonia, calle y numero
+ *     exterior— y el punto en el mapa.
  *   - Al recoger, nada mas: ni direccion ni ubicacion.
  *
  * Aqui la tienda es MAS estricta que la API a proposito. Arriba basta con una de
- * las dos formas de decir donde entregar —la direccion escrita o `locationUrl`—,
- * pero la que lee el repartidor es la escrita: un enlace de Maps no se puede
- * dictar por telefono ni buscar en un portal. Asi que la ubicacion dejo de
- * sustituir a la direccion y quedo como lo que es, un extra que la precisa.
+ * las dos formas de decir donde entregar —la direccion escrita o `locationUrl`—
+ * y aqui se piden LAS DOS, porque ninguna hace el trabajo de la otra: la escrita
+ * es la que lee el repartidor —un enlace de Maps no se dicta por telefono ni se
+ * busca en un portal— y el punto es lo que mide el envio y lo que lleva hasta la
+ * puerta cuando la direccion escrita no basta.
+ *
+ * Que el punto sea obligatorio se cobra en /datos, que es donde se elige: alli
+ * los dos "Continuar" estan apagados hasta que lo haya. Esto es la ultima red,
+ * la que cubre un borrador que llegue al cierre sin el.
  */
 export function draftGaps(draft: CheckoutDraft): string[] {
   const { customer } = draft;
@@ -280,6 +286,10 @@ export function draftGaps(draft: CheckoutDraft): string[] {
     if (!customer.neighborhood?.trim()) gaps.push(neighborhood);
     if (!customer.street?.trim()) gaps.push(street);
     if (!customer.exteriorNumber?.trim()) gaps.push(exteriorNumber);
+
+    // La misma pregunta que se hace el resumen para saber si hay envio que
+    // ensenar: el punto y su importe son un solo dato. Ver hasSharedLocation().
+    if (!hasSharedLocation(draft)) gaps.push('tu ubicacion en el mapa');
   }
 
   return gaps;

@@ -207,9 +207,10 @@ const areaNotice = TEST_MODE ? '' : (quote?.notice ?? '');
 
             <!-- 3. Donde entregar: solo a domicilio.
                  En movil son dos bloques —la ubicacion (gap 16) y la direccion
-                 escrita (gap 12)— separados por el 24 de la columna: la direccion
-                 escrita es la obligatoria, es la que lee el repartidor, y la
-                 ubicacion, opcional, la precisa.
+                 escrita (gap 12)— separados por el 24 de la columna. Las dos se
+                 piden: la escrita es la que lee el repartidor y el punto es lo que
+                 mide el envio, asi que sin ubicacion no se continua —el candado
+                 vive en src/scripts/delivery-form.ts—.
 
                  En desktop es un solo grupo a 12, rotulado "Direccion": el bloque
                  de la ubicacion se abre (`display: contents`, ver

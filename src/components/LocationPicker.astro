@@ -14,9 +14,11 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 // `customer.locationUrl`: un enlace de Google Maps al punto. Debajo del boton
 // aparece el label con la ubicacion, oculto mientras no haya ninguna.
 //
-// Es OPCIONAL y complementa a la direccion escrita, que es la que lee el
-// repartidor. Lo que aporta es el envio: con un punto, el backend puede medir la
-// distancia y cotizarlo; sin el, se confirma al final, a mano.
+// Es OBLIGATORIA a domicilio, y no sustituye a la direccion escrita: la
+// precisa. La escrita es la que lee el repartidor; el punto es lo que deja al
+// backend medir la distancia y cotizar el envio, y lo que lleva hasta la puerta
+// cuando la direccion no basta. Mientras no lo haya, los dos "Continuar" de
+// /datos se quedan apagados —ver el candado en src/scripts/delivery-form.ts—.
 //
 // EN DESKTOP ES SOLO EL BOTON
 //
@@ -47,9 +49,10 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 // destapa el panel y retira las piezas marcadas con `data-location-fallback` —el
 // boton, su pista y el enlace de quitar, que en el panel es el boton rojo—.
 //
-// Y si tampoco hay posicion utilizable, lo dice y ya: esto es opcional, lo que el
-// pedido necesita es la direccion escrita, y lo unico que se pierde es la
-// cotizacion previa del envio.
+// Y si tampoco hay posicion utilizable, lo dice y ya: aqui se acaban los
+// caminos. Como sin punto el pedido no sigue, lo unico que queda es reintentar
+// —dar el permiso al navegador, o recargar la pantalla para que el mapa tenga
+// otra oportunidad—.
 ---
 
 <div class="location" data-location>
@@ -120,7 +123,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 
     {/* El buscador de Google se inserta aqui al cargar el mapa. Oculto mientras
         no llegue: un hueco vacio encima del mapa no dice nada. */}
-    <div class="map-picker__search" hidden data-map-search></div>
+    <div class="place-search" hidden data-map-search></div>
 
     <div class="map-picker__stage" data-map-stage>
       <div class="map-picker__canvas" data-map-canvas></div>
@@ -176,14 +179,13 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     verlo, asi que una posicion deducida de la IP se rechaza en lugar de acabar
     cotizando un envio a otra ciudad.
 
-    Y si tampoco hay posicion, no pasa nada grave: lo dice y el pedido sigue con la
-    direccion escrita, que es la obligatoria.
+    Y si tampoco hay posicion, se dice y se invita a reintentar: el pedido necesita
+    un punto, asi que este respaldo es la ultima puerta.
   */}
   <div class="map-picker__offline" hidden data-map-offline>
     <p class="sheet__text">
-      No pudimos cargar el mapa. Puedes usar la ubicacion de tu dispositivo, o cerrar esta ventana y
-      escribir tu direccion en el formulario: en ese caso confirmamos el costo de envio al finalizar
-      tu pedido.
+      No pudimos cargar el mapa. Usa la ubicacion de tu dispositivo para indicar donde entregamos: tu
+      pedido necesita un punto en el mapa para poder continuar.
     </p>
 
     <button class="btn btn-primary" type="button" data-map-geolocate>
@@ -439,20 +441,8 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     line-height: 20px;
   }
 
-  /* Element: el buscador de Google, encima del mapa.
-
-     El widget es un web component de Google con su propio shadow DOM, asi que de
-     aqui solo se puede gobernar la caja: el ancho, y las variables que el propio
-     componente publica para su tipografia y su radio. */
-  .map-picker__search {
-    --gmp-mat-color-primary: var(--sf-gold);
-    width: 100%;
-  }
-  .map-picker__search gmp-place-autocomplete {
-    width: 100%;
-    font-family: var(--sf-font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    border-radius: 12px;
-  }
+  /* El buscador de Google, encima del mapa: es .place-search, el bloque con el
+     que acaba este archivo. Ahi esta tambien el por que de vestirlo desde aqui. */
 
   /* Bajo el mapa no va nada: la direccion del pin no se rotula aqui. El cierre de
      la hoja es el boton de aceptar. Ver LocationPicker.astro. */
@@ -472,5 +462,155 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     align-items: center;
     justify-content: center;
     gap: 8px;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Block: place-search
+     ---------------------------------------------------------------------------
+     El buscador de direcciones de Google (<gmp-place-autocomplete>), vestido de
+     campo de la tienda.
+
+     Lo inserta src/lib/place-search.ts, y lo inserta en los DOS sitios que lo
+     montan: el panel del mapa en linea (<LocationMap>) y la hoja de aqui arriba.
+     Por eso su piel se escribe una sola vez, y en global: dos copias acabarian
+     siendo dos buscadores distintos en la misma pantalla.
+
+     El widget es un web component con su propio shadow DOM y su propio Material
+     —tipografia de Google, caja blanca, radio y lista de sugerencias—, asi que
+     desde fuera solo se entra por donde el componente abre, que son dos sitios:
+
+       ::part(...)    las piezas que publica: el campo, su aro de foco, la lista
+                      y cada sugerencia con sus trozos de texto.
+       propiedades    las que documenta como estilables: color, fondo, borde,
+                      radio, tipografia y color-scheme.
+
+     Las --gmp-mat-* que se usaban antes NO son de este widget —son de las fichas
+     de lugar, Place Details—: por eso no cambiaban nada y el buscador se seguia
+     viendo como el de Google en medio del formulario. Las piezas y las
+     propiedades estan listadas en la referencia de Places:
+     developers.google.com/maps/documentation/javascript/reference/places-widget
+
+     La CAJA la pone este hueco, con el formato de .field —44 de alto, borde de 2,
+     radio de 12 y el dorado al enfocar—, y al widget se le pide que no pinte la
+     suya. Si algun dia dejara de hacer caso, lo peor que pasa es que se vea su
+     caja blanca dentro de esta: las dos son blancas, y nada deja de funcionar.
+
+     Lo que NO lleva es un `overflow: hidden`: la lista de sugerencias se despliega
+     desde dentro del widget, y recortarla dejaria el buscador sin sugerencias que
+     ver. La caja no recorta nada; quien no pinta fuera de ella es el propio
+     widget.
+     --------------------------------------------------------------------------- */
+  .place-search {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    /* `min-height` y no `height`: si el widget crece, la caja crece con el en
+       lugar de recortarlo. */
+    min-height: 44px;
+    border: 2px solid var(--sf-border);
+    border-radius: 12px;
+    background-color: var(--sf-white);
+    transition: border-color 160ms ease;
+  }
+
+  /* Como los campos de al lado, que se enmarcan en dorado al escribir en ellos. */
+  .place-search:focus-within {
+    border-color: var(--sf-gold);
+  }
+
+  /* El widget, ya sin caja propia: la que se ve es la de arriba.
+
+     `color-scheme: light` lo ata al unico tema que tiene la tienda: con el sistema
+     en oscuro, el widget se pintaba oscuro —campo gris y letra blanca— dentro de
+     una pantalla blanca, que es de lo que mas canta. */
+  .place-search gmp-place-autocomplete {
+    flex: 1 1 auto;
+    min-width: 0;
+    border: 0;
+    background-color: transparent;
+    color: var(--sf-ink);
+    color-scheme: light;
+    font-family: var(--bs-body-font-family);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  /* El campo. El relleno y el alto son lo unico que se pide fuera de lo que Google
+     documenta como estilable: si los ignorara, el texto quedaria unos pixeles
+     descuadrado dentro de la caja y nada mas. El 16 del relleno es el de .field. */
+  .place-search gmp-place-autocomplete::part(input) {
+    width: 100%;
+    height: 100%;
+    padding-block: 0;
+    padding-inline: 16px;
+    border: 0;
+    border-radius: 12px;
+    background-color: transparent;
+    color: var(--sf-ink);
+    font-family: var(--bs-body-font-family);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+  }
+
+  /* El mismo placeholder que el resto de campos de una linea (ver .field). */
+  .place-search gmp-place-autocomplete::part(input)::placeholder {
+    color: var(--sf-ink-soft);
+    font-weight: 600;
+  }
+
+  /* El aro de foco de Google sobra: quien dice que el campo esta activo es el
+     borde dorado del hueco, como en todos los campos de la tienda. */
+  .place-search gmp-place-autocomplete::part(focus-ring) {
+    border: 0;
+  }
+
+  /* La lista de sugerencias, con la superficie de la tienda —blanca, borde de 1 y
+     radio de 12— en lugar de la tarjeta de Material. */
+  .place-search gmp-place-autocomplete::part(prediction-list) {
+    border: 1px solid var(--sf-border);
+    border-radius: 12px;
+    background-color: var(--sf-white);
+    color: var(--sf-ink);
+    font-family: var(--bs-body-font-family);
+  }
+
+  .place-search gmp-place-autocomplete::part(prediction-item) {
+    color: var(--sf-ink);
+    font-family: var(--bs-body-font-family);
+    font-size: 14px;
+    line-height: 20px;
+  }
+
+  /* La sugerencia marcada —con el dedo o con las flechas—: el dorado al 10%, el
+     mismo con el que se marca la opcion elegida en el selector de pais. */
+  .place-search gmp-place-autocomplete::part(prediction-item-selected) {
+    background-color: var(--sf-gold-tint);
+  }
+
+  /* Dentro de cada sugerencia: la calle en 600 y lo que la situa —colonia, ciudad—
+     en el gris de los textos secundarios, que es como se leen los pares de la
+     tienda. */
+  .place-search gmp-place-autocomplete::part(prediction-item-main-text) {
+    color: var(--sf-ink);
+    font-weight: 600;
+  }
+  .place-search gmp-place-autocomplete::part(prediction-item-secondary-text) {
+    color: var(--sf-ink-soft);
+    font-weight: 400;
+  }
+
+  /* Y dentro del texto, lo que coincide con lo tecleado. Google lo reparte en dos
+     trozos para poder distinguirlo; aqui la diferencia es de peso y no de color:
+     un segundo color en una lista de dos lineas solo la ensucia. */
+  .place-search gmp-place-autocomplete::part(prediction-item-match) {
+    font-weight: 700;
+  }
+  .place-search gmp-place-autocomplete::part(prediction-item-nonmatch) {
+    font-weight: 400;
+  }
+
+  .place-search gmp-place-autocomplete::part(prediction-item-icon) {
+    color: var(--sf-ink-soft);
   }
 </style>

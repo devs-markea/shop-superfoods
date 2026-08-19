@@ -66,7 +66,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 
   {/* El buscador de Google, que se inserta al cargar el mapa. Oculto mientras no
       llegue: un hueco vacio encima del mapa no dice nada. */}
-  <div class="location-map__search" hidden data-location-map-search></div>
+  <div class="place-search" hidden data-location-map-search></div>
 
   <div class="location-map__stage">
     <div class="location-map__canvas" data-location-map-canvas></div>
@@ -168,59 +168,10 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     flex: 0 0 auto;
   }
 
-  /* Element: el buscador de Google.
-   *
-   * El widget es suyo y vive en un shadow DOM cerrado: desde fuera no se puede
-   * escribir ni una regla dentro. Asi que la CAJA la pone este hueco —y con el
-   * formato de .field, que es el de todos los campos de la pantalla: 44 de alto,
-   * borde de 2, radio de 12, fondo blanco y el dorado al enfocar— y al widget se
-   * le pide, por las variables que publica, que no pinte la suya.
-   *
-   * Si alguna de esas variables dejara de valer, lo peor que pasa es que el
-   * widget siga pintando su propia caja blanca DENTRO de esta: se nota poco,
-   * porque las dos son blancas, y nada deja de funcionar.
+  /* El buscador de Google va en el hueco de arriba, y su piel es .place-search:
+   * la escribe <LocationPicker> una sola vez para los dos sitios donde se monta
+   * el mismo widget —este panel y la hoja—. Ver components/LocationPicker.astro.
    */
-  .location-map__search {
-    display: flex;
-    align-items: center;
-    /* `min-height` y no `height`: si el widget crece, la caja crece con el en
-       lugar de recortarlo. */
-    min-height: 44px;
-    width: 100%;
-    overflow: hidden;
-    border: 2px solid var(--sf-border);
-    border-radius: 12px;
-    background-color: var(--sf-white);
-    transition: border-color 160ms ease;
-  }
-
-  /* Como los campos de al lado, que se enmarcan en dorado al escribir en ellos. */
-  .location-map__search:focus-within {
-    border-color: var(--sf-gold);
-  }
-
-  /* El widget, ya sin caja propia: solo el texto. Va en :global porque lo inserta
-     el script y no lleva, por tanto, la marca de estilo con la que Astro acota
-     este bloque. */
-  .location-map__search :global(gmp-place-autocomplete) {
-    /* La superficie y el borde los pone el hueco de arriba. */
-    --gmp-mat-color-surface: transparent;
-    --gmp-mat-color-outline-decorative: transparent;
-    /* Y el resto, los grises y la tipografia de la tienda. */
-    --gmp-mat-color-on-surface: var(--sf-ink);
-    --gmp-mat-color-on-surface-variant: var(--sf-ink-soft);
-    --gmp-mat-color-primary: var(--sf-gold);
-    --gmp-mat-font-family: var(--sf-font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    --gmp-mat-font-body-medium: 600 14px /
-      20px var(--sf-font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-
-    flex: 1 1 auto;
-    min-width: 0;
-    border: 0;
-    background-color: transparent;
-    font-family: var(--sf-font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    font-size: 14px;
-  }
 
   /* Element: el hueco del mapa.
    *

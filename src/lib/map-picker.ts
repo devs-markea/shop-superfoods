@@ -50,10 +50,10 @@
 // unico que separa un GPS de una posicion deducida de la IP es `coords.accuracy`.
 // Lo que pase de MAX_ACCURACY_METERS no se acepta, y se dice por que.
 //
-// Si tampoco hay posicion utilizable, la hoja lo cuenta y ya: la ubicacion es
-// OPCIONAL. Lo que hace falta para que salga el pedido es la direccion escrita del
-// formulario de detras, y lo unico que se pierde es la cotizacion previa del
-// envio, de la que ya avisa el resumen con su "Por cotizar".
+// Si tampoco hay posicion utilizable, la hoja lo cuenta y ya: aqui se acaban los
+// caminos. La ubicacion es OBLIGATORIA a domicilio —sin punto, /datos no deja
+// continuar—, asi que lo que se ofrece es reintentar: dar el permiso, salir al
+// aire libre o recargar la pantalla para que el mapa tenga otra oportunidad.
 //
 // Solo navegador. Lo consume src/scripts/delivery-form.ts, que es quien sabe que
 // hacer con el punto: rotularlo, cotizarlo y guardarlo.
@@ -151,8 +151,9 @@ export function createMapPicker(onPick: (lat: number, lng: number) => void): Map
     setStatus(null);
 
     // Sin geolocalizacion tampoco hay respaldo que ofrecer: el boton se retira en
-    // lugar de quedarse ahi para fallar al pulsarlo. El texto de la hoja sigue
-    // diciendo lo que hay que hacer, que es escribir la direccion.
+    // lugar de quedarse ahi para fallar al pulsarlo. Entonces esta hoja no puede
+    // dar ningun punto, y sin punto no se continua: queda recargar la pantalla,
+    // que es lo que le da al mapa otra oportunidad.
     if (!('geolocation' in navigator)) geolocateButton?.setAttribute('hidden', '');
 
     offline?.removeAttribute('hidden');
@@ -178,7 +179,7 @@ export function createMapPicker(onPick: (lat: number, lng: number) => void): Map
 
         if (coords.accuracy > MAX_ACCURACY_METERS) {
           showOfflineError(
-            'Tu dispositivo dio una ubicacion aproximada, de varios kilometros, y con ella no podemos calcular el envio. Escribe tu direccion en el formulario y lo confirmamos al finalizar.',
+            'Tu dispositivo dio una ubicacion aproximada, de varios kilometros, y con ella no sabriamos a donde llevar tu pedido. Intentalo otra vez al aire libre, o con el GPS encendido.',
           );
           return;
         }
@@ -190,7 +191,7 @@ export function createMapPicker(onPick: (lat: number, lng: number) => void): Map
         // Permiso denegado, sin senal o agotado el plazo.
         geolocateButton.disabled = false;
         showOfflineError(
-          'No pudimos obtener tu ubicacion. Escribe tu direccion en el formulario y confirmamos el envio al finalizar tu pedido.',
+          'No pudimos obtener tu ubicacion. Revisa el permiso de ubicacion de tu navegador y vuelve a intentarlo: tu pedido necesita un punto en el mapa.',
         );
       },
       // enableHighAccuracy pide el sensor de verdad en lugar de la posicion
