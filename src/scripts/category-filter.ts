@@ -24,14 +24,14 @@ const ALL_CATEGORIES = 'Todos';
 // esqueleto durante HOLD y vuelven. El relleno no espera ninguna descarga —el
 // contenido esta debajo, entero— y no pretende decir que la haya: es el acuse de
 // recibo del filtro. Lo que se pinta lo decide .product-card--loading en
-// components/_product-card.scss.
+// components/ProductCard.astro.
 //
 // Se pone en TODO lo que queda a la vista, no solo en lo que vuelve de estar
 // oculto, porque el caso que hay que resolver es justamente el de las tarjetas que
 // no se movieron.
 //
 // Con movimiento reducido no hay espera ni relleno: el filtro se aplica y ya. Se
-// consulta aqui porque el bloque de _base.scss solo manda sobre las animaciones de
+// consulta aqui porque el bloque de styles/base.css solo manda sobre las animaciones de
 // CSS, y esta pausa es de JavaScript.
 const LOADING = 'product-card--loading';
 

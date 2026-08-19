@@ -96,7 +96,7 @@ if (form) {
   // `value` del radio, que es de donde lo lee todo lo demas. El campo no tiene
   // `name` y no viaja en el formulario; es un teclado para el radio.
   //
-  // El panel se abre y se cierra solo, con CSS (ver components/_tip.scss). Aqui
+  // El panel se abre y se cierra solo, con CSS (ver components/TipSelector.astro). Aqui
   // no se toca: lo unico que hace falta de este lado es el valor.
   const customOption = form.querySelector<HTMLInputElement>('[data-tip-custom]');
   const customAmount = form.querySelector<HTMLInputElement>('[data-tip-amount]');

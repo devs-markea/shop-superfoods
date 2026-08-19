@@ -1,5 +1,6 @@
 ---
 import Icon from './Icon.astro';
+import SectionLabel from './SectionLabel.astro';
 import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 
 // El mapa de /datos, en linea: el panel que releva al boton que abria la hoja.
@@ -31,10 +32,10 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     confirmado— y por eso se anuncia: quien no ve el mapa no tiene otra forma de
     enterarse de que el punto quedo guardado.
   */}
-  <div class="location-map__head d-flex align-items-center justify-content-between gap-3">
-    <p class="location-map__label section-label" aria-live="polite" data-location-map-label>
+  <div class="location-map__head d-flex align-items-center justify-content-between">
+    <SectionLabel as="p" class="location-map__label" aria-live="polite" data-location-map-label>
       Mueve el mapa hasta tu domicilio
-    </p>
+    </SectionLabel>
 
     {/*
       Confirmar. Nace deshabilitado: hasta que el mapa no esta pintado, lo unico
@@ -65,7 +66,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 
   {/* El buscador de Google, que se inserta al cargar el mapa. Oculto mientras no
       llegue: un hueco vacio encima del mapa no dice nada. */}
-  <div class="location-map__search" hidden data-location-map-search></div>
+  <div class="place-search" hidden data-location-map-search></div>
 
   <div class="location-map__stage">
     <div class="location-map__canvas" data-location-map-canvas></div>
@@ -100,14 +101,12 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
   /* -------------------------------------------------------------------------
    * Block: location-map
    * -------------------------------------------------------------------------
-   * El panel del mapa en /datos. A diferencia del resto de bloques del proyecto
-   * —un parcial Sass por bloque en src/styles/components/— este va en CSS puro
-   * y dentro del componente, que es como se pidio.
+   * El panel del mapa en /datos. Fue el primer bloque en escribirse asi —CSS
+   * puro dentro del componente— y hoy es como esta todo el proyecto.
    *
-   * Lo que lo mantiene dentro del sistema es lo de siempre: los tokens --sf-*,
-   * que son custom properties y no variables Sass, y las clases de Bootstrap
-   * del marcado (.btn, .btn-success, .btn-danger y las utilidades de flex).
-   * Aqui solo se escribe lo que Bootstrap no trae.
+   * Lo que lo mantiene dentro del sistema son las clases de Bootstrap del marcado
+   * (.btn, .btn-success, .btn-danger y las utilidades de flex) y los valores de la
+   * spec, escritos aqui. Solo se escribe lo que Bootstrap no trae.
    *
    * La ley del bloque es la misma del selector de la hoja: el pin y el centro
    * del mapa son EL MISMO PUNTO. De ahi las dos reglas que no se pueden tocar
@@ -118,7 +117,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
   .location-map {
     display: flex;
     flex-direction: column;
-    gap: var(--sf-space-3);
+    gap: 12px;
     /* El ancho del boton al que releva (.location__button): 350 como maximo y
        centrado. En desktop, como el boton, ocupa la columna entera. */
     width: 100%;
@@ -127,8 +126,14 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
   }
 
   /* Element: la cabecera —rotulo y boton—. El reparto lo hacen las utilidades
-     de Bootstrap en el marcado; aqui solo se deja que el rotulo encoja, para que
-     sea el quien parta en dos lineas antes que el boton. */
+     de Bootstrap en el marcado; aqui solo va el hueco, porque los 12 salen de la
+     escala de la tienda y no de la de Bootstrap. */
+  .location-map__head {
+    gap: 12px;
+  }
+
+  /* Se deja que el rotulo encoja, para que sea el quien parta en dos lineas
+     antes que el boton. */
   .location-map__label {
     min-width: 0;
   }
@@ -163,59 +168,10 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     flex: 0 0 auto;
   }
 
-  /* Element: el buscador de Google.
-   *
-   * El widget es suyo y vive en un shadow DOM cerrado: desde fuera no se puede
-   * escribir ni una regla dentro. Asi que la CAJA la pone este hueco —y con el
-   * formato de .field, que es el de todos los campos de la pantalla: 44 de alto,
-   * borde de 2, radio de 12, fondo blanco y el dorado al enfocar— y al widget se
-   * le pide, por las variables que publica, que no pinte la suya.
-   *
-   * Si alguna de esas variables dejara de valer, lo peor que pasa es que el
-   * widget siga pintando su propia caja blanca DENTRO de esta: se nota poco,
-   * porque las dos son blancas, y nada deja de funcionar.
+  /* El buscador de Google va en el hueco de arriba, y su piel es .place-search:
+   * la escribe <LocationPicker> una sola vez para los dos sitios donde se monta
+   * el mismo widget —este panel y la hoja—. Ver components/LocationPicker.astro.
    */
-  .location-map__search {
-    display: flex;
-    align-items: center;
-    /* `min-height` y no `height`: si el widget crece, la caja crece con el en
-       lugar de recortarlo. */
-    min-height: 44px;
-    width: 100%;
-    overflow: hidden;
-    border: 2px solid var(--sf-border);
-    border-radius: var(--sf-radius-md);
-    background-color: var(--sf-surface);
-    transition: border-color var(--sf-transition);
-  }
-
-  /* Como los campos de al lado, que se enmarcan en dorado al escribir en ellos. */
-  .location-map__search:focus-within {
-    border-color: var(--sf-gold);
-  }
-
-  /* El widget, ya sin caja propia: solo el texto. Va en :global porque lo inserta
-     el script y no lleva, por tanto, la marca de estilo con la que Astro acota
-     este bloque. */
-  .location-map__search :global(gmp-place-autocomplete) {
-    /* La superficie y el borde los pone el hueco de arriba. */
-    --gmp-mat-color-surface: transparent;
-    --gmp-mat-color-outline-decorative: transparent;
-    /* Y el resto, los grises y la tipografia de la tienda. */
-    --gmp-mat-color-on-surface: var(--sf-ink);
-    --gmp-mat-color-on-surface-variant: var(--sf-ink-soft);
-    --gmp-mat-color-primary: var(--sf-gold);
-    --gmp-mat-font-family: var(--sf-font-sans);
-    --gmp-mat-font-body-medium: var(--sf-weight-semibold) var(--sf-font-size-base) /
-      var(--sf-line-height-base) var(--sf-font-sans);
-
-    flex: 1 1 auto;
-    min-width: 0;
-    border: 0;
-    background-color: transparent;
-    font-family: var(--sf-font-sans);
-    font-size: var(--sf-font-size-base);
-  }
 
   /* Element: el hueco del mapa.
    *
@@ -226,11 +182,11 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     position: relative;
     overflow: hidden;
     border: 1px solid var(--sf-border);
-    border-radius: var(--sf-radius-md);
+    border-radius: 12px;
     /* Se ve mientras cargan los tiles: gris de pagina, no blanco, para que el
        hueco se lea como "aqui va algo" y no como una tarjeta vacia. */
     background-color: var(--sf-body-bg);
-    transition: border-color var(--sf-transition);
+    transition: border-color 160ms ease;
   }
 
   /* Confirmado, el borde se pone verde: es el otro sitio —ademas del rotulo y del
@@ -291,7 +247,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     pointer-events: none;
     /* El pin es dorado sobre un mapa de colores cualesquiera: la sombra es lo
        que lo despega de una avenida amarilla o de un parque verde. */
-    filter: drop-shadow(0 2px 4px rgb(20 24 33 / 45%));
+    filter: drop-shadow(0 2px 4px var(--sf-scrim));
   }
 
   /* Element: la diana que centra el mapa donde esta el comprador. Abajo a la
@@ -299,19 +255,19 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
      tapar el centro. Se retira al confirmar, con el resto de los gestos. */
   .location-map__locate {
     position: absolute;
-    right: var(--sf-space-3);
-    bottom: var(--sf-space-3);
+    right: 12px;
+    bottom: 12px;
     z-index: 2;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 36px;
     height: 36px;
-    border-radius: var(--sf-radius-sm);
-    background-color: var(--sf-surface);
+    border-radius: 8px;
+    background-color: var(--sf-white);
     color: var(--sf-ink);
-    box-shadow: var(--sf-shadow-card);
-    transition: color var(--sf-transition);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
+    transition: color 160ms ease;
   }
 
   .location-map__locate:hover {
@@ -333,9 +289,9 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     justify-content: center;
     margin: 0;
     color: var(--sf-muted);
-    font-size: var(--sf-font-size-base);
-    font-weight: var(--sf-weight-medium);
-    line-height: var(--sf-line-height-base);
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
   }
 
   /* --- Desktop ---------------------------------------------------------- */
@@ -353,7 +309,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
          mapa: con estos 12 mas, el panel se lee como una pieza aparte de la
          direccion que se escribe debajo. En movil no hace falta —alli la columna
          ya separa a 24— y por eso vive dentro del breakpoint. */
-      margin-bottom: var(--sf-space-3);
+      margin-bottom: 12px;
     }
 
     .location-map__canvas {

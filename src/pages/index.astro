@@ -119,7 +119,7 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
         contenedor de fuera y solo pone el aire de arriba y abajo.
 
         La pila solo existe en desktop —en movil es `display: contents`, ver
-        components/_storefront.scss—, asi que envolver no cambia nada de lo que
+        los estilos de este archivo—, asi que envolver no cambia nada de lo que
         ya habia: el aviso de tienda cerrada se queda fuera porque flota. */}
     <div class="storefront__stack container-fluid">
       <Hero
@@ -151,7 +151,7 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
               // hay que quitar es el margin-bottom que el Reboot pone a <ul>,
               // que ese si sobrevive.
               <ul
-                class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-6 list-unstyled mb-0"
+                class="product-list__grid row row-cols-1 row-cols-md-2 row-cols-xl-3 list-unstyled mb-0"
                 data-product-list
               >
                 {products.map((product, index) => (
@@ -264,3 +264,163 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
   import '../scripts/sheet';
   import '../scripts/footer-discover';
 </script>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: storefront
+     ---------------------------------------------------------------------------
+     El armazon de la portada, y solo de la portada. Son dos piezas encajadas:
+
+     .storefront        <main>, el contenedor de fuera: 48 arriba y 48 abajo.
+     .storefront__stack el subcontenedor, un .container-fluid de Bootstrap: las
+     12 columnas, 32 de sangria y tope en --sf-container-max,
+     y dentro el banner, la barra y la rejilla separados 32.
+
+     El de fuera solo pone el aire vertical; el de dentro, el ancho y el lateral.
+     Repartido asi, mover la portada arriba o abajo no toca los margenes, y
+     cambiar de ancho no toca el aire.
+
+     En movil el subcontenedor no existe: las piezas —barra de pedido y rejilla—
+     se apilan solas y cada una trae su propio gutter y su propio aire, como hasta
+     ahora. En desktop aparece y manda tambien de lado a lado: es EL contenedor de
+     los tres, asi que el unico margen lateral de la portada es el suyo. Antes cada
+     bloque ponia el suyo y paraba en su propio ancho, y bastaba que uno cambiara
+     para que los bordes dejaran de coincidir; ahora los tres arrancan y acaban en
+     la misma linea porque solo hay una que decide donde esta.
+
+     Por eso el aire —vertical y lateral— se les quita ahi a los tres (ver
+     components/Hero.astro, components/OrderBar.astro y los estilos de este archivo): en desktop lo
+     pone la pila, en un solo sitio, y no la suma de los margenes de cada bloque.
+     --------------------------------------------------------------------------- */
+  /* Movil: el hueco del boton flotante del pedido. Flota sobre el catalogo (ver
+     components/CartFab.astro), asi que al final de la lista se quedaria encima de
+     la ultima tarjeta y justo sobre su "+", que es lo que se viene a pulsar. Lo
+     reserva <main>, que es lo que scrollea: el circulo esta fuera del flujo y no
+     puede reservarselo el.
+
+     Se reserva el diametro mas la separacion del borde; el aire entre la ultima
+     tarjeta y el circulo lo pone el padding que la lista ya trae. En desktop no
+     hace falta —ahi no hay boton— y lo sustituye el `padding-block` de mas abajo. */
+  .storefront {
+    padding-bottom: calc(70px + 20px + env(safe-area-inset-bottom, 0px));
+  }
+
+  /* display: contents: en movil el envoltorio no pinta ni ocupa nada —ni el ancho
+     ni el relleno del .container-fluid llegan a aplicarse—, asi que sus hijos
+     siguen siendo hijos de <main> a efectos de layout y la pantalla se ve
+     exactamente igual que si no estuviera. */
+  .storefront__stack {
+    display: contents;
+  }
+
+  /* --- Desktop ------------------------------------------------------------- */
+  @media (min-width: 768px) {
+    /* El contenedor de fuera: solo el aire de arriba y abajo. El lateral no puede
+       ir aqui porque el aviso de tienda cerrada tambien cuelga de <main>, flota y
+       trae su propia sangria: se la duplicaria. */
+    .storefront {
+      padding-block: 48px;
+    }
+    .storefront__stack {
+      /* El ancho, el centrado y la sangria son los del .container-fluid; lo unico
+         que se le cambia es la medida del gutter, que en la portada es el de la
+         tienda (32) y no el de la rejilla (24). Se pide en --bs-gutter-x, que es
+         la variable por la que el contenedor pregunta, y se dobla porque el
+         reparte la mitad a cada lado.
+
+         No se filtra a las tarjetas: el .row de la lista es .product-list__grid,
+         que redeclara --bs-gutter-x en el propio .row. */
+      --bs-gutter-x: calc(32px * 2);
+      /* Y el tope, que es lo unico que .container-fluid no trae: fluido hasta
+         aqui, y de aqui en adelante centrado, dejando el resto de la pantalla a
+         los lados. Sin el, la portada seguiria creciendo mientras la cabecera y el
+         pie paran en --sf-container-max, y los tres dejarian de coincidir en el
+         primer monitor ancho.
+
+         Se suma el gutter porque el tope del diseno es el del CONTENIDO y la caja
+         mide con border-box: 1140 + 32 + 32 deja dentro los 1140 de la spec, los
+         mismos que paran la cabecera y el pie dentro de su propia sangria. */
+      max-width: calc(1140px + var(--bs-gutter-x));
+      display: flex;
+      flex-direction: column;
+      gap: 32px;
+    }
+  }
+  /* ---------------------------------------------------------------------------
+     Block: product-list
+     ---------------------------------------------------------------------------
+     Spec: gap 24 - padding 20
+     La rejilla la resuelve Bootstrap en el marcado (.row .row-cols-*), asi que
+     del bloque original solo queda el padding de la seccion y la medida del
+     hueco, que la pone .product-list__grid.
+     --------------------------------------------------------------------------- */
+  .product-list {
+    padding: 20px 20px;
+  }
+
+  /* Element: grid — el .row de las tarjetas.
+     Los 24 del diseno. Antes los ponia la utilidad `g-6`, que salia de la escala
+     de espaciado propia que se le daba a Bootstrap desde Sass; sin esa escala,
+     Bootstrap no tiene ningun `g-6` que dar y la medida se pide aqui, que es
+     donde se puede leer de que token sale. */
+  .product-list__grid {
+    --bs-gutter-x: 24px;
+    --bs-gutter-y: 24px;
+  }
+
+  /* Ya no limita el ancho: en desktop lo hace el subcontenedor de la portada, que
+     para en --sf-container-max igual que la cabecera y el pie (ver
+     los estilos de este archivo). Ponerlo aqui tambien no cambiaria nada y seria
+     un segundo sitio donde tocar el dia que el tope se mueva.
+
+     El envoltorio sigue existiendo aunque ya no limite: envuelve al .row porque
+     .row usa margenes negativos para sus gutters, y en desktop es el que reparte
+     los 24 entre el titulo y la rejilla. */
+  .product-list__items {
+    width: 100%;
+  }
+
+  /* Element: title — "Nuestros Platillos", encima de la rejilla. Solo desktop: en
+     movil la barra de categorias, que va justo encima, ya dice que se esta
+     mirando, y el titulo se comeria la unica pantalla que tiene el catalogo. */
+  .product-list__title {
+    display: none;
+    margin: 0;
+    font-size: 24px;
+    font-weight: 700;
+    /* 100% del tamano: es un titulo de una linea y el interlineado de la escala
+       (32 sobre 24) le sobra por arriba y por abajo. */
+    line-height: 1;
+    color: var(--sf-ink);
+  }
+
+  /* Element: notice — ocupa el sitio de la rejilla cuando no hay nada que
+     pintar: catalogo vacio (200 con lista vacia) o API inalcanzable. */
+  .product-list__notice {
+    margin: 0;
+    padding-block: 32px;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--sf-muted);
+    text-align: center;
+  }
+
+  /* --- Desktop ------------------------------------------------------------- */
+  @media (min-width: 768px) {
+    /* Sin aire propio de ninguna clase: el que la separa de la barra lo pone la
+       pila de la portada (ver los estilos de este archivo), el de abajo el padding
+       de <main>, y el de los lados el gutter de la propia pila. */
+    .product-list {
+      padding: 0;
+    }
+    /* La lista pasa a ser dos piezas con 24 entre ellas: el titulo y la rejilla. */
+    .product-list__items {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }
+    .product-list__title {
+      display: block;
+    }
+  }
+</style>

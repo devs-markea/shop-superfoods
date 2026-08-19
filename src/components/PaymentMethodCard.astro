@@ -34,7 +34,7 @@ const { icon, title, note, wideNote, description } = Astro.props;
 // UN MARCADO, DOS PANTALLAS: con `wideNote` las dos frases van en el marcado y
 // cada ancho ensena la suya. La de abajo, la larga de movil, se retira en desktop
 // —lo mismo que dice ya la de arriba— y con ella el segundo renglon de la tarjeta.
-// Ver components/_payment-method.scss.
+// Ver los estilos de este archivo.
 ---
 
 <div class="payment-method">
@@ -56,3 +56,159 @@ const { icon, title, note, wideNote, description } = Astro.props;
     <p class="payment-method__description">{description}</p>
   </div>
 </div>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: payment-method
+     ---------------------------------------------------------------------------
+     Tarjeta que dice como se paga el pedido: icono, metodo y la frase que explica
+     cuando y donde se entrega el dinero.
+
+     Spec: tarjeta gap 20 - padding 20 - radius 20
+     grupo gap 12 - fila gap 12 - textos gap 2
+     caja del icono 40x40 - radius 8 - bg #D5AA531A - icono #D5AA53
+     titulo 14/20 600 #141821 - medio 12/16 500 #6C757D
+     frase 14/20 400 #6C757D
+
+     El fondo y la sombra no los da la spec: son los de .bank-account, la tarjeta
+     que ocupa este mismo sitio en la pantalla de transferencia.
+
+     No es .payment-option con un modifier: coinciden en la caja del icono y en el
+     par de textos, pero aquella es un control que se elige —con sus estados— y
+     esta una tarjeta de lectura.
+     --------------------------------------------------------------------------- */
+  .payment-method {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 20px;
+    border-radius: 20px;
+    background-color: var(--sf-white);
+    box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
+  }
+
+  /* Element: el grupo que forman la fila y su frase. Va aparte de la tarjeta
+     porque los dos separan cosas distintas: 12 entre lo que se lee de corrido, 20
+     entre este bloque y cualquier otro que se le anada a la tarjeta. */
+  .payment-method__body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Element: fila del icono con sus textos */
+  .payment-method__head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  /* Element: caja del icono. Las medidas de .payment-option__media, pero aqui el
+     tinte dorado es fijo: no hay estado que lo apague. */
+  .payment-method__media {
+    display: inline-flex;
+    flex: 0 0 40px;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background-color: var(--sf-gold-tint);
+    color: var(--sf-gold);
+  }
+
+  /* Element: titulo + medio */
+  .payment-method__text {
+    display: flex;
+    flex-direction: column;
+    /* Fuera de la escala de 4 del proyecto: la spec fija 2, el mismo de
+       .payment-option__body. */
+    gap: 2px;
+    min-width: 0;
+  }
+
+  /* Element: el metodo — Inter 600 14/20 #141821 */
+  .payment-method__title {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--sf-ink);
+  }
+
+  /* Element: el medio — Inter 500 12/16 #6C757D */
+  .payment-method__note {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--sf-muted);
+  }
+
+  /* Element: la frase — Inter 400 14/20 #6C757D */
+  .payment-method__description {
+    /* Sin esto el Reboot le pone margin-bottom: 1rem al <p> y estira la tarjeta. */
+    margin: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    color: var(--sf-muted);
+  }
+
+  /* --- Desktop -------------------------------------------------------------
+     La tarjeta se queda en dos renglones —el metodo y la frase que lo explica— y
+     crece de caja. Spec:
+     tarjeta        gap 16 - padding 24 - radius 16 - borde 1
+     caja del icono padding 12 - radius 32
+     titulo         Inter 700 16/100% #111827
+     explicacion    Inter 400 14/100% #6C757D
+
+     La frase de abajo desaparece porque en desktop la dice la linea de arriba: la
+     pantalla la sirve entera en `wideNote` y las dos juntas serian lo mismo escrito
+     dos veces. Ver components/PaymentMethodCard.astro. */
+  @media (min-width: 768px) {
+    .payment-method {
+      gap: 16px;
+      padding: 24px;
+      border: 1px solid var(--sf-border);
+      border-radius: 16px;
+    }
+    /* La caja del icono deja de ser un cuadrado de 40 con las esquinas romas y pasa
+       a ser un circulo que mide lo que el icono mas su aire: 12 + 20 + 12.
+
+       Se pide el circulo, no los 32 de la spec: sobre una caja de 44, un radio de
+       32 no cabe —el navegador escala los cuatro hasta 22— y lo que se ve ya es un
+       circulo. Escrito 32, dejaria de serlo en cuanto la caja creciera. */
+    .payment-method__media {
+      flex: 0 0 auto;
+      width: auto;
+      height: auto;
+      padding: 12px;
+      border-radius: 100px;
+    }
+    /* El par que forman el metodo y su explicacion se separa 4 en lugar de 2: los
+       dos textos crecieron —16 el titulo y 14 la frase— y el 2 de movil, pensado
+       para un 14 con un 12 debajo, los dejaba pegados. */
+    .payment-method__text {
+      gap: 4px;
+    }
+    .payment-method__title {
+      font-size: 16px;
+      font-weight: 700;
+      /* 100% del tamano: es un rotulo de una linea. */
+      line-height: 1;
+    }
+    /* La explicacion ocupa el hueco del medio ("Efectivo en mano" en movil), asi
+       que sube de 12 a 14 y pierde el peso: aqui es una frase, no una etiqueta.
+
+       Con 1.2 y no con el 100% de la spec, la misma razon que el aviso dorado de
+       estas dos pantallas: la frase entera no cabe en un renglon de esta columna y
+       sin interlineado los dos se tocarian. */
+    .payment-method__note {
+      font-size: 14px;
+      font-weight: 400;
+      line-height: 1.2;
+    }
+    .payment-method__description {
+      display: none;
+    }
+  }
+</style>

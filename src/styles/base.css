@@ -1,0 +1,67 @@
+/* ---------------------------------------------------------------------------
+ * Base
+ * ---------------------------------------------------------------------------
+ * Lo que quedo de shared/css/base/_reset.css tras montar Bootstrap: Reboot ya
+ * resuelve box-sizing, margenes, tipografia e imagenes. Solo sobreviven las
+ * reglas de accesibilidad y el bloque .page.
+ *
+ * Se carga DESPUES de bootstrap.min.css: [hidden] depende de ese orden, ver mas
+ * abajo.
+ * --------------------------------------------------------------------------- */
+
+/* Columna de alto completo: permite que la barra de accion quede al fondo de la
+   pantalla cuando el contenido no llega a llenarla. Las paginas que la usan
+   marcan su <main> y su <form> con `d-flex flex-column flex-grow-1`. */
+.page {
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+  background-color: var(--sf-body-bg);
+}
+
+/* Botones "desnudos" (iconos de la navbar, "+" de la tarjeta). Reboot deja
+   fondo y borde del agente de usuario en un <button> sin .btn. */
+.btn-plain {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-plain:disabled {
+  cursor: not-allowed;
+}
+
+/* El atributo `hidden`, por encima de las utilidades de display.
+ *
+ * Reboot ya lo declara, pero pierde: `[hidden]` y `.d-flex` tienen la misma
+ * especificidad (una es atributo, la otra clase) y las dos llevan `!important`
+ * —las utilidades lo ponen por $enable-important-utilities—, asi que decide el
+ * orden y las utilidades van despues dentro de bootstrap.min.css. Resultado: un
+ * `<div class="d-flex" hidden>` se seguia viendo.
+ *
+ * Repetirlo aqui, en la capa propia, lo devuelve al final y con ello a donde
+ * tiene que estar: ocultar algo es mas fuerte que como se coloca. */
+[hidden] {
+  display: none !important;
+}
+
+/* Foco visible solo para navegacion por teclado */
+:focus-visible {
+  outline: 2px solid var(--sf-gold);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

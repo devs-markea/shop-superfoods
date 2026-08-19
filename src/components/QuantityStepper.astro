@@ -42,3 +42,88 @@ const { quantity, itemName, min = 1, max, disabled = false } = Astro.props;
     <Icon name="plus" size="sm" />
   </button>
 </div>
+
+<style is:global>
+  /* Se repite en /carrito porque alli las unidades las pinta el JS
+     (src/lib/cart-view.ts) y este componente no llega a montarse. Las dos
+     pantallas nunca coinciden, asi que cada una carga una sola copia. */
+
+  /* ---------------------------------------------------------------------------
+     Block: stepper
+     ---------------------------------------------------------------------------
+     Control de cantidad: restar - cantidad - sumar.
+     Spec: 87x28 - gap 12
+     28 + 12 + ~7 (un digito) + 12 + 28 = 87. El ancho no se fija: con dos digitos
+     el bloque crece en lugar de recortar el numero.
+
+     Restar: 28x28, borde 1.5 dorado, fondo transparente, rectangulo 10x1.5.
+     Sumar:  28x28, fondo dorado, "+" blanco.
+     --------------------------------------------------------------------------- */
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 28px;
+  }
+
+  .stepper__button {
+    display: inline-flex;
+    flex: 0 0 28px;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 14px;
+    transition: background-color 160ms ease, opacity 160ms ease, transform 160ms ease;
+  }
+  .stepper__button:active {
+    transform: scale(0.92);
+  }
+  /* El tope de unidades por opcion se ve: atenuado y sin respuesta al hover.
+     Es la diferencia deliberada con el checkbox, que al llegar a su maximo de
+     opciones ignora el clic sin ninguna senal. */
+  .stepper__button:disabled {
+    opacity: 0.4;
+    transform: none;
+    cursor: not-allowed;
+  }
+
+  /* Modifier: restar */
+  .stepper__button--minus {
+    border: 1.5px solid var(--sf-gold);
+    background-color: transparent;
+  }
+  .stepper__button--minus:hover:not(:disabled) {
+    background-color: var(--sf-gold-tint);
+  }
+
+  /* El menos es un rectangulo de 10x1.5, no un icono de trazo: a ese grosor el
+     sistema de 20x20 con stroke 2 no da la medida de la spec. */
+  .stepper__minus {
+    display: block;
+    width: 10px;
+    height: 1.5px;
+    background-color: var(--sf-gold);
+  }
+
+  /* Modifier: sumar */
+  .stepper__button--plus {
+    border: 0;
+    background-color: var(--sf-gold);
+    color: var(--sf-white);
+  }
+  .stepper__button--plus:hover:not(:disabled) {
+    background-color: var(--sf-gold-hover);
+  }
+
+  /* Element: cantidad — Inter 600 14/20 */
+  .stepper__value {
+    min-width: 7px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--sf-ink);
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+</style>

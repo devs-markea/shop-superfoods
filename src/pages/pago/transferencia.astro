@@ -2,7 +2,6 @@
 import Layout from '../../layouts/Layout.astro';
 import ScreenHeader from '../../components/ScreenHeader.astro';
 import NavbarDesktop from '../../components/NavbarDesktop.astro';
-import Icon from '../../components/Icon.astro';
 import BankAccount from '../../components/BankAccount.astro';
 import OrderDetail from '../../components/OrderDetail.astro';
 import CartSummary from '../../components/CartSummary.astro';
@@ -10,6 +9,8 @@ import ActionBar from '../../components/ActionBar.astro';
 import ScheduleSheet from '../../components/ScheduleSheet.astro';
 import LocationSheet from '../../components/LocationSheet.astro';
 import Footer from '../../components/Footer.astro';
+import FormError from '../../components/FormError.astro';
+import InfoNote from '../../components/InfoNote.astro';
 import { getCart, isEmptyCart, type Cart } from '../../lib/cart.ts';
 import { resolveCartToken } from '../../lib/cart-session.ts';
 import { quoteForDraft } from '../../lib/shipping-quote.ts';
@@ -27,7 +28,7 @@ import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts
 // barra de tienda, el mismo armazon de 48 y el mismo pie— y se parte en dos
 // columnas: lo que hay que leer antes de pagar a la izquierda y la tarjeta de
 // resumen a la derecha, que es donde se confirma. Ver
-// components/_checkout-page.scss.
+// styles/screens.css.
 //
 // La tarjeta releva a la barra de accion: los dos son submits del mismo
 // formulario, asi que scripts/confirm-order.ts cierra el pedido igual desde
@@ -141,7 +142,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
        la pantalla aunque el contenido no llegue a llenarla. -->
   <main class="checkout-page checkout-page--confirm d-flex flex-column flex-grow-1">
     {/* La pila y la rejilla solo existen en desktop —en movil son `display:
-        contents`, ver components/_checkout-page.scss—, asi que envolver no cambia
+        contents`, ver styles/screens.css—, asi que envolver no cambia
         nada de lo que ya habia. */}
     <div class="checkout-page__stack">
       <h1 class="checkout-page__title">Pago por transferencia</h1>
@@ -167,16 +168,13 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
             clabe={bankTransfer?.clabe}
           />
 
-          <div class="info-note">
-            <Icon name="info" size="sm" />
-            <p class="info-note__text">
-              {
-                pendingShipping
-                  ? 'Al finalizar tu pedido se te indicara el costo de envio exacto. Por favor realiza la transferencia una vez confirmado.'
-                  : 'Realiza la transferencia por el importe total y envianos el comprobante para confirmar tu pedido.'
-              }
-            </p>
-          </div>
+          <InfoNote>
+            {
+              pendingShipping
+                ? 'Al finalizar tu pedido se te indicara el costo de envio exacto. Por favor realiza la transferencia una vez confirmado.'
+                : 'Realiza la transferencia por el importe total y envianos el comprobante para confirmar tu pedido.'
+            }
+          </InfoNote>
 
           <OrderDetail
             items={items}
@@ -188,7 +186,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
           />
 
           {/* Lo rellena el script si el checkout rechaza el pedido. */}
-          <p class="form-error" role="alert" hidden data-checkout-error></p>
+          <FormError mark="data-checkout-error" />
         </div>
 
         <!-- En desktop esta barra no se pinta: confirmar es el boton de la

@@ -42,3 +42,201 @@ const id = `field-${name}`;
   inputmode={inputmode}
   required={required}
 />
+
+<style is:global>
+  /* La familia .field-* entera: el campo, el textarea, la etiqueta y las tres
+     formas de agruparlos. Vive aqui porque <AddressFields>, <PhoneField> y
+     /datos montan sus campos con este componente, asi que donde hay un campo
+     de la tienda hay un <TextField>. La unica excepcion esta en
+     <TipSelector>, que copia .field-label por su cuenta. */
+
+  /* ---------------------------------------------------------------------------
+     Los campos de un formulario: el campo, el textarea, su etiqueta y las dos
+     formas de agruparlos. Un archivo y no cinco porque son la misma pieza vista
+     por partes, y porque las tres ultimas solo existen para colocar a las dos
+     primeras.
+     --------------------------------------------------------------------------- */
+  /* ---------------------------------------------------------------------------
+     Block: field  (sobre .form-control de Bootstrap)
+     ---------------------------------------------------------------------------
+     Campo de una sola linea. Bootstrap aporta borde, radius, tipografia y el
+     color base del placeholder via .form-control; aqui va el alto de la spec y el
+     placeholder de los campos de texto, que es distinto al de los textarea.
+
+     Spec: height 44 - radius 12 - borde 2px #EAECF0
+     placeholder Inter 600 14/20 #616673
+
+     El 2px es comun a todos los campos de una linea y al selector de pais; los
+     textarea se quedan en el 1px que trae .form-control.
+
+     El padding lateral no viene en la spec: se usa 16, el mismo que el textarea
+     y que el resto del sistema. El vertical se anula porque el alto es fijo.
+     --------------------------------------------------------------------------- */
+  .field {
+    height: 44px;
+    min-width: 0; /* permite encogerse dentro de un flex sin desbordar */
+    padding-block: 0;
+    padding-inline: 16px;
+    border-width: 2px;
+    border-radius: 12px;
+  }
+  .field::placeholder {
+    font-weight: 600;
+    color: var(--sf-ink-soft);
+  }
+
+  /* ---------------------------------------------------------------------------
+     Block: field-note  (textarea de alto fijo)
+     ---------------------------------------------------------------------------
+     Spec: height 80 - padding 16 - radius 12 - borde 1
+     placeholder Inter 400 14/20 #9CA3AF
+
+     No expandible: sin tirador de redimensionado. A diferencia del textarea de
+     comentarios de /carrito, este no crece con el contenido, asi que conserva
+     su scroll interno para no ocultar texto.
+     --------------------------------------------------------------------------- */
+  .field-note {
+    height: 80px;
+    resize: none;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Block: field-label
+     ---------------------------------------------------------------------------
+     La etiqueta de un campo, o de un grupo de campos cuando el dato se parte en
+     varios controles (el telefono, con su selector de pais al lado).
+
+     En movil no se pinta: ese diseno no lleva etiquetas —cada campo lo rotula su
+     placeholder—, pero la etiqueta tiene que existir igual, porque un placeholder
+     no es un label y sin ella el campo llega al lector de pantalla sin nombre. De
+     md hacia arriba si se pinta: el formulario de desktop las rotula.
+
+     Spec (desktop): Inter 600 14/100% #111827, que se resuelve con --sf-ink, el
+     negro del resto de la tienda —la misma equivalencia que ya documentan la
+     tarjeta de resumen y el titulo de estas pantallas—.
+
+     No se apoya en .visually-hidden de Bootstrap: esa clase lo declara todo con
+     !important y no habria forma de devolver la etiqueta a la pagina en un
+     breakpoint. Se repite aqui su tecnica —fuera de flujo y recortada: en el arbol,
+     sin ocupar ni pintar— para poder deshacerla abajo.
+     --------------------------------------------------------------------------- */
+  .field-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Block: field-group
+     ---------------------------------------------------------------------------
+     Etiqueta y campo, como un solo bloque. Solo existe en desktop, que es donde
+     hay etiqueta que separar del campo: en movil es `display: contents` y el campo
+     sigue siendo hijo de la columna que lo contiene, con el ritmo de esa columna
+     intacto. Es el mismo recurso con el que .checkout-page monta sus dos pantallas.
+     --------------------------------------------------------------------------- */
+  .field-group {
+    display: contents;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Block: field-row
+     ---------------------------------------------------------------------------
+     Varios campos en una linea, repartiendose el ancho. Como .field-group, solo
+     existe en desktop: en movil los campos se apilan uno debajo de otro, que es lo
+     que cabe en 350.
+     --------------------------------------------------------------------------- */
+  .field-row {
+    display: contents;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Block: field-stack
+     ---------------------------------------------------------------------------
+     Una columna de campos y filas de campos, a 12. La usa <AddressFields> para
+     apilar la fila de los tres obligatorios sobre los dos opcionales.
+
+     A diferencia de .field-group y .field-row, existe en las dos pantallas: el
+     ritmo de la direccion escrita es el mismo en movil que en desktop.
+
+     Solo pone el hueco; que sea columna lo dicen las utilidades de Bootstrap en el
+     marcado. Antes lo ponia `gap-3`, que valia 12 porque a Bootstrap se le pasaba
+     desde Sass la escala de 4px de la tienda. Sin esa escala su `gap-3` son 16, y
+     la medida se pide aqui, que es donde se ve de que token sale.
+     --------------------------------------------------------------------------- */
+  .field-stack {
+    gap: 12px;
+  }
+
+  /* ---------------------------------------------------------------------------
+     Block: field-pair
+     ---------------------------------------------------------------------------
+     Un dato partido en dos controles, en linea: el telefono con su selector de
+     pais al lado (ver components/PhoneField.astro).
+
+     Spec: 8 en movil, 12 en desktop. Mismo motivo que .field-stack para no
+     dejarlo en `gap-2 gap-md-3`.
+     --------------------------------------------------------------------------- */
+  .field-pair {
+    gap: 8px;
+  }
+
+  /* --- Desktop ------------------------------------------------------------- */
+  @media (min-width: 768px) {
+    .field-pair {
+      gap: 12px;
+    }
+    /* El textarea se rellena de blanco. Es el unico campo con fondo propio: la
+       spec de desktop se lo pide solo a el, y es coherente con lo que ya hacen los
+       demas, que no declaran ninguno porque su spec tampoco lo definia (ver
+       .form-control en styles/bootstrap-overrides.css).
+
+       El :focus va aparte porque Bootstrap repone ahi el fondo, y esa
+       regla gana por especificidad: sin esto, el campo se vaciaria al escribir en el. */
+    .field-note,
+    .field-note:focus {
+      background-color: var(--sf-white);
+    }
+    /* La etiqueta vuelve a la pagina: se deshace el recorte de arriba y se le pone
+       la tipografia de la spec. */
+    .field-label {
+      position: static;
+      width: auto;
+      height: auto;
+      margin: 0;
+      overflow: visible;
+      clip-path: none;
+      white-space: normal;
+      font-size: 14px;
+      font-weight: 600;
+      /* 100% del tamano: son etiquetas de una linea, y el 20 de la escala les
+         sobraria por arriba y por abajo dentro de un grupo que ya separa a 8. */
+      line-height: 1;
+      color: var(--sf-ink);
+    }
+    /* Modifier: la etiqueta de las referencias, un tono mas clara. El #4B5563 de la
+       spec se resuelve con --sf-slate (#4A5568), el gris de texto secundario de
+       desktop: la diferencia es de una unidad por canal y no la ve nadie, mientras
+       que un token nuevo para eso si se paga cada vez que hay que elegir un gris. */
+    .field-label--soft {
+      color: var(--sf-slate);
+    }
+    .field-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .field-row {
+      display: flex;
+      gap: 12px;
+    }
+    /* A partes iguales, y desde 0: con el ancho del campo como base, tres campos de
+       100% no cabrian en la linea y el gap se comeria el texto. */
+    .field-row > .field {
+      flex: 1 1 0;
+    }
+  }
+</style>
