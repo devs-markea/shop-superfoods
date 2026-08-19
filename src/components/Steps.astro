@@ -1,4 +1,5 @@
 ---
+import SectionLabel from './SectionLabel.astro';
 interface Props {
   /** Los pasos, en orden. */
   steps: string[];
@@ -19,7 +20,7 @@ const { steps } = Astro.props;
 ---
 
 <div class="steps">
-  <span class="section-label">Pasos a seguir</span>
+  <SectionLabel>Pasos a seguir</SectionLabel>
 
   {/* Lista ordenada: el orden es la informacion. */}
   <ol class="steps__list list-unstyled">
@@ -41,3 +42,121 @@ const { steps } = Astro.props;
     }
   </ol>
 </div>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: steps
+     ---------------------------------------------------------------------------
+     Tarjeta con el procedimiento a seguir, numerado.
+     Spec: gap 20 - padding 24 - radius 20 - bg #FFFFFF
+     borde izquierdo de 4 en dorado al 25%
+     lista gap 16 - numero 28 radius 14 dorado, digito 14/100% 700 #FFFFFF
+     texto 14/20 500 #141821
+
+     Los 342x200 de la spec son la caja del artboard movil: no se declaran, el
+     bloque ocupa el ancho de la columna y crece con su contenido.
+     --------------------------------------------------------------------------- */
+  .steps {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    padding: 24px;
+    border-left: 4px solid var(--sf-gold-edge);
+    border-radius: 20px;
+    background-color: var(--sf-white);
+  }
+
+  .steps__list {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 0;
+  }
+
+  /* Element: paso. El numero se alinea con la primera linea, no con el centro del
+     bloque de texto: asi sigue leyendose como marcador cuando el texto parte en
+     dos lineas. */
+  .steps__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  /* Element: numero — circulo dorado de 28 con el digito en blanco.
+     line-height 1 y no 20: el digito se centra por el flex de la caja. */
+  .steps__number {
+    display: inline-flex;
+    flex: 0 0 28px;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background-color: var(--sf-gold);
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--sf-white);
+  }
+
+  /* Element: texto — Inter 500 14/20.
+     El padding superior centra la primera linea contra el numero de 28:
+     (28 - 20) / 2 = 4. */
+  .steps__text {
+    padding-top: 4px;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+    color: var(--sf-ink);
+  }
+
+  /* --- Desktop -------------------------------------------------------------
+     La tarjeta se alinea con las otras dos superficies de esta columna —la cuenta
+     bancaria y el detalle del pedido— y deja de ser la excepcion que era en movil.
+     Spec:
+     tarjeta  gap 20 - padding 24 - radius 16 - borde 1px #EAECF0 - bg #FFFFFF
+     rotulo   Inter 700 18/100% #111827
+     lista    gap 16 - item gap 12
+     numero   24 redondo dorado, digito Inter 700 12/100% #FFFFFF
+
+     El gap de 20 de la tarjeta, el de 16 de la lista y el de 12 del item ya son
+     los de movil y no se repiten; el relleno de 24 y el fondo blanco, tampoco. Lo
+     que cambia son las tres cosas de abajo.
+
+     Los 532x104 de la spec no se declaran, la misma regla que ya siguen
+     .screen-body y .order-detail: 532 es lo que deja la columna de esta pantalla
+     (580 - 24 - 24) y 104 lo que miden tres pasos de una linea (3x24 + 2x16), asi
+     que los ponen el ancho de la columna y el contenido. */
+  @media (min-width: 768px) {
+    /* El radius baja de 20 a 16 y la franja dorada de la izquierda se va, relevada
+       por el borde de 1 que llevan las tarjetas de esta columna. La franja marcaba
+       la tarjeta entre otras dos sin borde; aqui la separaria de ellas. */
+    .steps {
+      border: 1px solid var(--sf-border);
+      border-radius: 16px;
+    }
+    /* El rotulo encabeza una seccion de la pantalla, con el mismo 18 que abre la
+       tarjeta del detalle del pedido y la de resumen del checkout. */
+    .steps .section-label {
+      font-size: 18px;
+      font-weight: 700;
+      /* 100% del tamano: es un rotulo de una linea. */
+      line-height: 1;
+      color: var(--sf-ink);
+    }
+    /* El numero encoge a 24 con el digito en 12: aqui el paso es un marcador al
+       lado del texto, no la pieza que lo encabeza. El radius de 12 sobre una caja
+       de 24 es el circulo que ya declara el bloque. */
+    .steps__number {
+      flex: 0 0 24px;
+      width: 24px;
+      height: 24px;
+      font-size: 12px;
+    }
+    /* Y con el numero en 24, lo que centra la primera linea contra el es 2:
+       (24 - 20) / 2. */
+    .steps__text {
+      padding-top: 2px;
+    }
+  }
+</style>

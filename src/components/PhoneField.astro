@@ -11,13 +11,13 @@ import TextField from './TextField.astro';
 //
 // En movil no se pinta —el diseno de movil no lleva etiquetas— pero sigue en el
 // arbol, y es la que nombra al campo para el lector de pantalla. Ver
-// components/_field.scss.
+// components/TextField.astro.
 ---
 
 <div class="field-group">
   <label class="field-label" for="field-phone">Telefono de contacto</label>
 
-  <div class="d-flex gap-2 gap-md-3">
+  <div class="field-pair d-flex">
     <CountrySelect />
 
     <div class="flex-grow-1">

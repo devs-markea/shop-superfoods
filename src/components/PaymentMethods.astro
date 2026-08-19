@@ -1,5 +1,6 @@
 ---
 import PaymentOption from './PaymentOption.astro';
+import SectionLabel from './SectionLabel.astro';
 import MpLogo from '../assets/icons/mp-logo.svg';
 import type { DeliveryType, PaymentMethod } from '../lib/checkout.ts';
 
@@ -25,10 +26,14 @@ const pickup = deliveryType === 'pickup';
 // tambien el CSS de los estados y las etiquetas de los labels.
 ---
 
-<div class="d-flex flex-column gap-3">
-  <span class="section-label section-label--strong" id="payment-label">Metodo de pago</span>
+<div class="payment-methods d-flex flex-column">
+  <SectionLabel variant="strong" id="payment-label">Metodo de pago</SectionLabel>
 
-  <div class="d-flex flex-column gap-3" role="group" aria-labelledby="payment-label">
+  <div
+    class="payment-methods__options d-flex flex-column"
+    role="group"
+    aria-labelledby="payment-label"
+  >
     {
       pickup ? (
         /*
@@ -115,3 +120,20 @@ const pickup = deliveryType === 'pickup';
     }
   </div>
 </div>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: payment-methods
+     ---------------------------------------------------------------------------
+     Etiqueta y opciones, y las opciones entre si: los dos huecos son de 12.
+
+     Es lo unico que pone este componente: quien pinta cada opcion es
+     .payment-option, en components/PaymentOption.astro. El reparto en columna lo
+     hacen las utilidades de Bootstrap en el marcado; aqui va solo la medida del
+     hueco, que sale de la escala de la tienda y no de la de Bootstrap.
+     --------------------------------------------------------------------------- */
+  .payment-methods,
+  .payment-methods__options {
+    gap: 12px;
+  }
+</style>

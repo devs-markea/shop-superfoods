@@ -10,6 +10,7 @@ import DeviceFingerprint from '../components/DeviceFingerprint.astro';
 import ScheduleSheet from '../components/ScheduleSheet.astro';
 import LocationSheet from '../components/LocationSheet.astro';
 import Footer from '../components/Footer.astro';
+import FormError from '../components/FormError.astro';
 import { getCart, type Cart } from '../lib/cart.ts';
 import { getOrder } from '../lib/orders.ts';
 import { resolveCartToken } from '../lib/cart-session.ts';
@@ -41,7 +42,7 @@ import { TEST_MODE } from 'astro:env/server';
 // En desktop se monta como el resto de la tienda —la misma barra de tienda
 // arriba, el mismo pie abajo— y el contenido pasa a una columna centrada con 40
 // entre sus piezas, rematada por la misma accion que en movil lleva la barra.
-// Ver components/_confirmation-page.scss.
+// Ver components/ConfirmationCta.astro.
 
 // Depende de la sesion: el pedido se relee en cada visita.
 export const prerender = false;
@@ -311,7 +312,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
             <OrderReceipt items={items} total={total} method={method} />
 
             {/* Lo rellena el script si la pasarela o la API rechazan el cobro. */}
-            <p class="form-error" role="alert" hidden data-checkout-error />
+            <FormError mark="data-checkout-error" />
 
             {/*
               Ultimo subcontenedor, SOLO desktop: ahi es donde releva a la barra de

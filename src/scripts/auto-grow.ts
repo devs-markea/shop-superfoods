@@ -1,6 +1,6 @@
 // Textarea que crece con su contenido.
 // Sustituye al tirador de redimensionado: el campo se expande al escribir, sin
-// el asa de la esquina ni barra de scroll (ver _order-comments.scss).
+// el asa de la esquina ni barra de scroll (ver components/OrderComments.astro).
 
 function grow(field: HTMLTextAreaElement): void {
   // Se reinicia antes de medir: si no, scrollHeight nunca decrece al borrar.

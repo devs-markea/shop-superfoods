@@ -12,6 +12,7 @@ import DeviceFingerprint from '../../components/DeviceFingerprint.astro';
 import ScheduleSheet from '../../components/ScheduleSheet.astro';
 import LocationSheet from '../../components/LocationSheet.astro';
 import Footer from '../../components/Footer.astro';
+import FormError from '../../components/FormError.astro';
 import { getCart, isEmptyCart, type Cart } from '../../lib/cart.ts';
 import { resolveCartToken } from '../../lib/cart-session.ts';
 import { quoteForDraft } from '../../lib/shipping-quote.ts';
@@ -34,7 +35,7 @@ import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts
 // En desktop se monta como /carrito y /datos —la misma barra de tienda, el mismo
 // armazon de 48 y el mismo pie— y se parte en dos columnas: lo que hay que elegir
 // a la izquierda y la tarjeta de resumen a la derecha, que es donde se continua.
-// Ver components/_checkout-page.scss.
+// Ver styles/screens.css.
 //
 // Con la tarjeta, el desglose del cuerpo (<PaymentSummary>) se queda en movil: son
 // la misma cuenta contada dos veces, y a la tarjeta le toca porque ademas lleva el
@@ -216,7 +217,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 
   <main class="checkout-page d-flex flex-column flex-grow-1">
     {/* La pila y la rejilla solo existen en desktop —en movil son `display:
-        contents`, ver components/_checkout-page.scss—, asi que envolver no cambia
+        contents`, ver styles/screens.css—, asi que envolver no cambia
         nada de lo que ya habia. */}
     <div class="checkout-page__stack">
       <h1 class="checkout-page__title">Resumen de pago</h1>
@@ -246,7 +247,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
           </div>
 
           {/* Lo rellena el script si el checkout rechaza el pedido. */}
-          <p class="form-error" role="alert" hidden data-checkout-error></p>
+          <FormError mark="data-checkout-error" />
 
           {/* Tambien solo en movil: en desktop el aviso va dentro de la tarjeta,
               pegado al boton que lo dispara. Aqui abajo se quedaria lejos de el,

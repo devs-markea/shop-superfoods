@@ -78,3 +78,182 @@ const hasLogo = Astro.slots.has('media');
     }
   </span>
 </label>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: payment-option  (sobre .btn-check de Bootstrap)
+     ---------------------------------------------------------------------------
+     Tarjeta de metodo de pago: icono a la izquierda, textos a la derecha.
+     Contenedor reutilizable: sirve para cualquier metodo, el icono y los textos
+     llegan por props.
+
+     Spec: 72 de alto - gap 16 - padding 16 - radius 16
+     caja del icono 40x40 - radius 8
+     activo:   borde 2px #D5AA53 - bg #FFFFFF - caja del icono #D5AA531A
+     inactivo: borde     #EAECF0 - bg #FFFFFF - caja del icono #F8F9FB
+
+     caja de una marca (el logo de Mercado Pago), que es apaisada:
+     movil:   68x40 - radius 20 - bg #F8F9FB - logo 68x28
+     desktop: 76x32 - sin caja                - logo 76x32
+
+     El borde se mantiene en 2px en los dos estados. La spec da 1px para el
+     inactivo, pero cambiar de grosor al seleccionar desplazaria el contenido un
+     pixel; el 2px es ademas el que declara el contenedor base y el que usan los
+     campos del resto del proyecto.
+     --------------------------------------------------------------------------- */
+  .payment-option {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    min-height: 72px;
+    padding: 16px;
+    border: 2px solid var(--sf-border);
+    border-radius: 16px;
+    background-color: var(--sf-white);
+    cursor: pointer;
+    transition: border-color 160ms ease, background-color 160ms ease;
+  }
+  .payment-option:hover {
+    border-color: var(--sf-gold);
+  }
+
+  /* Element: caja del icono */
+  .payment-option__media {
+    display: inline-flex;
+    flex: 0 0 40px;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background-color: var(--sf-body-bg);
+    color: var(--sf-gold);
+    transition: background-color 160ms ease;
+  }
+
+  /* Modifier: la caja de una marca. El logo es apaisado y no cabe en el cuadrado
+     de 40, asi que en movil la caja se estira a una pastilla de 68x40 —mismo
+     fondo, radio 20— y el logo entra a su tamano de archivo. No hace falta
+     margen: el aire de los lados lo trae dibujado el propio SVG. */
+  .payment-option__media--logo {
+    flex: 0 0 68px;
+    width: 68px;
+    height: 40px;
+    border-radius: 20px;
+  }
+
+  .payment-option__logo {
+    width: 68px;
+    height: 28px;
+  }
+
+  /* Element: textos */
+  .payment-option__body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .payment-option__title {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--sf-ink);
+  }
+
+  .payment-option__note {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--sf-muted);
+  }
+
+  /* Modifier: metodo no disponible todavia */
+  .payment-option--disabled {
+    cursor: not-allowed;
+  }
+  .payment-option--disabled:hover {
+    border-color: var(--sf-border);
+  }
+
+  /* --- Estados ------------------------------------------------------------- */
+  .btn-check:checked + .payment-option {
+    border-color: var(--sf-gold);
+    /* La caja de una marca no se tine de dorado: el logo va con sus colores y el
+       fondo dorado detras los pone a competir. Que el metodo esta elegido lo dice
+       el borde, que es lo que se lee de la tarjeta entera. */
+  }
+  .btn-check:checked + .payment-option .payment-option__media:not(.payment-option__media--logo) {
+    background-color: var(--sf-gold-tint);
+  }
+
+  .btn-check:focus-visible + .payment-option {
+    outline: 2px solid var(--sf-gold);
+    outline-offset: 2px;
+  }
+
+  .btn-check:disabled + .payment-option {
+    cursor: not-allowed;
+    opacity: 0.7;
+  }
+  .btn-check:disabled + .payment-option:hover {
+    border-color: var(--sf-border);
+  }
+
+  /* --- Desktop ------------------------------------------------------------- */
+  @media (min-width: 768px) {
+    /* Aqui la marca va sin caja: fuera el fondo y el radio, y el logo crece a
+       76x32. Sigue reservando su ancho con `flex-basis` para que el titulo no se
+       le monte encima. */
+    .payment-option__media--logo {
+      flex-basis: 76px;
+      width: 76px;
+      height: 32px;
+      border-radius: 0;
+      background-color: transparent;
+    }
+    .payment-option__logo {
+      width: 76px;
+      height: 32px;
+    }
+  }
+
+  /* Este bloque lo comparten <OptionGroup>, <ProductCard> y <PaymentOption>.
+     Se repite en los tres, y no en un archivo comun, porque cada uno vive en
+     una pantalla distinta —la ficha, la portada y el pago—: ninguna pagina
+     carga mas de una copia. Si se cambia, hay que cambiarlo en los tres. */
+
+  /* ---------------------------------------------------------------------------
+     Block: tag  (sobre .badge de Bootstrap)
+     ---------------------------------------------------------------------------
+     Bootstrap aporta forma, padding y tipografia via .badge. Aqui solo quedan
+     el alto de la spec y los dos esquemas de color.
+
+     Spec: alto 24 - radius 32 - padding 4/8 - label Inter 600 12/16
+     --required: bg #D5AA531A - color #4F46E5
+     --optional: bg #EAECF0   - color #616673
+     --------------------------------------------------------------------------- */
+  .tag {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 8px;
+    height: 24px;
+    white-space: nowrap;
+  }
+
+  /* Modifier: obligatorio */
+  .tag--required {
+    background-color: var(--sf-gold-tint);
+    color: var(--sf-indigo);
+  }
+
+  /* Modifier: opcional */
+  .tag--optional {
+    background-color: var(--sf-border);
+    color: var(--sf-ink-soft);
+  }
+</style>

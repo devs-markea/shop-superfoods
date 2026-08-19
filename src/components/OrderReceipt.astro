@@ -1,4 +1,5 @@
 ---
+import SectionLabel from './SectionLabel.astro';
 import Icon, { type IconName } from './Icon.astro';
 import { formatPrice } from '../lib/price.ts';
 import { PAYMENT_LABEL, type OrderLine, type PaymentMethod } from '../lib/checkout.ts';
@@ -37,11 +38,11 @@ const icons: Record<PaymentMethod, IconName> = {
 // En desktop la tarjeta se encabeza, se enmarca y el pie se aprieta en una sola
 // linea: el rotulo del metodo y el icono se van, y lo que queda es "Metodo de
 // pago: X" con el importe al otro extremo. Cada linea del pedido gana ademas su
-// importe a la derecha. Ver components/_order-receipt.scss.
+// importe a la derecha. Ver los estilos de este archivo.
 ---
 
 <div class="order-receipt">
-  <span class="section-label section-label--soft">Resumen de tu pedido</span>
+  <SectionLabel variant="soft">Resumen de tu pedido</SectionLabel>
 
   {/* Sin lineas no se pinta la lista: un <ul> vacio dejaria el gap de 16 a los
       dos lados de nada. */}
@@ -78,7 +79,7 @@ const icons: Record<PaymentMethod, IconName> = {
 
   <div class="order-receipt__payment">
     <div class="order-receipt__method">
-      <span class="section-label section-label--soft">Metodo de pago</span>
+      <SectionLabel variant="soft">Metodo de pago</SectionLabel>
 
       <span class="order-receipt__method-name">
         <Icon name={icons[method]} class="order-receipt__method-icon" />
@@ -96,3 +97,219 @@ const icons: Record<PaymentMethod, IconName> = {
     <span class="order-receipt__total">{formatPrice(total)}</span>
   </div>
 </div>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: order-receipt
+     ---------------------------------------------------------------------------
+     Resumen del pedido ya confirmado.
+     Spec: gap 16 - padding 20 - radius 20 - bg #FFFFFF
+     lineas gap 12 - Inter 400 14/20 (cantidad #6C757D, nombre #141821)
+     pie con el metodo a la izquierda y el importe a la derecha (20/700)
+
+     Misma superficie que .bank-account —tarjeta blanca de radius 20— pero sin
+     sombra: la spec no le da ninguna. Si se decide que las dos son la misma
+     superficie, el box-shadow entra aqui.
+     --------------------------------------------------------------------------- */
+  .order-receipt {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px;
+    border-radius: 20px;
+    background-color: var(--sf-white);
+  }
+
+  .order-receipt__items {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    margin: 0;
+  }
+
+  /* Element: linea — cantidad + nombre, Inter 400 14/20.
+     El hueco entre los dos no viene en la spec: 8 es el minimo de la escala que
+     separa dos textos seguidos sin que se lean como uno. */
+  .order-receipt__item {
+    display: flex;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+  }
+
+  /* En movil el grupo no existe: la cantidad y el nombre siguen siendo hijos de la
+     linea, y su hueco de 8 lo pone ella. */
+  .order-receipt__label {
+    display: contents;
+  }
+
+  /* El importe de la linea es de desktop entero: en movil la cuenta la cierra el
+     total del pie. */
+  .order-receipt__price {
+    display: none;
+  }
+
+  .order-receipt__quantity {
+    color: var(--sf-muted);
+    white-space: nowrap;
+  }
+
+  .order-receipt__name {
+    color: var(--sf-ink);
+  }
+
+  /* Element: pie — metodo de pago e importe, uno en cada extremo */
+  .order-receipt__payment {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  /* Element: columna del metodo. El 6 es el mismo hueco etiqueta/dato que usan
+     las filas de .bank-account. */
+  .order-receipt__method {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /* Element: nombre del metodo — icono de 20 + Inter 600 12/16 */
+  .order-receipt__method-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 16px;
+    color: var(--sf-ink);
+  }
+
+  /* La spec no da color para el icono. Dorado, como el de .payment-option__media:
+     es el color de la iconografia de pago en todo el proyecto. */
+  .order-receipt__method-icon {
+    color: var(--sf-gold);
+  }
+
+  /* Element: importe — Inter 700 20/20. Los 20 quedan fuera de la escala de tipos,
+     igual que el folio: es el otro dato que se lee de un vistazo. */
+  .order-receipt__total {
+    font-size: 20px;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--sf-ink);
+    white-space: nowrap;
+  }
+
+  /* --- Desktop -------------------------------------------------------------
+     La tarjeta se encabeza y se enmarca, como las otras dos de la columna, y cada
+     linea del pedido pasa a llevar su importe. Spec:
+     tarjeta   gap 20 - padding 24 - radius 16 - borde 1px #EAECF0
+     rotulo    Inter 700 18/100% #111827
+     lista     gap 12
+     linea     rotulo y su importe, uno en cada extremo
+     rotulo    "×2 Nombre" en Inter 400 14/100% #6C757D
+     importe   Inter 600 14/100% #111827
+     pie       "Metodo de pago: X" en Inter 600 14/100% #111827
+     y el total en Inter 800 18/100% #D5AA53
+
+     El gap de 12 de la lista, el fondo blanco y el reparto del pie ya son los de
+     movil y no se repiten. Los colores son tokens: #111827 es --sf-ink, #6C757D es
+     --sf-muted exacto y #D5AA53 el dorado de marca.
+
+     El pie cambia de fondo: en movil son dos renglones —el rotulo del metodo arriba
+     y el metodo debajo, con su icono— y aqui es una sola linea que dice lo mismo con
+     menos piezas. El icono se va con el rotulo: sin la columna de dos renglones no
+     tiene donde apoyarse, y la fila la cierra el importe. */
+  @media (min-width: 768px) {
+    .order-receipt {
+      gap: 20px;
+      padding: 24px;
+      border: 1px solid var(--sf-border);
+      border-radius: 16px;
+    }
+    /* El rotulo de la tarjeta, con el mismo 18 que encabeza el detalle del pedido y
+       la tarjeta de resumen del checkout. El `>` deja fuera al del metodo, que es la
+       otra .section-label de la tarjeta. */
+    .order-receipt > .section-label {
+      font-size: 18px;
+      font-weight: 700;
+      /* 100% del tamano: es un rotulo de una linea. */
+      line-height: 1;
+      color: var(--sf-ink);
+    }
+    /* La linea se reparte: el rotulo a la izquierda y su importe a la derecha. Las
+       dos alineadas por la base, que es lo que las mantiene a la misma altura si un
+       nombre largo parte en dos renglones. */
+    .order-receipt__item {
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 12px;
+      line-height: 1;
+    }
+    .order-receipt__label {
+      display: flex;
+      gap: 8px;
+      min-width: 0;
+    }
+    /* El nombre se apaga al gris de la cantidad: aqui los dos son el mismo rotulo
+       —"×2 Tacos de Pastor"—, y lo que se destaca en la linea es el importe. */
+    .order-receipt__name {
+      color: var(--sf-muted);
+    }
+    .order-receipt__price {
+      display: block;
+      font-weight: 600;
+      color: var(--sf-ink);
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    /* El rotulo del metodo y su icono se van: lo que decian lo dice ahora la propia
+       linea, "Metodo de pago: Transferencia". */
+    .order-receipt__method .section-label,
+    .order-receipt__method-icon {
+      display: none;
+    }
+    /* Y sin el icono, el hueco de 6 pasa a ser el que separa dos palabras: el que
+       queda entre "Metodo de pago:" y el metodo. */
+    .order-receipt__method-name {
+      gap: 4px;
+      font-size: 14px;
+      line-height: 1;
+    }
+    /* El total remata la cuenta con el 18 en dorado. No es el 20/800 del detalle del
+       pedido del checkout: alli la cifra compite con la tarjeta de resumen que tiene
+       al lado, y aqui es el unico importe de la pantalla. */
+    .order-receipt__total {
+      font-size: 18px;
+      font-weight: 800;
+      color: var(--sf-gold);
+      font-variant-numeric: tabular-nums;
+    }
+  }
+
+  /* Mismo caso que .tag: <OrderDetail> y <OrderReceipt> no coinciden en
+     ninguna pantalla, asi que cada uno lleva su copia. */
+
+  /* ---------------------------------------------------------------------------
+     Block: dashed-divider
+     ---------------------------------------------------------------------------
+     Divisora discontinua. Spec: 1px, trazos de 4 y huecos de 2, #EAECF0.
+     Separa el total del detalle en /pago/transferencia y en /confirmado.
+
+     Es un bloque propio y no un element de cada uno por el mismo motivo que
+     .section-label: son dos bloques distintos con la misma divisora, y la tecnica
+     no es una sola declaracion.
+
+     No usa `border-style: dashed`: ahi el largo de los trazos lo decide el
+     navegador. Con un degradado repetido salen los 4/2 exactos de la spec.
+     --------------------------------------------------------------------------- */
+  .dashed-divider {
+    height: 1px;
+    margin: 0;
+    border: 0;
+    opacity: 1;
+    background-image: repeating-linear-gradient(to right, var(--sf-border) 0 4px, transparent 4px 6px);
+  }
+</style>

@@ -23,3 +23,51 @@ const { label, name, class: className } = Astro.props;
   <Icon name="tag" size="sm" />
   <span class="promo-badge__label">{label}</span>
 </span>
+
+<style is:global>
+  /* Viene de la familia de promociones, que comparten la portada, la ficha, el
+       pedido y el cierre. Cada consumidor lleva solo las piezas que pinta: en
+       ninguna pantalla coinciden dos, asi que nadie carga la misma regla dos
+       veces. Si se toca una, mirar quien mas la tiene. */
+
+  /* ---------------------------------------------------------------------------
+     Promociones: las piezas que comparten la tarjeta, la ficha y el pedido.
+     ---------------------------------------------------------------------------
+     La referencia es la vista previa del formulario de descuento del panel, que
+     es lo que el administrador ve al configurar la promocion. De alli se hereda
+     la ESTRUCTURA y el ESTADO —que se pinta, cuando y en que orden—, no el color
+     del precio final: ese es tipografia de la tienda.
+
+     Lo que si se conserva tal cual, porque es senaletica y no marca:
+     · el gris + tachado del precio original
+     · el verde de la etiqueta de ahorro
+
+     Orden de la spec: insignia - original tachado - final - "Ahorra $X".
+     --------------------------------------------------------------------------- */
+
+  /* Block: promo-badge — "15%", "$50", "2x1". La etiqueta la compone el backend. */
+  .promo-badge {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 100px;
+    background-color: var(--sf-gold);
+    color: var(--sf-white);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 16px;
+    white-space: nowrap;
+  }
+
+  .promo-badge__label {
+    /* El numero es lo que se lee de lejos: el icono solo lo acompaña. */
+    letter-spacing: 0.01em;
+  }
+
+  /* Modifier: sin icono y mas apretada, para las listas de texto del cierre. */
+  .promo-badge--sm {
+    padding: 0 8px;
+  }
+</style>

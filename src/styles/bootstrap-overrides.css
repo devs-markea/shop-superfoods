@@ -1,0 +1,333 @@
+/* ---------------------------------------------------------------------------
+ * Bootstrap, ajustado a la spec de la tienda.
+ *
+ * Sustituye a lo que hacia old/styles/_variables.scss: alli se reasignaban las
+ * variables Sass ANTES de importar Bootstrap y este se recompilaba entero. Aqui
+ * se carga la CSS ya compilada y se pisa lo que hace falta.
+ *
+ * Se carga DESPUES de bootstrap.min.css, para poder pisarlo.
+ *
+ * ---------------------------------------------------------------------------
+ * POR QUE QUEDA ALGUNA --bs-* Y NO ES TODO DECLARACIONES NORMALES
+ * ---------------------------------------------------------------------------
+ * Las --bs-* son CSS puro —custom properties, del estandar; nada que ver con
+ * Sass— y son la entrada que Bootstrap 5.3 lee. Aqui se usan con una sola regla:
+ *
+ *   · Si el valor lo lee UN solo selector, va como declaracion normal. Declarar
+ *     una variable para que la lea una linea es dar un rodeo.
+ *
+ *   · Si Bootstrap reparte el mismo valor entre VARIOS selectores de estado
+ *     —.btn:hover, .btn:disabled, .btn-check:checked + .btn, :not(.btn-check) +
+ *     .btn:active…— se fija la variable. Escribirlo a mano obligaria a
+ *     reproducir esos selectores uno a uno, con su especificidad exacta, y a
+ *     rehacerlos cada vez que Bootstrap los cambie.
+ *
+ * Solo queda lo que alguien lee de verdad: una --bs-* que nadie consume no pinta
+ * nada. .btn-primary es el unico sitio donde el rodeo sale a cuenta.
+ * --------------------------------------------------------------------------- */
+
+:root {
+  /* Valores de tema: no los lee una regla, los leen muchas. --bs-body-color, sin
+     ir mas lejos, es el color por defecto de .btn, .card, .dropdown-menu y el
+     <body>. Fijarlos aqui es lo mismo que fijarlos en el :root de cualquier hoja
+     propia: el valor esta escrito, no hay indireccion que seguir. */
+  --bs-body-bg: var(--sf-body-bg);
+  --bs-body-color: var(--sf-ink);
+  --bs-body-color-rgb: 20, 24, 33;
+  --bs-border-color: var(--sf-border);
+  --bs-border-radius: 12px;
+
+  /* Que color es "primary" en esta tienda.
+     Hoy no lo lee nadie: ninguna pantalla usa .bg-primary, .text-primary ni
+     .border-primary. Se declaran igual porque son la DEFINICION del tema, no un
+     ajuste: sin ellas, el dia que alguien escriba `bg-primary` en el marcado le
+     saldria el azul de fabrica de Bootstrap en lugar del dorado de la marca, y
+     eso no se descubre leyendo el codigo. Las de forma —radios, sombras— no se
+     reponen: ahi el valor de fabrica se parece lo bastante. */
+  --bs-primary: var(--sf-gold);
+  --bs-primary-rgb: 213, 170, 83;
+  --bs-secondary: var(--sf-muted);
+  --bs-dark: var(--sf-ink);
+  --bs-dark-rgb: 20, 24, 33;
+  --bs-light: var(--sf-body-bg);
+  --bs-light-rgb: 248, 249, 251;
+  --bs-body-bg-rgb: 248, 249, 251;
+
+  /* Idem: el aro de foco de la utilidad .focus-ring, dorado y no azul. */
+  --bs-focus-ring-width: 2px;
+  --bs-focus-ring-opacity: 1;
+  --bs-focus-ring-color: var(--sf-gold);
+
+  /* La fuente la sirve Astro (config `fonts`), que expone --sf-font-inter. */
+  --bs-body-font-family:
+    var(--sf-font-inter), -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto,
+    'Helvetica Neue', Arial, sans-serif;
+  --bs-body-font-size: 0.875rem; /* 14px */
+  --bs-body-line-height: 1.4285714286; /* 20 sobre 14 */
+}
+
+/* ---------------------------------------------------------------------------
+ * Reboot
+ * --------------------------------------------------------------------------- */
+
+/* El diseno no subraya ningun enlace. */
+a {
+  text-decoration: none;
+}
+
+/* Peso 600 y el negro de la tienda. */
+h1,
+h2,
+h3,
+h4,
+h5,
+h6,
+.h1,
+.h2,
+.h3,
+.h4,
+.h5,
+.h6 {
+  font-weight: 600;
+  color: var(--sf-ink);
+}
+
+/* La escala de titulos sale del cuerpo (14) y no del 16 de fabrica: Bootstrap
+   los calcula como el cuerpo x 2.5 / 2 / 1.75 / 1.5 / 1.25 / 1, y con un cuerpo
+   de 14 todos bajan. Los calc() son su tipografia fluida, ya resuelta.
+
+   Casi ningun titulo de la tienda depende de esto —todos llevan su clase, que
+   fija el tamano—, pero se repone para que un <h*> sin clase mida lo que media. */
+h1,
+.h1 {
+  font-size: calc(1.34375rem + 1.125vw);
+}
+
+h2,
+.h2 {
+  font-size: calc(1.3rem + 0.6vw);
+}
+
+h3,
+.h3 {
+  font-size: calc(1.278125rem + 0.3375vw);
+}
+
+h4,
+.h4 {
+  font-size: calc(1.25625rem + 0.075vw);
+}
+
+h5,
+.h5 {
+  font-size: 1.09375rem;
+}
+
+h6,
+.h6 {
+  font-size: 0.875rem;
+}
+
+/* ---------------------------------------------------------------------------
+ * Contenedor. La spec limita el contenido a 1140, tambien por encima de 1400: el
+ * mapa de anchos no tenia clave xxl, asi que se quedaba en el valor de xl. La
+ * CSS compilada si trae xxl (1320) y hay que devolverlo.
+ * --------------------------------------------------------------------------- */
+@media (min-width: 1400px) {
+  .container,
+  .container-sm,
+  .container-md,
+  .container-lg,
+  .container-xl,
+  .container-xxl {
+    max-width: 1140px;
+  }
+}
+
+/* ---------------------------------------------------------------------------
+ * Botones: spec 44 de alto, radius 12, Inter 600 14/20, sin borde.
+ *
+ * La forma va escrita: la lee .btn y nadie mas. El COLOR va en variables, que es
+ * el caso del comentario de arriba.
+ * --------------------------------------------------------------------------- */
+.btn {
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  /* 20 sobre 14. Es lo que da el alto de 44: 12 + 20 + 12. Con el 1.5 de fabrica
+     el boton se iria a 45. */
+  line-height: 1.4285714286;
+  border-width: 0;
+  border-radius: 12px;
+  /* Solo fondo y opacidad: color y borde no se mueven en ningun estado. */
+  transition:
+    background-color 160ms ease,
+    opacity 160ms ease;
+  /* Aro de foco de 2 en vez de 4. En variable porque lo leen .btn:focus-visible
+     y .btn-check:checked + .btn:focus-visible, que son dos reglas distintas. */
+  --bs-btn-focus-box-shadow: 0 0 0 2px rgba(var(--bs-btn-focus-shadow-rgb), 0.5);
+}
+
+/* El dorado es claro y Bootstrap elegiria texto oscuro por contraste; la spec
+   pide label blanco sobre dorado. El hover es el dorado de marca, no un shade
+   calculado.
+
+   Aqui las variables si salen a cuenta: cada valor lo lee un selector distinto
+   —:hover, :focus-visible, :disabled, .btn-check:checked + .btn,
+   :not(.btn-check) + .btn:active…— y escribirlo a mano serian veinte reglas
+   en lugar de trece lineas. */
+.btn-primary {
+  --bs-btn-color: var(--sf-white);
+  --bs-btn-bg: var(--sf-gold);
+  --bs-btn-border-color: var(--sf-gold);
+  --bs-btn-hover-color: var(--sf-white);
+  --bs-btn-hover-bg: var(--sf-gold-hover);
+  --bs-btn-hover-border-color: var(--sf-gold-hover);
+  --bs-btn-active-color: var(--sf-white);
+  --bs-btn-active-bg: var(--sf-gold-hover);
+  --bs-btn-active-border-color: var(--sf-gold-hover);
+  --bs-btn-disabled-color: var(--sf-white);
+  --bs-btn-disabled-bg: var(--sf-gold);
+  --bs-btn-disabled-border-color: var(--sf-gold);
+  /* El dorado aclarado del aro de foco. Sin esto caeria al azul de fabrica. */
+  --bs-btn-focus-shadow-rgb: 219, 183, 109;
+}
+
+/* ---------------------------------------------------------------------------
+ * Campos: textarea de comentarios (padding 16, radius 12, borde 1).
+ *
+ * Sin relleno: la spec solo define borde, padding y radius. Los campos se leen
+ * por su borde, igual que el control de regresar de la topbar.
+ * --------------------------------------------------------------------------- */
+.form-control {
+  padding: 16px;
+  font-size: 14px;
+  /* 20 sobre 14, como el cuerpo y como el boton: es lo que fija el alto del
+     textarea. Con el 1.5 de fabrica cada linea creceria un pixel. */
+  line-height: 1.4285714286;
+  color: var(--sf-ink);
+  background-color: transparent;
+  border: 1px solid var(--sf-border);
+  border-radius: 12px;
+  transition: border-color 160ms ease;
+}
+
+.form-control:focus {
+  color: var(--sf-ink);
+  background-color: transparent;
+  border-color: var(--sf-gold);
+  box-shadow: none;
+}
+
+.form-control::placeholder {
+  color: var(--sf-placeholder);
+}
+
+/* ---------------------------------------------------------------------------
+ * Formularios: control 20x20 con borde de 2px.
+ * --------------------------------------------------------------------------- */
+.form-check {
+  /* 20: una linea de texto del cuerpo (14 x 20/14), no el 24 de fabrica, que
+     sale de un cuerpo de 16. */
+  min-height: 1.25rem;
+  margin-bottom: 0;
+  /* El layout lo da flex/gap, no el padding. */
+  padding-left: 0;
+}
+
+.form-check-input {
+  width: 20px;
+  height: 20px;
+  /* De fabrica lo desplaza para centrarlo en una linea de texto; aqui los
+     controles van en un flex con align-items: center y ese margen solo los
+     descuadraria. */
+  margin-top: 0;
+  /* Sin relleno, como el resto de campos: se lee por su borde. De fabrica hereda
+     el fondo del cuerpo y sobre una tarjeta blanca se notaria el gris. */
+  background-color: transparent;
+  border: 2px solid var(--sf-border);
+  border-radius: 6px;
+}
+
+.form-check-input[type="radio"] {
+  border-radius: 50%;
+}
+
+.form-check-input:checked {
+  background-color: var(--sf-gold);
+  border-color: var(--sf-gold);
+}
+
+.form-check-input:focus {
+  border-color: var(--sf-gold);
+  /* Aro dorado de 2, en lugar del azul de fabrica. */
+  box-shadow: 0 0 0 2px var(--sf-gold);
+}
+
+/* ---------------------------------------------------------------------------
+ * Tarjetas: spec radius 16, sin borde.
+ *
+ * La unica que hay es la de platillo. El relleno y la sombra los pone su bloque
+ * .product-card; de .card solo hereda la caja. Por eso no se tocan las medidas
+ * de .card-body ni las del resto de piezas: no existe ninguna en el proyecto.
+ * --------------------------------------------------------------------------- */
+.card {
+  background-color: var(--sf-white);
+  border-width: 0;
+  border-radius: 16px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Badge: base del bloque .tag (alto 24, pill, Inter 600 12/16).
+ * --------------------------------------------------------------------------- */
+.badge {
+  padding: 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: 100px;
+}
+
+/* ---------------------------------------------------------------------------
+ * Barra de progreso: pista 6 de alto, radius 3, relleno dorado.
+ * --------------------------------------------------------------------------- */
+.progress {
+  height: 6px;
+  font-size: 0.65625rem; /* 0.75 del cuerpo, como en la spec */
+  background-color: var(--sf-border);
+  border-radius: 3px;
+}
+
+.progress-bar {
+  background-color: var(--sf-gold);
+  transition: width 160ms ease;
+}
+
+/* ---------------------------------------------------------------------------
+ * Dropdown: lista del selector de pais.
+ * --------------------------------------------------------------------------- */
+.dropdown-menu {
+  min-width: 220px;
+  padding: 4px 0;
+  font-size: 14px;
+  color: var(--sf-ink);
+  border-color: var(--sf-border);
+  border-radius: 12px;
+}
+
+.dropdown-item {
+  padding: 8px 12px;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: var(--sf-body-bg);
+}
+
+.dropdown-item.active,
+.dropdown-item:active {
+  color: var(--sf-ink);
+  background-color: var(--sf-gold-tint);
+}
+
+/* La barra de movil no sale aqui: .navbar la pinta entera
+   components/Navbar.astro, que es quien la monta. */

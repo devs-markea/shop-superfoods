@@ -1,5 +1,6 @@
 ---
 import CopyButton from './CopyButton.astro';
+import SectionLabel from './SectionLabel.astro';
 import { formatClabe } from '../lib/clabe.ts';
 
 interface Props {
@@ -20,7 +21,7 @@ const { bank, clabe } = Astro.props;
 // En desktop la tarjeta se encabeza y se recolorea, igual que la de la cuenta en
 // /pago/transferencia: rotulo arriba, la CLABE en dorado y el boton de copiar en
 // el gris de la pagina. Son las MISMAS piezas con otra escala —ver
-// components/_clabe-card.scss—, salvo el rotulo, que es de desktop entero.
+// los estilos de este archivo—, salvo el rotulo, que es de desktop entero.
 ---
 
 <div class="clabe-card">
@@ -29,7 +30,7 @@ const { bank, clabe } = Astro.props;
     hay que transferir, y la etiqueta de la fila dice el resto: el rotulo seria
     un renglon de mas en una pantalla que se lee de un vistazo.
   */}
-  <h2 class="section-label d-none d-md-block">Datos para Transferencia</h2>
+  <SectionLabel as="h2" class="d-none d-md-block">Datos para Transferencia</SectionLabel>
 
   {/*
     El dato y su accion. La fila solo existe en desktop, que es donde hay un
@@ -46,3 +47,128 @@ const { bank, clabe } = Astro.props;
     <CopyButton value={clabe} label="Copiar la CLABE" size="lg" />
   </div>
 </div>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: clabe-card
+     ---------------------------------------------------------------------------
+     La CLABE con su boton de copiar, suelta.
+     Spec: gap 12 - padding 16 - radius 16 - borde 1px #EAECF0 - bg #FFFFFF
+     etiqueta 12/16 500 #9CA3AF - dato 14/20 600 #141821 - hueco de 2
+
+     No es .bank-account con un modifier: aquella es la ficha completa de la cuenta
+     (tres filas, sombra, huecos de 20) y esta una sola fila con borde. Solo
+     comparten el boton, que es .copy-button.
+
+     La etiqueta tampoco es .section-label--soft: coincide en tamano y color, pero
+     la spec la pide en 500, no en 600.
+     --------------------------------------------------------------------------- */
+  .clabe-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid var(--sf-border);
+    border-radius: 16px;
+    background-color: var(--sf-white);
+  }
+
+  /* En movil la fila no existe: sus dos hijos —el dato y el boton— siguen siendo
+     hijos de la tarjeta y los reparte ella. */
+  .clabe-card__row {
+    display: contents;
+  }
+
+  .clabe-card__field {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  /* Element: etiqueta — Inter 500 12/16 #9CA3AF */
+  .clabe-card__label {
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--sf-placeholder);
+  }
+
+  /* Element: dato — Inter 600 14/20 #141821 */
+  .clabe-card__value {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--sf-ink);
+  }
+
+  /* --- Desktop -------------------------------------------------------------
+     La tarjeta se encabeza y se recolorea, la misma mudanza que hace la de la
+     cuenta en /pago/transferencia y por las mismas razones. Spec:
+     tarjeta   gap 12 - padding 20 - radius 16 - borde 1px #EAECF0
+     rotulo    Inter 600 14/100% #6C757D
+     fila      etiqueta y dato a la izquierda, boton a la derecha
+     etiqueta  Inter 400 12/100% #6C757D
+     CLABE     Inter 700 16/100% #D5AA53
+     boton     32 - radius 8 - fondo #F8F9FB con el icono en #6C757D
+
+     El gap de 12, el radius de 16, el borde y el fondo blanco ya son los de movil y
+     no se repiten. Los colores son tokens: #6C757D es --sf-muted exacto, #D5AA53 el
+     dorado de marca y #F8F9FB es --sf-body-bg, el gris de fondo de la pagina. */
+  @media (min-width: 768px) {
+    /* La tarjeta pasa a columna: ahora tiene dos piezas apiladas —el rotulo y la
+       fila— en lugar de dos en linea. El `stretch` releva al centrado de movil, que
+       aqui encogeria la fila a lo que midiera su contenido. */
+    .clabe-card {
+      flex-direction: column;
+      align-items: stretch;
+      padding: 20px;
+    }
+    /* El rotulo de la tarjeta: la etiqueta de siempre, un punto mas grande. No es
+       --strong (16/700 #111827): ese encabeza una seccion de la pantalla y este
+       rotula una tarjeta que ya viene detras de los pasos. */
+    .clabe-card .section-label {
+      font-size: 14px;
+      /* 100% del tamano: es un rotulo de una linea. */
+      line-height: 1;
+    }
+    .clabe-card__row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    /* La etiqueta se aleja del dato en lugar de acercarse, como en la tarjeta de la
+       cuenta: aqui el dato pesa mas —16 en dorado— y el gris claro de movil
+       (#9CA3AF) se leeria como un dato apagado y no como su etiqueta. */
+    .clabe-card__label {
+      font-weight: 400;
+      line-height: 1;
+      color: var(--sf-muted);
+    }
+    /* La CLABE es lo unico que se viene a buscar a esta tarjeta, asi que se destaca
+       con el peso y el dorado: el mismo tratamiento que ya tiene en la tarjeta de la
+       cuenta. */
+    .clabe-card__value {
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1;
+      color: var(--sf-gold);
+    }
+    /* El boton vuelve a la caja de 32 —el 36 es de movil, donde se pulsa con el
+       dedo— y su tinte dorado de reposo pasa al gris de la pagina: al lado de una
+       CLABE ya dorada, dos dorados se peleaban en la misma linea.
+
+       Se cambia el punto de partida, no el color: son las dos variables de reposo
+       del bloque (ver components/CopyButton.astro). El hover y el "copiado" se
+       quedan como en el resto de la tienda. */
+    .clabe-card .copy-button {
+      --sf-copy-button-bg: var(--sf-body-bg);
+      --sf-copy-button-color: var(--sf-muted);
+      flex: 0 0 32px;
+      width: 32px;
+      height: 32px;
+    }
+  }
+</style>

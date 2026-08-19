@@ -8,7 +8,7 @@
 // Lo que se ve al tocarlo —el relevo de las metas de la barra: plazo y envio a
 // domicilio, recoleccion y mapa al recoger— lo hace CSS leyendo el radio
 // marcado, asi que aqui no hay nada que pintar. Ver
-// src/styles/components/_order-meta.scss.
+// components/OrderMeta.astro.
 //
 // El resto —guardar, releer y volver al defecto cuando ya no hay nada que
 // recuperar— es de src/lib/delivery-switch.ts, porque /datos necesita lo mismo.

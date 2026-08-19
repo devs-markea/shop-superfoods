@@ -8,7 +8,7 @@ import TextField from './TextField.astro';
 // colonia, calle y numero comparten una linea —son las tres piezas de la misma
 // direccion, y las tres cortas—, y los dos campos opcionales se quedan cada uno
 // con su etiqueta encima. Nada de eso duplica marcado: .field-row y .field-group
-// no existen en movil (ver components/_field.scss), asi que alli los campos
+// no existen en movil (ver components/TextField.astro), asi que alli los campos
 // siguen siendo hijos de esta columna y su ritmo no cambia.
 //
 // El borde de 2px lo trae .field por defecto, comun a todos los campos.
@@ -27,7 +27,7 @@ interface Props {
 const { required = true } = Astro.props;
 ---
 
-<div class="d-flex flex-column gap-3">
+<div class="field-stack d-flex flex-column">
   {/* Los tres obligatorios. En desktop, una linea de tres a 12. */}
   <div class="field-row">
     <TextField

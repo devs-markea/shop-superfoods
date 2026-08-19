@@ -1,0 +1,84 @@
+---
+// La etiqueta que rotula un grupo. Es la misma pieza en toda la tienda —"Elige
+// el tamano", "Comentarios generales", "Ubicacion", "Propina", "Metodo de pago",
+// "Resumen"— y por eso es un componente y no un element de cada bloque: son
+// trece sitios con el mismo rotulo, y hasta tres en una misma pantalla.
+//
+// El elemento se elige desde fuera porque no siempre es el mismo: unas veces
+// encabeza una seccion (<h2>), otras solo nombra un dato (<span>) y otras rotula
+// un campo (<label for>). Lo que no cambia es como se lee.
+
+interface Props {
+  /** La etiqueta HTML que se pinta. Por defecto <span>, que es el caso comun. */
+  as?: 'span' | 'p' | 'h2' | 'h3' | 'label';
+  /**
+   * --soft: un tono mas clara, para rotular datos dentro de una tarjeta blanca.
+   * --strong: en desktop encabeza una seccion de la pantalla, no un grupo.
+   */
+  variant?: 'soft' | 'strong';
+  /** Clases del sitio que la usa: utilidades de Bootstrap, o su propio element. */
+  class?: string;
+  id?: string;
+  for?: string;
+  /** Lo usa el rotulo del mapa, que cuenta el estado del pin. */
+  'aria-live'?: 'off' | 'polite' | 'assertive';
+  [key: `data-${string}`]: unknown;
+}
+
+const { as: Tag = 'span', variant, class: className, ...rest } = Astro.props;
+
+// Una marca escrita suelta —`data-location-map-label`— llega aqui como `true`, y
+// Astro la emitiria como `data-location-map-label="true"`. Se pasa a cadena vacia,
+// que es lo que emitia el marcado anterior: el selector la encuentra igual y
+// `dataset` sigue devolviendo "".
+const attrs = Object.fromEntries(
+  Object.entries(rest).map(([name, value]) => [name, value === true ? '' : value])
+);
+---
+
+<Tag
+  class:list={['section-label', variant && `section-label--${variant}`, className]}
+  {...attrs}
+>
+  <slot />
+</Tag>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: section-label
+     ---------------------------------------------------------------------------
+     Spec repetida en todo el diseno: Inter 600 12/16 #6C757D.
+     --------------------------------------------------------------------------- */
+  .section-label {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 16px;
+    color: var(--sf-muted);
+  }
+
+  /* Modifier: la misma etiqueta un tono mas clara, #9CA3AF. Es la que rotula los
+     datos dentro de una tarjeta blanca ("Titular", "Banco", "CLABE", "Resumen de
+     tu pedido", "Metodo de pago"), donde el gris de la etiqueta base competiria
+     con el dato que acompana. */
+  .section-label--soft {
+    color: var(--sf-placeholder);
+  }
+
+  /* Modifier: el contrapunto de --soft. En desktop la etiqueta deja de rotular un
+     grupo de campos y pasa a encabezar una seccion de la pantalla: Inter 700
+     16/100% #111827, el negro del resto de la tienda.
+
+     En movil no cambia nada —alli sigue siendo la de 12 de la spec de esa
+     pantalla—, y por eso es un modifier y no un bloque aparte: es la misma
+     etiqueta leida en dos anchos. */
+  @media (min-width: 768px) {
+    .section-label--strong {
+      font-size: 16px;
+      font-weight: 700;
+      /* 100% del tamano: es un rotulo de una linea, como el titulo de la pantalla. */
+      line-height: 1;
+      color: var(--sf-ink);
+    }
+  }
+</style>

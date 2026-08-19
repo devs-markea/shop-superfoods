@@ -77,6 +77,62 @@ if (form) {
     areaNotice.hidden = !message;
   };
 
+  // --- El candado de continuar ---
+  // Continuar solo se enciende cuando el formulario esta listo para salir de
+  // aqui: los campos OBLIGATORIOS rellenos, el telefono utilizable y —a
+  // domicilio— el punto en el mapa. Los opcionales no cuentan: entre calles y
+  // referencias ayudan a encontrar el portal, pero el pedido sale sin ellos.
+  //
+  // La ubicacion cuenta como uno mas. La direccion escrita nombra la casa, pero
+  // el punto es lo que mide el envio y lo que lleva al repartidor hasta el
+  // portal: ninguna sustituye a la otra. Ver draftGaps() en
+  // src/lib/checkout-draft.ts, que vuelve a pedir las dos al cerrar el pedido.
+  //
+  // Los dos "Continuar" —el de la barra del fondo en movil y el de la tarjeta de
+  // resumen en desktop— se apagan mientras falte algo, pero SIGUEN siendo
+  // pulsables a proposito: un `disabled` real no emite click, y entonces no
+  // habria forma de contar QUE falta. Pulsarlos lleva al mismo sitio que antes,
+  // al envio, que es quien reparte los avisos. Es la misma mecanica del boton de
+  // la ficha de producto (ver setBlocked() en src/scripts/order-form.ts).
+  const submitButtons = form.querySelectorAll<HTMLButtonElement>('button[type="submit"]');
+
+  /**
+   * Si falta el punto en el mapa. Al recoger no hay ninguno que pedir.
+   *
+   * Da igual por cual de los caminos salga —el mapa en linea, el de la hoja o el
+   * respaldo del dispositivo—: los tres acaban en el mismo input oculto, y ese es
+   * el unico que se mira aqui.
+   */
+  const locationMissing = (): boolean =>
+    checkedDeliveryType(form) === 'delivery' && !value('locationUrl');
+
+  /**
+   * Si el formulario podria salir tal y como esta.
+   *
+   * Son las MISMAS tres preguntas que hace el envio, en el mismo orden, para que
+   * el boton encendido y el envio no puedan contradecirse: encendido significa
+   * "esto avanza", y apagado, "pulsalo y te digo que falta".
+   *
+   * `checkValidity()` cubre los obligatorios y solo los obligatorios: los dos
+   * campos opcionales de la direccion no llevan `required`, y los de la direccion
+   * dejan de llevarlo al pasar a "Para recoger" (ver el switch, mas abajo).
+   */
+  const canContinue = (): boolean =>
+    form.checkValidity() && phoneDigits(value('phone')).length >= 10 && !locationMissing();
+
+  /** Enciende o apaga los dos "Continuar". */
+  const syncContinue = (): void => {
+    const blocked = !canContinue();
+    for (const button of submitButtons) button.setAttribute('aria-disabled', String(blocked));
+  };
+
+  // Lo que puede cambiar la respuesta: escribir en un campo y elegir en el switch.
+  // `input` cubre el tecleo —`change` en un campo de texto no llega hasta salir de
+  // el, y el boton se quedaria apagado con todo relleno—; el resto de momentos los
+  // avisa quien los provoca: el switch, elegir ubicacion y quitarla.
+  form.addEventListener('input', syncContinue);
+  form.addEventListener('change', syncContinue);
+
   const saved = readDraft();
 
   /**
@@ -195,6 +251,11 @@ if (form) {
     // avisan —arranque, eleccion y vuelta atras—: al reponer el modo guardado los
     // radios no emiten `change`.
     repaintSummary();
+
+    // Y el candado se recalcula con el modo, que cambia las dos mitades de la
+    // pregunta: al recoger no hay punto que pedir y los tres campos de la
+    // direccion dejan de ser obligatorios.
+    syncContinue();
   });
 
   // --- Ubicacion ---
@@ -205,13 +266,16 @@ if (form) {
   const locationLink = form.querySelector<HTMLAnchorElement>('[data-location-link]');
   const clearButton = form.querySelector<HTMLButtonElement>('[data-location-clear]');
 
-  // La ubicacion no cambia lo que se pide: es un extra sobre la direccion escrita,
-  // no una alternativa. Compartirla o quitarla solo se ve aqui.
+  // La ubicacion no sustituye a la direccion escrita: la precisa, y a domicilio
+  // se piden las dos. Elegirla se ve aqui y en los dos "Continuar", que es lo que
+  // abre el candado.
   const showLocation = (url: string, label: string): void => {
     if (locationUrl) locationUrl.value = url;
     if (locationLabel) locationLabel.textContent = label;
     if (locationLink) locationLink.href = url;
     if (selected) selected.hidden = false;
+
+    syncContinue();
   };
 
   /**
@@ -246,6 +310,10 @@ if (form) {
 
     // Y el envio vuelve a "Por cotizar", que es lo que era antes de compartirla.
     repaintSummary();
+
+    // Con el punto se va tambien el permiso para seguir: quitar la ubicacion deja
+    // el pedido como estaba al entrar, sin saber a donde va.
+    syncContinue();
   };
 
   clearButton?.addEventListener('click', clearLocation);
@@ -519,8 +587,8 @@ if (form) {
   //
   // Son DOS: el de la barra del fondo en movil y el de la tarjeta de resumen en
   // desktop. Solo uno se ve a la vez, pero los dos existen en el marcado y los dos
-  // envian este formulario, asi que la espera de la medicion los bloquea a los dos.
-  const submitButtons = form.querySelectorAll<HTMLButtonElement>('button[type="submit"]');
+  // envian este formulario, asi que la espera de la medicion los bloquea a los dos
+  // —igual que el candado de la ubicacion, que es donde se buscan—.
 
   /** Lo que se espera como mucho a una cotizacion en vuelo, en milisegundos. */
   const QUOTE_TIMEOUT = 4000;
@@ -559,6 +627,19 @@ if (form) {
     window.location.assign('/pago');
   };
 
+  // Volver atras desde el pago puede reutilizar el documento tal cual quedo
+  // (bfcache), y quedo con los dos "Continuar" apagados DE VERDAD: los apaga
+  // goToPayment() para que no se envie dos veces el mismo formulario. Al volver
+  // ya no hay envio en curso, asi que se devuelven; si no, la pantalla se
+  // quedaria sin forma de seguir.
+  //
+  // El candado de la ubicacion no se toca aqui: ese es el aria-disabled, y lo
+  // repone bindDeliverySwitch al reponer el modo en este mismo momento.
+  window.addEventListener('pageshow', (event) => {
+    if (!event.persisted) return;
+    for (const button of submitButtons) button.disabled = false;
+  });
+
   form.addEventListener('submit', (event) => {
     event.preventDefault();
 
@@ -568,6 +649,26 @@ if (form) {
       // Ademas de los globos del navegador, el aviso queda escrito en la
       // pantalla: los globos se cierran al primer toque.
       showError('Completa los campos marcados para continuar.');
+      return;
+    }
+
+    // A domicilio, sin punto no se sigue. Es lo que ya dice el boton apagado,
+    // ahora escrito: sigue emitiendo click justamente para poder contarlo, y de
+    // paso la pantalla se va hasta el mapa, que es donde se arregla.
+    if (locationMissing()) {
+      showError('Elige tu ubicacion en el mapa para continuar.');
+
+      // El foco primero y el desplazamiento despues, como en la ficha de
+      // producto: lo que importa es dejar el cursor donde se elige, no la
+      // animacion. El primer boton a la vista del bloque es el que manda en cada
+      // camino: el verde del mapa en linea, o el que abre la hoja sin el.
+      const locationBlock = form.querySelector<HTMLElement>('[data-location]');
+
+      locationBlock
+        ?.querySelector<HTMLElement>('button:not([hidden]):not(:disabled)')
+        ?.focus({ preventScroll: true });
+
+      locationBlock?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
 
