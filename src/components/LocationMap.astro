@@ -3,7 +3,7 @@ import Icon from './Icon.astro';
 import SectionLabel from './SectionLabel.astro';
 import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 
-// El mapa de /datos, en linea: el panel que releva al boton que abria la hoja.
+// El mapa de /mamayaya/datos, en linea: el panel que releva al boton que abria la hoja.
 //
 // Es el MISMO selector de siempre —un mapa con el pin clavado en el centro, se
 // mueve el mapa hasta el domicilio y se acepta— sacado de la hoja y puesto en el
@@ -101,7 +101,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
   /* -------------------------------------------------------------------------
    * Block: location-map
    * -------------------------------------------------------------------------
-   * El panel del mapa en /datos. Fue el primer bloque en escribirse asi —CSS
+   * El panel del mapa en /mamayaya/datos. Fue el primer bloque en escribirse asi —CSS
    * puro dentro del componente— y hoy es como esta todo el proyecto.
    *
    * Lo que lo mantiene dentro del sistema son las clases de Bootstrap del marcado
@@ -145,7 +145,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 
   /* Element: confirmar.
    *
-   * Verde de la tienda (--sf-success, el del sello de /confirmado) en lugar del
+   * Verde de la tienda (--sf-success, el del sello de /mamayaya/confirmado) en lugar del
    * de Bootstrap: es el mismo "esto salio bien" y no hay razon para tener dos
    * verdes distintos en la misma pantalla. Se cambia por las variables que
    * publica .btn-success, asi que el resto del boton —el blanco del rotulo y del

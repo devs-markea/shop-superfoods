@@ -3,7 +3,7 @@
 //
 // Los rotulos del pie enlazan a la portada —donde vive el filtro— y la categoria
 // elegida viaja POR FUERA de la URL, en sessionStorage, para que la direccion
-// siga siendo `/` a secas. Es la contrapartida elegida: el filtro no se puede
+// siga siendo `/mamayaya` a secas. Es la contrapartida elegida: el filtro no se puede
 // compartir por enlace, y en cambio la barra de direcciones no acumula
 // parametros de una eleccion que dura un momento.
 //

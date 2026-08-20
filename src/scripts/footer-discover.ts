@@ -12,14 +12,14 @@
 //                        mirando un cambio que ocurrio arriba.
 //
 // En el primer camino el evento no se toca: ni preventDefault ni navegacion a
-// mano. El enlace es un <a href="/"> de verdad, asi que se puede abrir en otra
+// mano. El enlace es un <a href="/mamayaya"> de verdad, asi que se puede abrir en otra
 // pestana o seguir con el JavaScript caido, y entonces la portada sale entera.
 //
 // En movil no llega a correr: el pie es `display: none` bajo md (ver
 // components/Footer.astro), asi que sus enlaces no se pueden pulsar.
 //
 // LO IMPORTA CADA PANTALLA QUE MONTE EL PIE —las nueve— igual que copy-button en
-// /recibido. No se cargo desde un <script> dentro de Footer.astro, que habria sido
+// /mamayaya/recibido. No se cargo desde un <script> dentro de Footer.astro, que habria sido
 // un solo sitio: con este proyecto en servidor y sin paginas prerenderizadas,
 // Astro registra el script del componente en el manifiesto pero no emite su
 // bundle, y el pie se queda sin comportamiento con un 404 que nada avisa. Si se
@@ -28,7 +28,7 @@
 import { rememberCategory } from '../lib/discover.ts';
 
 /** La portada, la unica pantalla que tiene chips de categoria. */
-const HOME = '/';
+const HOME = '/mamayaya';
 
 /**
  * El chip de la portada que corresponde a esta categoria.

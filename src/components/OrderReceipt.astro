@@ -20,7 +20,7 @@ const { items, total, method } = Astro.props;
 // Resumen de lo pedido, ya sin acciones: aqui no se edita nada.
 //
 // El rotulo del metodo sale de PAYMENT_LABEL, que es el corto: el mismo metodo se
-// rotula "Transferencia bancaria" en /pago (ver PaymentMethods.astro),
+// rotula "Transferencia bancaria" en /mamayaya/pago (ver PaymentMethods.astro),
 // donde la tarjeta tiene sitio para el nombre largo.
 //
 // El icono de Mercado Pago es provisional —falta su logo— y el de efectivo se
@@ -296,7 +296,7 @@ const icons: Record<PaymentMethod, IconName> = {
      Block: dashed-divider
      ---------------------------------------------------------------------------
      Divisora discontinua. Spec: 1px, trazos de 4 y huecos de 2, #EAECF0.
-     Separa el total del detalle en /pago/transferencia y en /confirmado.
+     Separa el total del detalle en /mamayaya/pago/transferencia y en /mamayaya/confirmado.
 
      Es un bloque propio y no un element de cada uno por el mismo motivo que
      .section-label: son dos bloques distintos con la misma divisora, y la tecnica

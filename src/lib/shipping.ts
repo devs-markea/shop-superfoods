@@ -26,7 +26,7 @@ import { formatPrice } from './price';
 /**
  * Lo que el backend contesto sobre el envio a un punto.
  *
- * Es lo que viaja en el borrador entre /datos y el cierre: se pide UNA VEZ, al
+ * Es lo que viaja en el borrador entre /mamayaya/datos y el cierre: se pide UNA VEZ, al
  * compartir la ubicacion, y de ahi en adelante solo se lee. Si se pierde —la
  * cookie dura dos horas— se vuelve a pedir a la API, que la recuerda mientras
  * dure la sesion del carrito.
@@ -239,7 +239,7 @@ function parseCoords(text: string | undefined | null): { lat: number; lng: numbe
  * El punto de un enlace de Maps de los que escribe la tienda
  * (`https://www.google.com/maps?q=21.16,-86.82`).
  *
- * Sirve para recuperar el punto cuando se vuelve a /datos: la ubicacion viaja en
+ * Sirve para recuperar el punto cuando se vuelve a /mamayaya/datos: la ubicacion viaja en
  * el borrador como enlace, que es lo que espera la API del pedido, y de ahi salen
  * otra vez las coordenadas.
  */
@@ -324,7 +324,7 @@ export function resolveShipping(options: {
 /**
  * La respuesta de envio que la pantalla dejo escrita en el marcado.
  *
- * En /pago el envio ya no se mueve —se resolvio en el servidor y ahi se queda,
+ * En /mamayaya/pago el envio ya no se mueve —se resolvio en el servidor y ahi se queda,
  * porque lo unico que cambia es la propina—, pero el navegador tiene que repintar
  * la tarjeta de resumen y necesita ese mismo estado. Viaja en dos atributos, que
  * es lo que el DOM sabe llevar: el estado y el importe.

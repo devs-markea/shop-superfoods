@@ -390,7 +390,7 @@ async function addToCart(form: HTMLFormElement): Promise<void> {
 
     if (response.ok) {
       // La linea ya esta en el carrito: el pedido es la confirmacion.
-      window.location.assign(form.dataset.redirect || '/carrito');
+      window.location.assign(form.dataset.redirect || '/mamayaya/carrito');
       return;
     }
 

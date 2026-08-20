@@ -2,7 +2,7 @@
 // Carga del SDK de Google Maps.
 //
 // Una sola vez por pagina y SOLO cuando hace falta: son unos 90 KB de
-// JavaScript de un tercero, y en /datos la mayoria de las visitas no llegan a
+// JavaScript de un tercero, y en /mamayaya/datos la mayoria de las visitas no llegan a
 // abrir el mapa. Se pide al abrir la hoja, no al cargar la pantalla, asi que el
 // formulario de entrega sigue costando lo que costaba.
 //

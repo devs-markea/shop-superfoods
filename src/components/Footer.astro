@@ -39,7 +39,7 @@ const copyright = name
 // Los cuatro navegan a la portada, que es donde vive el filtro —los chips de la
 // barra, radios name="category"—. Los tres de categoria llevan ademas su nombre
 // en un `data-`, y de ahi lo toma src/scripts/footer-discover.ts para dejarlo
-// pasado a la portada por sessionStorage: asi la direccion sigue siendo `/` a
+// pasado a la portada por sessionStorage: asi la direccion sigue siendo `/mamayaya` a
 // secas en lugar de arrastrar un parametro. Ver src/lib/discover.ts.
 //
 // El `href` no es decorativo: sin JavaScript el enlace sigue llevando al menu
@@ -63,7 +63,7 @@ const socials: Array<{ label: string; href: string | null }> = [
   <div class="footer__inner">
     <div class="footer__top">
       <div class="footer__brand">
-        <a class="footer__brand-link" href="/">
+        <a class="footer__brand-link" href="/mamayaya">
           <BrandLogo class="footer__logo" />
         </a>
 
@@ -75,13 +75,13 @@ const socials: Array<{ label: string; href: string | null }> = [
 
         <ul class="footer__links list-unstyled" data-discover>
           <li>
-            <a class="footer__link" href="/">Menu completo</a>
+            <a class="footer__link" href="/mamayaya">Menu completo</a>
           </li>
 
           {
             discover.map((category) => (
               <li>
-                <a class="footer__link" href="/" data-discover-category={category}>
+                <a class="footer__link" href="/mamayaya" data-discover-category={category}>
                   {category}
                 </a>
               </li>

@@ -41,7 +41,7 @@ Disallow: /   # STAGING
 # justamente la etiqueta que las saca.
 #
 # Y hay que sacarlas, porque Google llega solo: la barra de la tienda enlaza a
-# /carrito desde todas las paginas. Con el rastreo bloqueado, esa URL puede
+# /mamayaya/carrito desde todas las paginas. Con el rastreo bloqueado, esa URL puede
 # acabar listada sin contenido —"no hay descripcion disponible para este
 # resultado"—; con el rastreo permitido, el buscador lee el noindex y la retira.
 
@@ -73,8 +73,8 @@ User-agent: cohere-ai
 # Mientras esto sea staging, a estos tampoco se les abre el menu: no hay tienda
 # que citar todavia. Es la segunda de las dos lineas que se borran al publicar.
 Disallow: /   # STAGING
-Disallow: /carrito
-Disallow: /datos
-Disallow: /pago
-Disallow: /recibido
-Disallow: /confirmado
+Disallow: /mamayaya/carrito
+Disallow: /mamayaya/datos
+Disallow: /mamayaya/pago
+Disallow: /mamayaya/recibido
+Disallow: /mamayaya/confirmado

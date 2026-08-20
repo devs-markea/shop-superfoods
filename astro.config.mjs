@@ -14,6 +14,31 @@ export default defineConfig({
   // (carrito, checkout, cuenta de usuario...).
   output: 'static',
 
+  // La tienda cuelga de /mamayaya (src/pages/mamayaya/), asi que la raiz no
+  // sirve ninguna pagina. Sin esto, quien teclee el dominio a secas —o abra un
+  // marcador de cuando las pantallas vivian en la raiz— cae en el 404 por
+  // defecto de Astro: una pagina gris, en ingles y sin un enlace de vuelta a la
+  // tienda. Con esto entra por la puerta.
+  //
+  // 302 y no el 301 que pone Astro por defecto, por lo mismo que las guardas de
+  // /mamayaya/recibido: el prefijo es de ahora, y un 301 se queda cacheado en el
+  // navegador para siempre. El dia que la raiz tenga contenido propio —o que la
+  // tienda se mude— un 301 obligaria a vaciar el cache de cada visitante.
+  //
+  // Las siete viejas se listan una a una a proposito, sin comodin: son las que
+  // existieron de verdad, y cada linea se borra el dia que ya nadie las tenga
+  // guardada. Un comodin taparia para siempre el 404 de cualquier URL inventada.
+  redirects: {
+    '/': { status: 302, destination: '/mamayaya' },
+    '/carrito': { status: 302, destination: '/mamayaya/carrito' },
+    '/datos': { status: 302, destination: '/mamayaya/datos' },
+    '/pago': { status: 302, destination: '/mamayaya/pago' },
+    '/pago/transferencia': { status: 302, destination: '/mamayaya/pago/transferencia' },
+    '/pago/efectivo': { status: 302, destination: '/mamayaya/pago/efectivo' },
+    '/recibido': { status: 302, destination: '/mamayaya/recibido' },
+    '/confirmado': { status: 302, destination: '/mamayaya/confirmado' },
+  },
+
   // Origen de la API de la tienda (Laravel). Solo se consume desde el
   // servidor, asi que no viaja al cliente.
   //

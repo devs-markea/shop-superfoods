@@ -7,7 +7,7 @@ interface Props {
   label?: string;
 }
 
-const { href = '/', label = 'Volver' } = Astro.props;
+const { href = '/mamayaya', label = 'Volver' } = Astro.props;
 
 // Element de .topbar, compartido por ScreenHeader y TopBar. Se extrae para que
 // el icono y la etiqueta accesible no se dupliquen ni se desincronicen.
@@ -31,10 +31,10 @@ const { href = '/', label = 'Volver' } = Astro.props;
      ---------------------------------------------------------------------------
      Barra superior con control de vuelta y titulo. Dos variantes:
 
-     - Base (/carrito): height 48, con total a la derecha. El titulo queda
+     - Base (/mamayaya/carrito): height 48, con total a la derecha. El titulo queda
      "centro entre los elementos, no del layout": space-between puro, sin
      compensar, asi que lo colocan sus vecinos.
-     - --tall (/datos): height 124, sin total y con el titulo
+     - --tall (/mamayaya/datos): height 124, sin total y con el titulo
      centrado en el ancho real de la barra.
 
      Spec de ambas: space-between - padding 12/20
@@ -85,7 +85,7 @@ const { href = '/', label = 'Volver' } = Astro.props;
     min-height: 124px;
   }
 
-  /* Modifier: barra sin titulo (/confirmado), donde el titular es el
+  /* Modifier: barra sin titulo (/mamayaya/confirmado), donde el titular es el
      contenido y la barra solo lleva el control de vuelta.
      Spec: height 64 - padding 12/20 - control de 40. Los 64 son exactos:
      12 + 40 + 12.
@@ -103,11 +103,11 @@ const { href = '/', label = 'Volver' } = Astro.props;
 
   /* Modifier: barra que solo existe en movil.
 
-     La marca asi la pantalla que en desktop tiene cabecera propia —/carrito, con
+     La marca asi la pantalla que en desktop tiene cabecera propia —/mamayaya/carrito, con
      la misma .navbar-desktop de la portada—, y ahi esta barra sobra entera: el
      control de vuelta lo releva el logo, el titulo lo repite el rotulo de la
      pantalla y el total, la tarjeta de resumen. No se apaga para todas las
-     pantallas con .topbar porque /datos y el pago siguen sin barra de desktop, y
+     pantallas con .topbar porque /mamayaya/datos y el pago siguen sin barra de desktop, y
      sin esta se quedarian sin cabecera. */
   @media (min-width: 768px) {
     .topbar--mobile {
