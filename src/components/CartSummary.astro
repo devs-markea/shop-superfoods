@@ -11,20 +11,20 @@ interface Props {
   products: number;
   /**
    * El envio, ya resuelto por la pantalla (src/lib/shipping.ts). Aqui todavia
-   * suele estar "Por cotizar" —la ubicacion se comparte en /datos—, salvo que el
+   * suele estar "Por cotizar" —la ubicacion se comparte en /mamayaya/datos—, salvo que el
    * negocio regale el envio o que se vuelva atras con la distancia ya medida.
    */
   shipping: ShippingResult;
   /**
    * Propina elegida, en MXN. Con 0 la fila no se pinta: solo la hay donde se
-   * elige (/pago), y ahi puede volver a cero.
+   * elige (/mamayaya/pago), y ahi puede volver a cero.
    */
   tip?: number;
   /** Texto del boton. */
   label: string;
   /**
    * A donde lleva el boton. Sin el, el control es un submit del formulario que lo
-   * envuelve: la misma regla que <ActionBar>, y la que necesita /datos, donde
+   * envuelve: la misma regla que <ActionBar>, y la que necesita /mamayaya/datos, donde
    * continuar es validar los campos antes de avanzar.
    */
   href?: string;
@@ -48,7 +48,7 @@ const {
 } = Astro.props;
 
 // La tarjeta de resumen del pedido, SOLO desktop: en movil no se pinta (ver
-// los estilos de este archivo). Es la segunda columna de /carrito y donde se
+// los estilos de este archivo). Es la segunda columna de /mamayaya/carrito y donde se
 // continua el flujo, porque alli la barra fija del fondo no existe.
 //
 // No sabe en que pantalla esta: recibe los importes ya calculados, el envio ya
@@ -98,7 +98,7 @@ const total = products + shipping.cost + tip;
 
     {/* Al recoger no hay envio y la fila desaparece entera: un "Por cotizar" en un
         pedido que se recoge promete un cobro que no va a llegar. Se pinta oculta y
-        no se omite porque en /datos el modo de entrega se elige aqui mismo, y la
+        no se omite porque en /mamayaya/datos el modo de entrega se elige aqui mismo, y la
         fila tiene que poder irse y volver con el switch. */}
     <div
       class:list={['cart-summary__row', shipping.state === 'none' && 'd-none']}
@@ -115,7 +115,7 @@ const total = products + shipping.cost + tip;
       </dd>
     </div>
 
-    {/* Solo donde se elige (/pago), y solo si se dejo algo: una fila de $0.00 no
+    {/* Solo donde se elige (/mamayaya/pago), y solo si se dejo algo: una fila de $0.00 no
         dice nada. Se pinta oculta, como las otras dos condicionales, porque el
         selector la mueve sin recargar. */}
     <div class:list={['cart-summary__row', tip <= 0 && 'd-none']} data-cart-tip-row>
@@ -133,7 +133,7 @@ const total = products + shipping.cost + tip;
 
   {/*
     Hueco entre la cuenta y el boton, para lo que cada pantalla tenga que decir
-    antes de continuar. Hoy solo lo llena /pago, con el aviso legal que en movil
+    antes de continuar. Hoy solo lo llena /mamayaya/pago, con el aviso legal que en movil
     va al final del cuerpo.
 
     Es un slot y no una prop porque la tarjeta no sabe en que pantalla esta —ver
@@ -167,10 +167,10 @@ const total = products + shipping.cost + tip;
   /* ---------------------------------------------------------------------------
      Block: cart-summary
      ---------------------------------------------------------------------------
-     La tarjeta de resumen de /carrito, SOLO desktop. Spec: 390 de ancho - gap 24 -
+     La tarjeta de resumen de /mamayaya/carrito, SOLO desktop. Spec: 390 de ancho - gap 24 -
      padding 24 - radius 16 - fondo blanco - sombra suave.
 
-     No es una variante de .summary, el desglose de /pago: alli el resumen es una
+     No es una variante de .summary, el desglose de /mamayaya/pago: alli el resumen es una
      pieza mas de la columna —sin superficie, sin boton y con otra escala
      tipografica— y aqui es la segunda columna de la pantalla, la que cierra la
      cuenta y continua el flujo. Coinciden en tener filas de concepto e importe y en
@@ -308,11 +308,11 @@ const total = products + shipping.cost + tip;
       gap: 8px;
       width: 100%;
     }
-    /* Falta algo por elegir —en /datos, la ubicacion—: el boton se ve apagado
+    /* Falta algo por elegir —en /mamayaya/datos, la ubicacion—: el boton se ve apagado
        pero SIGUE siendo pulsable a proposito. Un `disabled` real no emite click, y
        entonces no habria forma de contar que falta; con aria-disabled el envio lo
        intercepta el script, que lo escribe. La misma regla que .action-bar__button:
-       en /datos los dos son el mismo control en dos pantallas. */
+       en /mamayaya/datos los dos son el mismo control en dos pantallas. */
     .cart-summary__action[aria-disabled=true] {
       --bs-btn-hover-bg: var(--bs-btn-bg);
       --bs-btn-hover-border-color: var(--bs-btn-border-color);

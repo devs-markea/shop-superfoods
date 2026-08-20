@@ -110,7 +110,7 @@ if (estimate || hasSchedule) {
 // enlaza. El importe y las unidades vienen del carrito de la sesion, que pide la
 // pagina: sin sesion abierta llegan en cero y la etiqueta se queda vacia.
 //
-// En /carrito los tres —importe, cifra y nombre accesible— los reescribe
+// En /mamayaya/carrito los tres —importe, cifra y nombre accesible— los reescribe
 // src/scripts/order-summary.ts en cada cambio de cantidad: es la unica pantalla
 // donde el carrito se edita con la barra a la vista, y un chip que se queda en el
 // importe anterior contradice a la tarjeta que tiene justo debajo.
@@ -119,7 +119,7 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
 
 <header class="navbar-desktop">
   <div class="navbar-desktop__inner">
-    <a class="navbar-desktop__brand" href="/">
+    <a class="navbar-desktop__brand" href="/mamayaya">
       <BrandLogo class="navbar-desktop__logo" />
     </a>
 
@@ -164,7 +164,7 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
         })
       }
 
-      <a class="navbar-desktop__cart" href="/carrito" aria-label={cartLabel} data-cart-chip>
+      <a class="navbar-desktop__cart" href="/mamayaya/carrito" aria-label={cartLabel} data-cart-chip>
         <span class="navbar-desktop__cart-total" data-cart-chip-total>
           {formatPrice(cartTotal)}
         </span>
@@ -175,7 +175,7 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
           <Icon name="shopping-cart" class="navbar-desktop__cart-glyph" />
 
           {/* La cifra se pinta siempre y se esconde con `hidden` en lugar de no
-              existir: en /carrito el chip se actualiza sin recargar, y una
+              existir: en /mamayaya/carrito el chip se actualiza sin recargar, y una
               etiqueta que hay que crear desde el script es marcado dibujado dos
               veces. Vacio el pedido, `hidden` la retira igual que antes. */}
           <span

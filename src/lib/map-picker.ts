@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// El selector de ubicacion: un mapa con un pin, dentro de la hoja de /datos.
+// El selector de ubicacion: un mapa con un pin, dentro de la hoja de /mamayaya/datos.
 //
 // COMO SE ELIGE UN PUNTO
 //
@@ -36,7 +36,7 @@
 // soltar, acercar, ajustar—, asi que buscar una casa disparaba cinco o seis
 // consultas y el texto iba y venia entre coordenadas y calle en cada una. Lo que
 // confirma el sitio es el mapa, con sus nombres de calle pintados y el pin sobre
-// el techo; la direccion escrita aparece al aceptar, en /datos, ya resuelta.
+// el techo; la direccion escrita aparece al aceptar, en /mamayaya/datos, ya resuelta.
 //
 // SI EL MAPA NO CARGA, EL RESPALDO ES EL DISPOSITIVO
 //
@@ -51,7 +51,7 @@
 // Lo que pase de MAX_ACCURACY_METERS no se acepta, y se dice por que.
 //
 // Si tampoco hay posicion utilizable, la hoja lo cuenta y ya: aqui se acaban los
-// caminos. La ubicacion es OBLIGATORIA a domicilio —sin punto, /datos no deja
+// caminos. La ubicacion es OBLIGATORIA a domicilio —sin punto, /mamayaya/datos no deja
 // continuar—, asi que lo que se ofrece es reintentar: dar el permiso, salir al
 // aire libre o recargar la pantalla para que el mapa tenga otra oportunidad.
 //
@@ -166,7 +166,7 @@ export function createMapPicker(onPick: (lat: number, lng: number) => void): Map
   // que cobrar un envio medido contra la centralita del proveedor de internet.
   //
   // Lo que si se puede comprobar despues: el rotulo que queda bajo el boton en
-  // /datos enlaza al punto en Google Maps.
+  // /mamayaya/datos enlaza al punto en Google Maps.
   geolocateButton?.addEventListener('click', () => {
     if (!('geolocation' in navigator)) return;
 

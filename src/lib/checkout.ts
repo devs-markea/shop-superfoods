@@ -178,7 +178,7 @@ export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
   mercado_pago: 'Mercado Pago',
 };
 
-/** Del valor del radio de /pago al que espera la API. */
+/** Del valor del radio de /mamayaya/pago al que espera la API. */
 export function toPaymentMethod(value: string | undefined): PaymentMethod | null {
   if (value === 'transferencia') return 'bank_transfer';
   if (value === 'mercadopago') return 'mercado_pago';

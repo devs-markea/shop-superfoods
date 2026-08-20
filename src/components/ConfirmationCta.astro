@@ -51,7 +51,7 @@ const buttonClass = [
       // Sin destino el control queda inerte igual que en la barra: un submit
       // fuera de un formulario no navega ni recarga, que es lo que se quiere
       // cuando la tienda no tiene telefono configurado. Dentro del formulario del
-      // reintento de /confirmado, en cambio, este mismo boton es el que cobra.
+      // reintento de /mamayaya/confirmado, en cambio, este mismo boton es el que cobra.
       <button class={buttonClass} type="submit">
         {icon && <BrandIcon name={icon} />}
         <span>{label}</span>
@@ -66,8 +66,8 @@ const buttonClass = [
   /* ---------------------------------------------------------------------------
      Block: confirmation-page
      ---------------------------------------------------------------------------
-     El armazon de las pantallas de cierre: /confirmado y /recibido. Es a ellas lo
-     que .checkout-page a /carrito y /datos, o .product-page a la ficha: no pinta
+     El armazon de las pantallas de cierre: /mamayaya/confirmado y /mamayaya/recibido. Es a ellas lo
+     que .checkout-page a /mamayaya/carrito y /mamayaya/datos, o .product-page a la ficha: no pinta
      nada, reparte.
 
      Es UN bloque y no uno por pantalla porque el reparto es identico: la barra de

@@ -3,11 +3,11 @@
 //
 // El mismo control aparece en dos pantallas y decide cosas distintas en cada
 // una: en el listado, cual de los dos pares de metas se lee en la barra de
-// pedido; en /datos, si hay que decir donde entregar. Lo que comparten es la
+// pedido; en /mamayaya/datos, si hay que decir donde entregar. Lo que comparten es la
 // ELECCION, y por eso vive donde vive el resto del pedido a medias: en el
 // borrador (src/lib/checkout-draft.ts), no en la URL.
 //
-// Elegirlo en el listado es un atajo, no una decision cerrada: /datos llega con
+// Elegirlo en el listado es un atajo, no una decision cerrada: /mamayaya/datos llega con
 // el modo ya puesto —quien sabe que va a recoger no tiene que decirlo dos
 // veces— y ahi se puede cambiar. La ultima palabra sigue siendo la del
 // formulario, que es quien manda el pedido.

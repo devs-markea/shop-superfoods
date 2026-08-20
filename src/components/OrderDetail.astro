@@ -25,7 +25,7 @@ interface Props {
   /** Propina elegida. 0 = no hay fila que pintar. */
   tip?: number;
   /**
-   * El envio ya resuelto por la pantalla, igual que en el resumen de /pago. Con
+   * El envio ya resuelto por la pantalla, igual que en el resumen de /mamayaya/pago. Con
    * `none` —al recoger— no hay fila: no hay envio del que hablar.
    */
   shipping?: ShippingResult;
@@ -286,7 +286,7 @@ const breakdown = discount > 0 || tip > 0 || shipping.state !== 'none';
   }
 
   /* Element: los kilometros del envio, junto al concepto. Acompanan al importe
-     para poder cuadrarlo con la tarifa, como en el resumen de /pago. */
+     para poder cuadrarlo con la tarifa, como en el resumen de /mamayaya/pago. */
   .order-detail__hint {
     margin-left: 8px;
     font-weight: 400;
@@ -295,7 +295,7 @@ const breakdown = discount > 0 || tip > 0 || shipping.state !== 'none';
   }
 
   /* La divisora discontinua es .dashed-divider: la comparte con el resumen de
-     /confirmado. */
+     /mamayaya/confirmado. */
   /* Element: fila del total */
   .order-detail__total {
     display: flex;
@@ -471,7 +471,7 @@ const breakdown = discount > 0 || tip > 0 || shipping.state !== 'none';
      Block: dashed-divider
      ---------------------------------------------------------------------------
      Divisora discontinua. Spec: 1px, trazos de 4 y huecos de 2, #EAECF0.
-     Separa el total del detalle en /pago/transferencia y en /confirmado.
+     Separa el total del detalle en /mamayaya/pago/transferencia y en /mamayaya/confirmado.
 
      Es un bloque propio y no un element de cada uno por el mismo motivo que
      .section-label: son dos bloques distintos con la misma divisora, y la tecnica

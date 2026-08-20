@@ -5,7 +5,7 @@ interface Props {
    * Etiqueta accesible. El placeholder no sirve como label.
    *
    * Se omite SOLO cuando la escribe quien envuelve el campo, y por una razon: que
-   * el rotulo sea del grupo y no de este campo. Pasa dos veces en /datos —el
+   * el rotulo sea del grupo y no de este campo. Pasa dos veces en /mamayaya/datos —el
    * telefono, que se reparte entre el selector de pais y el numero, y los campos
    * que en desktop llevan la etiqueta encima y no dentro—, y en los dos casos esa
    * etiqueta apunta aqui con for="field-<name>".
@@ -46,7 +46,7 @@ const id = `field-${name}`;
 <style is:global>
   /* La familia .field-* entera: el campo, el textarea, la etiqueta y las tres
      formas de agruparlos. Vive aqui porque <AddressFields>, <PhoneField> y
-     /datos montan sus campos con este componente, asi que donde hay un campo
+     /mamayaya/datos montan sus campos con este componente, asi que donde hay un campo
      de la tienda hay un <TextField>. La unica excepcion esta en
      <TipSelector>, que copia .field-label por su cuenta. */
 
@@ -92,7 +92,7 @@ const id = `field-${name}`;
      placeholder Inter 400 14/20 #9CA3AF
 
      No expandible: sin tirador de redimensionado. A diferencia del textarea de
-     comentarios de /carrito, este no crece con el contenido, asi que conserva
+     comentarios de /mamayaya/carrito, este no crece con el contenido, asi que conserva
      su scroll interno para no ocultar texto.
      --------------------------------------------------------------------------- */
   .field-note {

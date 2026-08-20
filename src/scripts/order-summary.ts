@@ -92,7 +92,7 @@ if (summary) {
   };
 
   // El modo de entrega y la distancia medida no cambian en esta pantalla —se
-  // eligen en el listado y en /datos—, asi que el borrador se lee una vez.
+  // eligen en el listado y en /mamayaya/datos—, asi que el borrador se lee una vez.
   const draft = readDraft();
 
   // Sin ubicacion compartida no hay envio que ensenar, aunque la cookie recuerde

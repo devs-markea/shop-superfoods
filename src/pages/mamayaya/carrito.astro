@@ -1,31 +1,31 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import TopBar from '../components/TopBar.astro';
-import NavbarDesktop from '../components/NavbarDesktop.astro';
-import ShippingProgress from '../components/ShippingProgress.astro';
-import OrderComments from '../components/OrderComments.astro';
-import CartSummary from '../components/CartSummary.astro';
-import ActionBar from '../components/ActionBar.astro';
-import ScheduleSheet from '../components/ScheduleSheet.astro';
-import LocationSheet from '../components/LocationSheet.astro';
-import StoreClosedNotice from '../components/StoreClosedNotice.astro';
-import Footer from '../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
+import TopBar from '../../components/TopBar.astro';
+import NavbarDesktop from '../../components/NavbarDesktop.astro';
+import ShippingProgress from '../../components/ShippingProgress.astro';
+import OrderComments from '../../components/OrderComments.astro';
+import CartSummary from '../../components/CartSummary.astro';
+import ActionBar from '../../components/ActionBar.astro';
+import ScheduleSheet from '../../components/ScheduleSheet.astro';
+import LocationSheet from '../../components/LocationSheet.astro';
+import StoreClosedNotice from '../../components/StoreClosedNotice.astro';
+import Footer from '../../components/Footer.astro';
 import {
   getCart,
   remainingForFreeShipping,
   shippingProgress,
   type Cart,
-} from '../lib/cart.ts';
-import { imageResolver, renderLines } from '../lib/cart-view.ts';
-import { assetBase } from '../lib/api.ts';
-import { resolveCartToken } from '../lib/cart-session.ts';
-import { quoteForDraft } from '../lib/shipping-quote.ts';
-import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
-import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
-import { ALL_CATEGORIES, getCategories, getProducts } from '../lib/catalog.ts';
-import { resolveShipping } from '../lib/shipping.ts';
-import { isClosed } from '../lib/schedule.ts';
-import { formatPrice } from '../lib/price.ts';
+} from '../../lib/cart.ts';
+import { imageResolver, renderLines } from '../../lib/cart-view.ts';
+import { assetBase } from '../../lib/api.ts';
+import { resolveCartToken } from '../../lib/cart-session.ts';
+import { quoteForDraft } from '../../lib/shipping-quote.ts';
+import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
+import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
+import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts';
+import { resolveShipping } from '../../lib/shipping.ts';
+import { isClosed } from '../../lib/schedule.ts';
+import { formatPrice } from '../../lib/price.ts';
 
 // DOS PANTALLAS, UN MARCADO
 //
@@ -81,7 +81,7 @@ const linesHtml = cart ? renderLines(cart, imageResolver(base)) : '';
 //
 // Los comentarios ya escritos, para que volver desde el pago no los pierda; y el
 // modo de entrega y la cotizacion del envio, que son lo que la tarjeta de resumen
-// necesita para cerrar la cuenta. Nada de esto se reenvia a /datos: la cookie la
+// necesita para cerrar la cuenta. Nada de esto se reenvia a /mamayaya/datos: la cookie la
 // lee el servidor en cada peticion, asi que la siguiente pantalla la recibe entera
 // sin que el carrito tenga que pasarle nada. Un dato copiado aqui solo podria
 // contradecir al original.
@@ -91,7 +91,7 @@ const pickup = draft.deliveryType === 'pickup';
 // El envio de este borrador: el del borrador, o el que la API guarde para esta
 // sesion si la cookie lo perdio —dura dos horas, y el navegador la vacia de mas
 // maneras de las que parece—. Sin ubicacion compartida no hay ninguno, que aqui es
-// el caso normal: la ubicacion se comparte en /datos. Ver
+// el caso normal: la ubicacion se comparte en /mamayaya/datos. Ver
 // src/lib/shipping-quote.ts.
 const quotePending = quoteForDraft(draft, resolveCartToken(Astro.cookies));
 
@@ -123,7 +123,7 @@ const threshold = freeShipping?.mode === 'threshold' ? (freeShipping.threshold ?
 const showProgress = threshold > 0 && lines.length > 0;
 
 // El envio de la tarjeta. Aqui todavia suele estar "Por cotizar" —la ubicacion se
-// comparte en /datos, que es donde se mide la distancia—, pero las otras tres
+// comparte en /mamayaya/datos, que es donde se mide la distancia—, pero las otras tres
 // respuestas tambien se dan: al recoger no hay envio, el negocio puede regalarlo,
 // y volver atras desde el pago trae la distancia ya medida en el borrador.
 const shipping = resolveShipping({
@@ -262,11 +262,11 @@ const closed = isClosed(schedule);
         {
           lines.length > 0 ? (
             <div class="checkout-page__action">
-              <ActionBar label="Continuar" href="/datos" disabled={closed} />
+              <ActionBar label="Continuar" href="/mamayaya/datos" disabled={closed} />
             </div>
           ) : closed ? null : (
             <div class="checkout-page__action">
-              <ActionBar label="Ver el menu" href="/" />
+              <ActionBar label="Ver el menu" href="/mamayaya" />
             </div>
           )
         }
@@ -282,7 +282,7 @@ const closed = isClosed(schedule);
           products={total}
           shipping={shipping}
           label="Continuar con la entrega"
-          href="/datos"
+          href="/mamayaya/datos"
           disabled={closed || lines.length === 0}
         />
       </form>
@@ -301,15 +301,15 @@ const closed = isClosed(schedule);
 </Layout>
 
 <script>
-  import '../scripts/order-summary';
-  import '../scripts/auto-grow';
+  import '../../scripts/order-summary';
+  import '../../scripts/auto-grow';
   // Abre las hojas del horario y la ubicacion desde la barra de desktop y desde
   // la tarjeta de tienda cerrada.
-  import '../scripts/sheet';
+  import '../../scripts/sheet';
   // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
   // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
   // que importarlo. Ver src/lib/discover.ts.
-  import '../scripts/footer-discover';
+  import '../../scripts/footer-discover';
 </script>
 
 <style is:global>
@@ -552,7 +552,7 @@ const closed = isClosed(schedule);
     color: var(--sf-ink);
   }
 
-  /* Se repite en /carrito porque alli las unidades las pinta el JS
+  /* Se repite en /mamayaya/carrito porque alli las unidades las pinta el JS
      (src/lib/cart-view.ts) y este componente no llega a montarse. Las dos
      pantallas nunca coinciden, asi que cada una carga una sola copia. */
 

@@ -90,7 +90,7 @@ const customValue = custom ? String(selected) : '';
   <div class="tip__custom">
     <div class="tip__custom-clip">
       <div class="tip__custom-body">
-        {/* Como en /datos: la etiqueta se oculta en movil —donde rotula el
+        {/* Como en /mamayaya/datos: la etiqueta se oculta en movil —donde rotula el
             placeholder— y se pinta de md hacia arriba, pero existe siempre para
             que el campo llegue nombrado al lector de pantalla. */}
         <label class="field-label" for="tip-amount">Otra cantidad</label>
@@ -275,7 +275,7 @@ const customValue = custom ? String(selected) : '';
     transition: opacity var(--tip-reveal-duration) var(--tip-reveal-ease), transform var(--tip-reveal-duration) var(--tip-reveal-ease);
     /* De md hacia arriba la etiqueta vuelve a la pagina (ver .field-label en
        mas abajo en este archivo) y hay que separarla del campo, con el mismo 8 que usan los
-       grupos de /datos. En movil no hace falta: alli la etiqueta esta recortada
+       grupos de /mamayaya/datos. En movil no hace falta: alli la etiqueta esta recortada
        fuera de flujo y el unico hijo con altura es el campo. */
   }
   @media (min-width: 768px) {
@@ -355,7 +355,7 @@ const customValue = custom ? String(selected) : '';
      Block: field-label  (copia)
      ---------------------------------------------------------------------------
      La etiqueta de "Otra cantidad" es la misma pieza que rotula los campos de
-     /datos, pero esta pantalla no monta ningun <TextField>, que es donde vive la
+     /mamayaya/datos, pero esta pantalla no monta ningun <TextField>, que es donde vive la
      familia .field-*. Asi que se copia aqui lo justo que usa este componente.
 
      Son las dos unicas reglas del bloque: en movil la etiqueta existe pero no se

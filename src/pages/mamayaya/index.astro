@@ -1,25 +1,25 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import Navbar from '../components/Navbar.astro';
-import OrderBar from '../components/OrderBar.astro';
-import Hero from '../components/Hero.astro';
-import ProductCard from '../components/ProductCard.astro';
-import StoreClosedNotice from '../components/StoreClosedNotice.astro';
-import CartFab from '../components/CartFab.astro';
-import Footer from '../components/Footer.astro';
+import Layout from '../../layouts/Layout.astro';
+import Navbar from '../../components/Navbar.astro';
+import OrderBar from '../../components/OrderBar.astro';
+import Hero from '../../components/Hero.astro';
+import ProductCard from '../../components/ProductCard.astro';
+import StoreClosedNotice from '../../components/StoreClosedNotice.astro';
+import CartFab from '../../components/CartFab.astro';
+import Footer from '../../components/Footer.astro';
 import {
   ALL_CATEGORIES,
   getCategories,
   getProducts,
   type ProductListItem,
-} from '../lib/catalog.ts';
-import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
-import { getCart } from '../lib/cart.ts';
-import { peekCartToken } from '../lib/cart-session.ts';
-import { DISCOVER_KEY } from '../lib/discover.ts';
-import { isClosed } from '../lib/schedule.ts';
-import { formatPrice } from '../lib/price.ts';
-import { DRAFT_COOKIE, parseDraft } from '../lib/checkout-draft.ts';
+} from '../../lib/catalog.ts';
+import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
+import { getCart } from '../../lib/cart.ts';
+import { peekCartToken } from '../../lib/cart-session.ts';
+import { DISCOVER_KEY } from '../../lib/discover.ts';
+import { isClosed } from '../../lib/schedule.ts';
+import { formatPrice } from '../../lib/price.ts';
+import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
 
 // On-demand, no prerenderizado: `available` depende del horario de la
 // categoria resuelto en America/Cancun, asi que una pagina generada en el
@@ -95,7 +95,7 @@ const hasLocation = Boolean(store.location?.address || store.location?.mapsUrl);
 // tantas veces como platillos haya.
 const closed = isClosed(schedule);
 
-// El switch de la barra llega con lo ultimo elegido, aqui o en /datos: es la
+// El switch de la barra llega con lo ultimo elegido, aqui o en /mamayaya/datos: es la
 // misma eleccion, guardada en el borrador. Se pinta en el servidor para que las
 // metas correctas —plazo y envio, o recoleccion y mapa— esten ya en su sitio
 // antes de que arranque el JavaScript.
@@ -254,15 +254,15 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 </Layout>
 
 <script>
-  import '../scripts/category-nav';
-  import '../scripts/category-filter';
+  import '../../scripts/category-nav';
+  import '../../scripts/category-filter';
   // Retira el esqueleto de cada foto cuando llega. Solo esta pantalla lo necesita:
   // es la unica que pinta tarjetas de platillo.
-  import '../scripts/image-skeleton';
-  import '../scripts/delivery-mode';
-  import '../scripts/add-button';
-  import '../scripts/sheet';
-  import '../scripts/footer-discover';
+  import '../../scripts/image-skeleton';
+  import '../../scripts/delivery-mode';
+  import '../../scripts/add-button';
+  import '../../scripts/sheet';
+  import '../../scripts/footer-discover';
 </script>
 
 <style is:global>
