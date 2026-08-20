@@ -9,7 +9,7 @@
 //
 // DOS IDENTIFICADORES CON DOS TRABAJOS
 //
-//   slug  RUTEA. La URL de la tienda —`/{slug}`— y la ruta de la ficha en la
+//   slug  RUTEA. La URL de la tienda —`/mamayaya/{slug}`— y la ruta de la ficha en la
 //         API. Lo escribe el administrador, asi que PUEDE CAMBIAR: si lo hace,
 //         el enlace anterior responde 404 y no hay redireccion.
 //   id    COMPRA. Es el `productId` que viaja a POST /api/cart/items, y nunca
@@ -84,7 +84,7 @@ export interface ProductListItem {
   /** menus.id — la llave estable, la que viaja al carrito. Nunca cambia. */
   id: string;
   /**
-   * menus.slug — como se nombra el platillo en la URL: `/{slug}`. Obligatorio
+   * menus.slug — como se nombra el platillo en la URL: `/mamayaya/{slug}`. Obligatorio
    * (`NOT NULL` y `UNIQUE`), asi que no hay tarjeta sin enlace. Ver productHref().
    */
   slug: string;
@@ -132,15 +132,15 @@ export function getCategories(items: ProductListItem[]): string[] {
 }
 
 /**
- * Ruta del detalle. Cuelga de la raiz —`/{slug}`—, asi que compite con las
- * pantallas del pedido (`/carrito`, `/datos`, `/pago`...): en Astro las rutas
+ * Ruta del detalle. Cuelga de `/mamayaya` —`/mamayaya/{slug}`—, asi que compite con las
+ * pantallas del pedido (`/mamayaya/carrito`, `/mamayaya/datos`, `/mamayaya/pago`...): en Astro las rutas
  * estaticas ganan a `[slug]`, y por eso un platillo no puede tapar ninguna.
  *
- * Solo el slug: el id no es respaldo de nada aqui, porque `/{id}` no resuelve
+ * Solo el slug: el id no es respaldo de nada aqui, porque `/mamayaya/{id}` no resuelve
  * ninguna ficha —ni en esta ruta ni en la de la API—.
  */
 export function productHref(item: Pick<ProductListItem, 'slug'>): string {
-  return `/${encodeURIComponent(item.slug)}`;
+  return `/mamayaya/${encodeURIComponent(item.slug)}`;
 }
 
 /** URL lista para el `src`, con el placeholder ya resuelto. */
@@ -238,7 +238,7 @@ function productPath(slug: string): string {
 }
 
 /**
- * Ficha del platillo por su enlace. `slug` es lo que venia en `/{slug}`.
+ * Ficha del platillo por su enlace. `slug` es lo que venia en `/mamayaya/{slug}`.
  *
  * Devuelve null cuando la API responde 404, que son cuatro casos indistinguibles
  * a proposito: el enlace no existe, el administrador lo reescribio —el anterior

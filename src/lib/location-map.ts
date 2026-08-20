@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// El mapa de /datos, en linea.
+// El mapa de /mamayaya/datos, en linea.
 //
 // Es el MISMO selector de siempre —un mapa con el pin clavado en el centro, se
 // mueve el mapa hasta el domicilio y se acepta— sacado de la hoja y puesto en el

@@ -63,7 +63,7 @@ export interface CartItemLine {
   /** menus.id — identifica el platillo en el carrito, no enlaza a su pagina. */
   productId: string;
   /**
-   * menus.slug — con el se enlaza a `/{slug}`. null cuando el platillo se
+   * menus.slug — con el se enlaza a `/mamayaya/{slug}`. null cuando el platillo se
    * elimino del catalogo: la linea conserva su snapshot pero ya no hay pagina
    * que abrir. Ver titleHtml().
    */
@@ -186,7 +186,7 @@ export function cartChipLabel(total: number, count: number): string {
 /**
  * El nombre del platillo, enlazado a su ficha cuando todavia hay ficha.
  *
- * La ficha se pide por ENLACE —`/{slug}`—, y el id no es respaldo: `/{productId}`
+ * La ficha se pide por ENLACE —`/mamayaya/{slug}`—, y el id no es respaldo: `/mamayaya/{productId}`
  * no resuelve ninguna pagina. Por eso `productSlug: null` —el platillo salio del
  * catalogo— deja el nombre en texto plano en vez de enlazar a un 404. La linea
  * sigue siendo editable: el carrito la identifica por `productId`, que no se va.
@@ -198,7 +198,7 @@ function titleHtml(line: { productSlug: string | null; name: string }): string {
   const name = escape(line.name);
   if (!line.productSlug) return name;
 
-  return `<a class="text-reset" href="/${encodeURIComponent(line.productSlug)}">${name}</a>`;
+  return `<a class="text-reset" href="/mamayaya/${encodeURIComponent(line.productSlug)}">${name}</a>`;
 }
 
 /**

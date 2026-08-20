@@ -23,7 +23,7 @@ const method = form?.dataset.method as PaymentMethod | undefined;
 // Sin metodo declarado no se cierra nada: crear un pedido con uno inventado seria
 // peor que no crearlo, porque el cobro quedaria esperando por el canal equivocado.
 if (form && method && method in PAYMENT_LABEL) {
-  const next = form.dataset.next ?? '/recibido';
+  const next = form.dataset.next ?? '/mamayaya/recibido';
 
   // El envio no se manda desde aqui: la API lo recalcula al cerrar el pedido y lo
   // devuelve en `shippingTotal`, ya sumado al total. Lo unico que viaja es la

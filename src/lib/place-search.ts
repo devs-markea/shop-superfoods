@@ -10,7 +10,7 @@
 // la camara: el punto sigue siendo el que el comprador acepta, porque una
 // direccion escrita puede caer en el numero de al lado.
 //
-// Lo usan los dos selectores de /datos —el panel en linea (src/lib/location-map.ts)
+// Lo usan los dos selectores de /mamayaya/datos —el panel en linea (src/lib/location-map.ts)
 // y la hoja (src/lib/map-picker.ts)— con el mismo comportamiento, asi que vive
 // aqui y no dentro de uno de los dos.
 //
@@ -95,7 +95,7 @@ export async function mountPlaceSearch(
     slot.append(search);
     slot.hidden = false;
 
-    // El buscador vive dentro del <form> de /datos, y ahi un Enter en un campo
+    // El buscador vive dentro del <form> de /mamayaya/datos, y ahi un Enter en un campo
     // de texto envia el formulario: buscar una calle acabaria en el aviso de
     // "completa los campos". El widget ya se queda con la tecla cuando hay una
     // sugerencia marcada; esto solo impide el envio implicito.

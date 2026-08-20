@@ -18,13 +18,13 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 // precisa. La escrita es la que lee el repartidor; el punto es lo que deja al
 // backend medir la distancia y cotizar el envio, y lo que lleva hasta la puerta
 // cuando la direccion no basta. Mientras no lo haya, los dos "Continuar" de
-// /datos se quedan apagados —ver el candado en src/scripts/delivery-form.ts—.
+// /mamayaya/datos se quedan apagados —ver el candado en src/scripts/delivery-form.ts—.
 //
 // EN DESKTOP ES SOLO EL BOTON
 //
 // El rotulo "Ubicacion" y la pista "o ingresa manualmente" son de movil: alli
 // este bloque va suelto y tiene que decir de que va y que hay otro camino. En
-// desktop el grupo entero lo rotula "Direccion" —lo pone /datos— y los campos
+// desktop el grupo entero lo rotula "Direccion" —lo pone /mamayaya/datos— y los campos
 // escritos quedan justo debajo, asi que las dos frases sobrarian: repetirian el
 // mismo titulo y describirian algo que ya se ve. Se retiran con d-md-none, y con
 // ellas se va la columna de este bloque (ver los estilos de este archivo): el boton
@@ -154,7 +154,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     {/*
       Aqui NO se rotula la direccion del pin, a proposito. Lo que confirma el
       sitio es el mapa —sus calles estan pintadas y el pin queda sobre el techo—
-      y la direccion escrita aparece al aceptar, en /datos, resuelta por el
+      y la direccion escrita aparece al aceptar, en /mamayaya/datos, resuelta por el
       backend al cotizar. Leerla tambien aqui costaba una consulta a Google en
       CADA parada del mapa para acabar diciendo lo mismo. Ver
       src/lib/map-picker.ts.
@@ -321,7 +321,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
   /* ---------------------------------------------------------------------------
      Block: map-picker
      ---------------------------------------------------------------------------
-     El selector de ubicacion de /datos: un mapa dentro de la hoja, con un pin
+     El selector de ubicacion de /mamayaya/datos: un mapa dentro de la hoja, con un pin
      clavado en su centro. El comprador mueve el MAPA hasta su domicilio y acepta.
 
      No hay spec de Figma para esta pieza: se compone con el sistema que ya existe

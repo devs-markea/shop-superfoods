@@ -1,23 +1,23 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import ScreenHeader from '../../components/ScreenHeader.astro';
-import NavbarDesktop from '../../components/NavbarDesktop.astro';
-import PaymentMethodCard from '../../components/PaymentMethodCard.astro';
-import OrderDetail from '../../components/OrderDetail.astro';
-import CartSummary from '../../components/CartSummary.astro';
-import ActionBar from '../../components/ActionBar.astro';
-import ScheduleSheet from '../../components/ScheduleSheet.astro';
-import LocationSheet from '../../components/LocationSheet.astro';
-import Footer from '../../components/Footer.astro';
-import FormError from '../../components/FormError.astro';
-import InfoNote from '../../components/InfoNote.astro';
-import { getCart, isEmptyCart, type Cart } from '../../lib/cart.ts';
-import { resolveCartToken } from '../../lib/cart-session.ts';
-import { quoteForDraft } from '../../lib/shipping-quote.ts';
-import { DRAFT_COOKIE, draftGaps, parseDraft } from '../../lib/checkout-draft.ts';
-import { resolveShipping } from '../../lib/shipping.ts';
-import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
-import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts';
+import Layout from '../../../layouts/Layout.astro';
+import ScreenHeader from '../../../components/ScreenHeader.astro';
+import NavbarDesktop from '../../../components/NavbarDesktop.astro';
+import PaymentMethodCard from '../../../components/PaymentMethodCard.astro';
+import OrderDetail from '../../../components/OrderDetail.astro';
+import CartSummary from '../../../components/CartSummary.astro';
+import ActionBar from '../../../components/ActionBar.astro';
+import ScheduleSheet from '../../../components/ScheduleSheet.astro';
+import LocationSheet from '../../../components/LocationSheet.astro';
+import Footer from '../../../components/Footer.astro';
+import FormError from '../../../components/FormError.astro';
+import InfoNote from '../../../components/InfoNote.astro';
+import { getCart, isEmptyCart, type Cart } from '../../../lib/cart.ts';
+import { resolveCartToken } from '../../../lib/cart-session.ts';
+import { quoteForDraft } from '../../../lib/shipping-quote.ts';
+import { DRAFT_COOKIE, draftGaps, parseDraft } from '../../../lib/checkout-draft.ts';
+import { resolveShipping } from '../../../lib/shipping.ts';
+import { getStoreConfig, getStoreSchedule } from '../../../lib/store-config.ts';
+import { ALL_CATEGORIES, getCategories, getProducts } from '../../../lib/catalog.ts';
 
 // DOS PANTALLAS, UN MARCADO
 //
@@ -80,19 +80,19 @@ const [store, schedule, cart, categories, quote] = await Promise.all([
 // que pagar; la segunda, si hay con que entregarlo.
 //
 // El pedido va antes aunque cueste esperar al carrito, porque un carrito vacio no
-// se arregla en /datos: rellenar una direccion no crea lineas. Mandar alli a quien
+// se arregla en /mamayaya/datos: rellenar una direccion no crea lineas. Mandar alli a quien
 // no tiene pedido solo mete una pantalla de mas en el camino de vuelta al carrito,
 // que es adonde acaba yendo de todas formas.
 
 // Sin pedido no hay nada que pagar en mano: seria un "Confirmar pedido" sobre $0.
-if (isEmptyCart(cart)) return Astro.redirect('/carrito');
+if (isEmptyCart(cart)) return Astro.redirect('/mamayaya/carrito');
 
 // El efectivo ya no es solo del pedido para recoger: a domicilio se le paga al
 // repartidor. Asi que lo que hay que comprobar no es el modo de entrega, sino que
 // siga habiendo con que cerrar el pedido —el borrador caduca a las dos horas—:
 // sin nombre, telefono o direccion, "Confirmar pedido" solo podria fallar. Se
 // vuelve a los datos de entrega, que es donde se rellenan.
-if (draftGaps(draft).length > 0) return Astro.redirect('/datos');
+if (draftGaps(draft).length > 0) return Astro.redirect('/mamayaya/datos');
 
 const items = cart?.items ?? [];
 const products = cart?.total ?? 0;
@@ -101,7 +101,7 @@ const products = cart?.total ?? 0;
 const subtotal = cart?.subtotal ?? 0;
 const discount = cart?.discountTotal ?? 0;
 
-// El envio, con la misma cuenta que /pago: la distancia medida en /datos con la
+// El envio, con la misma cuenta que /mamayaya/pago: la distancia medida en /mamayaya/datos con la
 // tarifa, y por encima de ella las dos reglas que mandan —al recoger no hay
 // envio, y el envio gratis del negocio manda sobre cualquier distancia—.
 const shipping = resolveShipping({
@@ -144,7 +144,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 >
   {/* Una cabecera por pantalla: la de 124 con el control de vuelta en movil, y de
       md hacia arriba la barra de la tienda. */}
-  <ScreenHeader title="Pago en efectivo" backHref="/pago" mobileOnly />
+  <ScreenHeader title="Pago en efectivo" backHref="/mamayaya/pago" mobileOnly />
 
   <NavbarDesktop
     shortAddress={store.location?.shortAddress}
@@ -175,7 +175,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
         method="post"
         data-confirm-form
         data-method="efectivo"
-        data-next="/recibido"
+        data-next="/mamayaya/recibido"
         data-shipping={shipping.cost}
       >
         <!-- Contenedor 1: lo que hay que leer antes de pagar. -->
@@ -237,11 +237,11 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 </Layout>
 
 <script>
-  import '../../scripts/confirm-order';
+  import '../../../scripts/confirm-order';
   // Abre las hojas del horario y la ubicacion desde la barra de desktop.
-  import '../../scripts/sheet';
+  import '../../../scripts/sheet';
   // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
   // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
   // que importarlo. Ver src/lib/discover.ts.
-  import '../../scripts/footer-discover';
+  import '../../../scripts/footer-discover';
 </script>

@@ -1,18 +1,18 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import NavbarDesktop from '../components/NavbarDesktop.astro';
-import ScheduleSheet from '../components/ScheduleSheet.astro';
-import LocationSheet from '../components/LocationSheet.astro';
-import ProductHero from '../components/ProductHero.astro';
-import OptionGroup from '../components/OptionGroup.astro';
-import PromoBadge from '../components/PromoBadge.astro';
-import ProductCounter from '../components/ProductCounter.astro';
-import ActionBar from '../components/ActionBar.astro';
-import Footer from '../components/Footer.astro';
-import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
-import { getCart } from '../lib/cart.ts';
-import { peekCartToken } from '../lib/cart-session.ts';
-import { isClosed } from '../lib/schedule.ts';
+import Layout from '../../layouts/Layout.astro';
+import NavbarDesktop from '../../components/NavbarDesktop.astro';
+import ScheduleSheet from '../../components/ScheduleSheet.astro';
+import LocationSheet from '../../components/LocationSheet.astro';
+import ProductHero from '../../components/ProductHero.astro';
+import OptionGroup from '../../components/OptionGroup.astro';
+import PromoBadge from '../../components/PromoBadge.astro';
+import ProductCounter from '../../components/ProductCounter.astro';
+import ActionBar from '../../components/ActionBar.astro';
+import Footer from '../../components/Footer.astro';
+import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
+import { getCart } from '../../lib/cart.ts';
+import { peekCartToken } from '../../lib/cart-session.ts';
+import { isClosed } from '../../lib/schedule.ts';
 import {
   ALL_CATEGORIES,
   defaultVariant,
@@ -24,7 +24,7 @@ import {
   toOptionGroups,
   variantPrice,
   type ProductDetail,
-} from '../lib/catalog.ts';
+} from '../../lib/catalog.ts';
 
 // Los tres controles —radio, checkbox y contador de cantidad— llegan con la
 // misma forma: control, required, min, max, maxPerOption, defaultOptionId y
@@ -54,8 +54,8 @@ export const prerender = false;
 // LA RUTA COMODIN DE LA TIENDA
 //
 // La ficha cuelga de la raiz, asi que este archivo recoge todo lo que no case
-// con una pagina propia: `/carrito`, `/datos`, `/pago`, `/confirmado` y
-// `/recibido` siguen siendo suyas —en Astro una ruta estatica gana siempre a
+// con una pagina propia: `/mamayaya/carrito`, `/mamayaya/datos`, `/mamayaya/pago`, `/mamayaya/confirmado` y
+// `/mamayaya/recibido` siguen siendo suyas —en Astro una ruta estatica gana siempre a
 // `[slug]`—, pero cualquier otra cosa aterriza aqui y sale por el 404 de abajo.
 //
 // El segmento se pasa a la API tal cual: es `menus.slug` en los dos lados —la
@@ -196,7 +196,7 @@ const closed = isClosed(schedule);
             method="post"
             data-order-form
             data-endpoint="/api/cart/items"
-            data-redirect="/carrito"
+            data-redirect="/mamayaya/carrito"
             data-product-id={product.id}
             data-variant-id={product.hasVariants ? undefined : variant?.id}
             data-base-price={variantPrice(variant) ?? product.basePrice}
@@ -256,7 +256,7 @@ const closed = isClosed(schedule);
                     <ActionBar label="Agregar — {total}" total={total} />
                   </>
                 ) : (
-                  <ActionBar label="Volver al menu" href="/" />
+                  <ActionBar label="Volver al menu" href="/mamayaya" />
                 )}
               </div>
             )}
@@ -287,7 +287,7 @@ const closed = isClosed(schedule);
           </div>
 
           <div class="product-page__buy">
-            <ActionBar label="Volver al menu" href="/" />
+            <ActionBar label="Volver al menu" href="/mamayaya" />
           </div>
         </>
       )
@@ -305,12 +305,12 @@ const closed = isClosed(schedule);
 </Layout>
 
 <script>
-  import '../scripts/order-form';
-  import '../scripts/sheet';
+  import '../../scripts/order-form';
+  import '../../scripts/sheet';
   // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
   // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
   // que importarlo. Ver src/lib/discover.ts.
-  import '../scripts/footer-discover';
+  import '../../scripts/footer-discover';
 </script>
 
 <style is:global>

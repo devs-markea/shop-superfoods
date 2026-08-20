@@ -149,7 +149,7 @@ if (form) {
   let quote: ShippingQuote | null = hasSharedLocation(saved) ? saved.shipping : null;
 
   // --- Tarjeta de resumen (desktop) ---
-  // La misma tarjeta de /carrito, con la cuenta del pedido. Aqui los importes de
+  // La misma tarjeta de /mamayaya/carrito, con la cuenta del pedido. Aqui los importes de
   // los productos no se mueven —eso es del carrito—, pero el envio si, y por dos
   // caminos: compartir una ubicacion lo mide, y el switch de entrega lo quita
   // entero. Las dos cosas pasan en esta pantalla, asi que la tarjeta se vuelve a
@@ -624,7 +624,7 @@ if (form) {
       shipping: spot && quote && !otherSpot(quote, spot.lat, spot.lng) ? quote : null,
     });
 
-    window.location.assign('/pago');
+    window.location.assign('/mamayaya/pago');
   };
 
   // Volver atras desde el pago puede reutilizar el documento tal cual quedo

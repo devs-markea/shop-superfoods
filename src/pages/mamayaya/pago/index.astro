@@ -1,38 +1,38 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import ScreenHeader from '../../components/ScreenHeader.astro';
-import NavbarDesktop from '../../components/NavbarDesktop.astro';
-import TipSelector from '../../components/TipSelector.astro';
-import PaymentMethods from '../../components/PaymentMethods.astro';
-import PaymentSummary from '../../components/PaymentSummary.astro';
-import CartSummary from '../../components/CartSummary.astro';
-import LegalNote from '../../components/LegalNote.astro';
-import ActionBar from '../../components/ActionBar.astro';
-import DeviceFingerprint from '../../components/DeviceFingerprint.astro';
-import ScheduleSheet from '../../components/ScheduleSheet.astro';
-import LocationSheet from '../../components/LocationSheet.astro';
-import Footer from '../../components/Footer.astro';
-import FormError from '../../components/FormError.astro';
-import { getCart, isEmptyCart, type Cart } from '../../lib/cart.ts';
-import { resolveCartToken } from '../../lib/cart-session.ts';
-import { quoteForDraft } from '../../lib/shipping-quote.ts';
+import Layout from '../../../layouts/Layout.astro';
+import ScreenHeader from '../../../components/ScreenHeader.astro';
+import NavbarDesktop from '../../../components/NavbarDesktop.astro';
+import TipSelector from '../../../components/TipSelector.astro';
+import PaymentMethods from '../../../components/PaymentMethods.astro';
+import PaymentSummary from '../../../components/PaymentSummary.astro';
+import CartSummary from '../../../components/CartSummary.astro';
+import LegalNote from '../../../components/LegalNote.astro';
+import ActionBar from '../../../components/ActionBar.astro';
+import DeviceFingerprint from '../../../components/DeviceFingerprint.astro';
+import ScheduleSheet from '../../../components/ScheduleSheet.astro';
+import LocationSheet from '../../../components/LocationSheet.astro';
+import Footer from '../../../components/Footer.astro';
+import FormError from '../../../components/FormError.astro';
+import { getCart, isEmptyCart, type Cart } from '../../../lib/cart.ts';
+import { resolveCartToken } from '../../../lib/cart-session.ts';
+import { quoteForDraft } from '../../../lib/shipping-quote.ts';
 import {
   DRAFT_COOKIE,
   ORDER_COOKIE,
   parseDraft,
   parseOrderPointer,
-} from '../../lib/checkout-draft.ts';
-import { resolveShipping } from '../../lib/shipping.ts';
-import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
-import { normalizeTipAmounts } from '../../lib/tips.ts';
-import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts';
+} from '../../../lib/checkout-draft.ts';
+import { resolveShipping } from '../../../lib/shipping.ts';
+import { getStoreConfig, getStoreSchedule } from '../../../lib/store-config.ts';
+import { normalizeTipAmounts } from '../../../lib/tips.ts';
+import { ALL_CATEGORIES, getCategories, getProducts } from '../../../lib/catalog.ts';
 
 // DOS PANTALLAS, UN MARCADO
 //
 // En movil es la de siempre: la cabecera de 124, la propina, los metodos, el
 // desglose y "Continuar" en la barra fija del fondo.
 //
-// En desktop se monta como /carrito y /datos —la misma barra de tienda, el mismo
+// En desktop se monta como /mamayaya/carrito y /mamayaya/datos —la misma barra de tienda, el mismo
 // armazon de 48 y el mismo pie— y se parte en dos columnas: lo que hay que elegir
 // a la izquierda y la tarjeta de resumen a la derecha, que es donde se continua.
 // Ver styles/screens.css.
@@ -63,7 +63,7 @@ export const prerender = false;
 const rejectedOrder = Astro.url.searchParams.get('order');
 
 if (Astro.url.searchParams.get('pago') === 'rechazado' && rejectedOrder) {
-  return Astro.redirect(`/confirmado?order=${encodeURIComponent(rejectedOrder)}`);
+  return Astro.redirect(`/mamayaya/confirmado?order=${encodeURIComponent(rejectedOrder)}`);
 }
 
 const token = resolveCartToken(Astro.cookies);
@@ -96,7 +96,7 @@ try {
 //             avisar a la tienda, y quien no llego a verlos no tiene otra via.
 //   ya visto  al menu. Repetirle "Pedido confirmado" en cada atras se lee como
 //             que pago dos veces, y ademas dejaria el boton atras en bucle:
-//             /confirmado -> /pago -> /confirmado.
+//             /mamayaya/confirmado -> /mamayaya/pago -> /mamayaya/confirmado.
 //
 // El carrito vacio es condicion, no adorno: la cookie del pedido dura un dia, asi
 // que quien pidio ayer y hoy vuelve a llenar el carrito tiene que poder pagarlo.
@@ -107,18 +107,18 @@ try {
 // nadie lo mande a ningun otro sitio.
 const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
 
-// Cada metodo tiene su acuse —la misma reparticion que hace /recibido al reves—,
+// Cada metodo tiene su acuse —la misma reparticion que hace /mamayaya/recibido al reves—,
 // y el menu es el destino comun en cuanto ese acuse ya se leyo.
 if (pointer && isEmptyCart(cart)) {
   return Astro.redirect(
-    pointer.seen ? '/' : pointer.method === 'mercado_pago' ? '/confirmado' : '/recibido',
+    pointer.seen ? '/mamayaya' : pointer.method === 'mercado_pago' ? '/mamayaya/confirmado' : '/mamayaya/recibido',
   );
 }
 
 // Y sin puntero, el carrito vacio es lo que parece: no hay pedido que resumir ni
 // pago que elegir, solo una propina sobre $0 y un "Confirmar el pago" que devolveria
 // "Tu carrito esta vacio.". Se vuelve al pedido, que es quien lo explica.
-if (isEmptyCart(cart)) return Astro.redirect('/carrito');
+if (isEmptyCart(cart)) return Astro.redirect('/mamayaya/carrito');
 
 const products = cart?.total ?? 0;
 
@@ -174,7 +174,7 @@ const tip = showTips ? (raw ? draft.tip : tipAmounts[0]) : 0;
 
 const method = pickup ? 'efectivo' : draft.paymentMethod;
 
-// El envio, por fin con precio. Lo cotizo el backend en /datos al compartir la
+// El envio, por fin con precio. Lo cotizo el backend en /mamayaya/datos al compartir la
 // ubicacion y viaja en el borrador; aqui se resuelve contra las dos reglas que
 // mandan sobre el: al recoger no hay envio, y el envio gratis del negocio manda
 // sobre cualquier importe.
@@ -204,7 +204,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 >
   {/* Una cabecera por pantalla: la de 124 con el control de vuelta en movil, y de
       md hacia arriba la barra de la tienda. */}
-  <ScreenHeader title="Resumen de pago" backHref="/datos" mobileOnly />
+  <ScreenHeader title="Resumen de pago" backHref="/mamayaya/datos" mobileOnly />
 
   <NavbarDesktop
     shortAddress={store.location?.shortAddress}
@@ -271,7 +271,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
           <ActionBar label="Continuar" />
         </div>
 
-        {/* Contenedor 2, solo desktop: la misma tarjeta de /carrito y /datos, aqui
+        {/* Contenedor 2, solo desktop: la misma tarjeta de /mamayaya/carrito y /mamayaya/datos, aqui
             ya con la propina. Sin `href`, su boton es un submit —igual que la
             barra— porque a donde se va depende del metodo que se acabe de elegir.
 
@@ -304,13 +304,13 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 </Layout>
 
 <script>
-  import '../../scripts/payment-summary';
+  import '../../../scripts/payment-summary';
   // Abre las hojas del horario y la ubicacion desde la barra de desktop.
-  import '../../scripts/sheet';
+  import '../../../scripts/sheet';
   // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
   // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
   // que importarlo. Ver src/lib/discover.ts.
-  import '../../scripts/footer-discover';
+  import '../../../scripts/footer-discover';
 </script>
 
 {/*

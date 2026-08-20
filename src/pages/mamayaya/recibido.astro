@@ -1,24 +1,24 @@
 ---
-import Layout from '../layouts/Layout.astro';
-import BackHeader from '../components/BackHeader.astro';
-import NavbarDesktop from '../components/NavbarDesktop.astro';
-import OrderStatus from '../components/OrderStatus.astro';
-import Steps from '../components/Steps.astro';
-import ClabeCard from '../components/ClabeCard.astro';
-import ActionBar from '../components/ActionBar.astro';
-import ConfirmationCta from '../components/ConfirmationCta.astro';
-import ScheduleSheet from '../components/ScheduleSheet.astro';
-import LocationSheet from '../components/LocationSheet.astro';
-import Footer from '../components/Footer.astro';
-import { getCart, type Cart } from '../lib/cart.ts';
-import { getOrder } from '../lib/orders.ts';
-import { resolveCartToken } from '../lib/cart-session.ts';
-import { ORDER_COOKIE, markPointerSeen, parseOrderPointer } from '../lib/checkout-draft.ts';
-import { PAYMENT_LABEL, type StoreOrder } from '../lib/checkout.ts';
-import { fillMessage, whatsAppUrl } from '../lib/whatsapp.ts';
-import { formatPrice } from '../lib/price.ts';
-import { getStoreConfig, getStoreSchedule } from '../lib/store-config.ts';
-import { ALL_CATEGORIES, getCategories, getProducts } from '../lib/catalog.ts';
+import Layout from '../../layouts/Layout.astro';
+import BackHeader from '../../components/BackHeader.astro';
+import NavbarDesktop from '../../components/NavbarDesktop.astro';
+import OrderStatus from '../../components/OrderStatus.astro';
+import Steps from '../../components/Steps.astro';
+import ClabeCard from '../../components/ClabeCard.astro';
+import ActionBar from '../../components/ActionBar.astro';
+import ConfirmationCta from '../../components/ConfirmationCta.astro';
+import ScheduleSheet from '../../components/ScheduleSheet.astro';
+import LocationSheet from '../../components/LocationSheet.astro';
+import Footer from '../../components/Footer.astro';
+import { getCart, type Cart } from '../../lib/cart.ts';
+import { getOrder } from '../../lib/orders.ts';
+import { resolveCartToken } from '../../lib/cart-session.ts';
+import { ORDER_COOKIE, markPointerSeen, parseOrderPointer } from '../../lib/checkout-draft.ts';
+import { PAYMENT_LABEL, type StoreOrder } from '../../lib/checkout.ts';
+import { fillMessage, whatsAppUrl } from '../../lib/whatsapp.ts';
+import { formatPrice } from '../../lib/price.ts';
+import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
+import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts';
 import { TEST_MODE } from 'astro:env/server';
 
 // UNA PANTALLA, DOS FORMAS
@@ -58,12 +58,12 @@ const token = resolveCartToken(Astro.cookies);
 const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
 
 if (!TEST_MODE) {
-  if (!pointer) return Astro.redirect('/');
+  if (!pointer) return Astro.redirect('/mamayaya');
 
   // Mercado Pago tiene su propia pantalla de cierre, y no es esta: aqui veria la
   // copia de la transferencia —los tres pasos y la cuenta a la que pagar— despues
   // de haber pagado ya con tarjeta.
-  if (pointer.method === 'mercado_pago') return Astro.redirect('/confirmado');
+  if (pointer.method === 'mercado_pago') return Astro.redirect('/mamayaya/confirmado');
 }
 
 // El carrito, solo para el chip de la barra de desktop. Aqui el pedido ya esta
@@ -132,12 +132,12 @@ if (pointer) {
     failed = true;
   }
 
-  if (!order && !failed && !TEST_MODE) return Astro.redirect('/');
+  if (!order && !failed && !TEST_MODE) return Astro.redirect('/mamayaya');
 }
 
 // EL ACUSE QUEDA VISTO
 //
-// Lo mismo que hace /confirmado, y por lo mismo: las pantallas del pago consultan
+// Lo mismo que hace /mamayaya/confirmado, y por lo mismo: las pantallas del pago consultan
 // esta marca para decidir a donde mandar a quien vuelve con el carrito ya vacio —a
 // su acuse si no lo ha visto, al menu si ya lo vio—.
 //
@@ -249,7 +249,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
     Una cabecera por pantalla: la de 64 con el control de vuelta en movil, y de md
     hacia arriba la barra de la tienda, donde el que vuelve al menu es el logo.
   */}
-  <BackHeader backHref="/" mobileOnly />
+  <BackHeader backHref="/mamayaya" mobileOnly />
 
   <NavbarDesktop
     shortAddress={store.location?.shortAddress}
@@ -338,11 +338,11 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   // El boton de copiar de la tarjeta de la CLABE: el comportamiento lo pone el
   // script, que delega en document, y la pantalla que use el componente tiene que
   // importarlo.
-  import '../scripts/copy-button';
+  import '../../scripts/copy-button';
   // Abre las hojas del horario y la ubicacion desde la barra de desktop.
-  import '../scripts/sheet';
+  import '../../scripts/sheet';
   // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
   // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
   // que importarlo. Ver src/lib/discover.ts.
-  import '../scripts/footer-discover';
+  import '../../scripts/footer-discover';
 </script>

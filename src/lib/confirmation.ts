@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Que dice el acuse, segun lo que de verdad paso con el pago.
 //
-// /confirmado es la pantalla de vuelta de Mercado Pago, y ahi el pedido
+// /mamayaya/confirmado es la pantalla de vuelta de Mercado Pago, y ahi el pedido
 // puede estar en media docena de situaciones distintas: pagado, esperando que el
 // webhook confirme, rechazado por falta de fondos, cancelado por el comprador,
 // creado sin que la pasarela llegara a abrirse... Cada una necesita otro titular,
@@ -229,7 +229,7 @@ export function resolveConfirmation(
 
   // --- Transferencia y efectivo ------------------------------------------
   //
-  // No pasan por aqui en su flujo normal -cierran en /recibido-, pero se
+  // No pasan por aqui en su flujo normal -cierran en /mamayaya/recibido-, pero se
   // llega releyendo la pantalla: una transferencia ya confirmada por la tienda
   // acaba en este acuse, y de un pedido en efectivo se puede volver por el
   // historial.

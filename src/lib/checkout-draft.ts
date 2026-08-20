@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// Borrador del pedido: lo que se va reuniendo entre /carrito y el cierre.
+// Borrador del pedido: lo que se va reuniendo entre /mamayaya/carrito y el cierre.
 //
 // Nada viaja en la URL. El borrador vive en una cookie de primera parte que
 // escribe el navegador y lee tambien el servidor: asi cada pantalla puede
@@ -39,9 +39,9 @@ export const ORDER_COOKIE = 'sf_order';
  * mensaje y su remedio son la misma decision, y separarlos deja dos sitios donde
  * un dia uno diga "revisa tus datos de entrega" y el otro lleve a otra parte.
  *
- * Es el mismo destino que ya usa la guarda de servidor de /pago/efectivo.
+ * Es el mismo destino que ya usa la guarda de servidor de /mamayaya/pago/efectivo.
  */
-export const DELIVERY_SCREEN = '/datos';
+export const DELIVERY_SCREEN = '/mamayaya/datos';
 
 /** Dos horas: lo que dura un checkout, no una sesion. */
 const DRAFT_MAX_AGE = 60 * 60 * 2;
@@ -50,7 +50,7 @@ const ORDER_MAX_AGE = 60 * 60 * 24;
 
 export interface CheckoutDraft {
   deliveryType: DeliveryType;
-  /** Se elige en /pago. */
+  /** Se elige en /mamayaya/pago. */
   paymentMethod: PaymentMethod | null;
   tip: number;
   customer: CheckoutCustomer;
@@ -59,13 +59,13 @@ export interface CheckoutDraft {
    * la interfaz: al checkout va `customer.locationUrl`.
    */
   locationLabel: string;
-  /** Comentarios del pedido, capturados en /carrito. Viajan como `notes`. */
+  /** Comentarios del pedido, capturados en /mamayaya/carrito. Viajan como `notes`. */
   comments: string;
   /**
    * Lo que el backend contesto sobre el envio a la ubicacion compartida: el
    * importe, los kilometros, si se entrega ahi y el aviso si no.
    *
-   * Se pide UNA VEZ, al compartir la ubicacion en /datos, y de ahi en adelante
+   * Se pide UNA VEZ, al compartir la ubicacion en /mamayaya/datos, y de ahi en adelante
    * solo se lee: cotizar es una llamada que mide contra un tercero con cuota, y
    * ni la distancia ni la ciudad de un punto cambian entre pantallas. Se vuelve a
    * pedir si el comprador comparte otro punto.
@@ -99,7 +99,7 @@ export interface OrderPointer {
   /** El pedido no devuelve el metodo, y la pantalla de cierre lo rotula. */
   method: PaymentMethod;
   /**
-   * Como se entrega. El pedido si lo devuelve, pero /recibido rotula sin
+   * Como se entrega. El pedido si lo devuelve, pero /mamayaya/recibido rotula sin
    * pedirlo —lo hace tambien cuando la lectura falla o no hay telefono al que
    * escribir—, y en efectivo la diferencia es toda la pantalla: pagar al
    * repartidor no es pasar por el local.
@@ -266,7 +266,7 @@ type OptionalCustomerKey = 'email' | (typeof ADDRESS_KEYS)[number];
  * busca en un portal— y el punto es lo que mide el envio y lo que lleva hasta la
  * puerta cuando la direccion escrita no basta.
  *
- * Que el punto sea obligatorio se cobra en /datos, que es donde se elige: alli
+ * Que el punto sea obligatorio se cobra en /mamayaya/datos, que es donde se elige: alli
  * los dos "Continuar" estan apagados hasta que lo haya. Esto es la ultima red,
  * la que cubre un borrador que llegue al cierre sin el.
  */
@@ -475,7 +475,7 @@ export function saveOrderPointer(pointer: OrderPointer): void {
  * Con el se va la UBICACION, y con cualquier metodo: los tres cierran por aqui,
  * asi que no hay un camino por el que un punto pueda sobrevivir a su compra. La
  * ubicacion es de un pedido, no del navegador —quien pide dos veces puede pedir
- * a dos sitios—, y por eso la siguiente compra vuelve a pedirla en /datos en
+ * a dos sitios—, y por eso la siguiente compra vuelve a pedirla en /mamayaya/datos en
  * lugar de heredar la anterior con su importe.
  *
  * El envio no viaja como importe: la API lo recalcula al cerrar, desde la misma

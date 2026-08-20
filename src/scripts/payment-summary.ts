@@ -28,8 +28,8 @@ import { parseTipAmount } from '../lib/tips';
 // lo que cambia entre las dos es lo que hay que leer antes de confirmar —una cuenta
 // bancaria o como se entrega el dinero—, no lo que se manda.
 const CONFIRM_SCREEN: Partial<Record<PaymentMethod, string>> = {
-  bank_transfer: '/pago/transferencia',
-  efectivo: '/pago/efectivo',
+  bank_transfer: '/mamayaya/pago/transferencia',
+  efectivo: '/mamayaya/pago/efectivo',
 };
 
 const form = document.querySelector<HTMLFormElement>('[data-payment-form]');
@@ -38,7 +38,7 @@ if (form) {
   const products = Number.parseFloat(form.dataset.products ?? '') || 0;
 
   // El envio ya viene resuelto del servidor: la tarifa, la distancia medida en
-  // /datos y el envio gratis se aplicaron alli (ver src/lib/shipping.ts). Aqui
+  // /mamayaya/datos y el envio gratis se aplicaron alli (ver src/lib/shipping.ts). Aqui
   // solo es un sumando mas del total, que la propina vuelve a mover.
   const shipping = Number.parseFloat(form.dataset.shipping ?? '') || 0;
   const output = form.querySelector<HTMLElement>('[data-summary-total]');
@@ -228,6 +228,6 @@ if (form) {
     // que ofrece pagarlo desde alli. Ver src/lib/confirmation.ts.
     const gateway = outcome.order.payment?.redirectUrl;
 
-    window.location.assign(gateway || '/confirmado');
+    window.location.assign(gateway || '/mamayaya/confirmado');
   });
 }

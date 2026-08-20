@@ -2,7 +2,7 @@
 // La propina: que importes se ofrecen y cual se acepta.
 //
 // Isomorfico a proposito, como src/lib/checkout.ts: no importa nada de
-// `astro:env`, asi que lo usan por igual el frontmatter de /pago —que pinta los
+// `astro:env`, asi que lo usan por igual el frontmatter de /mamayaya/pago —que pinta los
 // botones y el total del primer render— y el script del navegador, que atiende
 // el importe libre de "Otro".
 //
@@ -89,7 +89,7 @@ export function normalizeTipAmounts(amounts: unknown): number[] {
  * Si el importe elegido se escribio en "Otro" en vez de pulsarse.
  *
  * Es lo que decide, en el servidor, si el campo libre nace abierto y con su
- * valor dentro: al volver a /pago desde la pantalla de transferencia, una
+ * valor dentro: al volver a /mamayaya/pago desde la pantalla de transferencia, una
  * propina de $23 tiene que seguir siendo $23 y verse donde se escribio.
  */
 export function isCustomTip(tip: number, amounts: readonly number[]): boolean {

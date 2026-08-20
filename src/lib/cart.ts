@@ -124,8 +124,8 @@ export { describeSelection } from './cart-view.ts';
  * Si el carrito esta vacio y no hay con que seguir el checkout.
  *
  * Lo miran las cuatro pantallas que van despues del pedido y las cuatro vuelven
- * a `/carrito`. La ruta se escribe en cada una, como el resto de destinos del
- * proyecto —`Astro.redirect('/datos')`, `backHref="/carrito"`—: aqui vive la
+ * a `/mamayaya/carrito`. La ruta se escribe en cada una, como el resto de destinos del
+ * proyecto —`Astro.redirect('/mamayaya/datos')`, `backHref="/mamayaya/carrito"`—: aqui vive la
  * regla, no el mapa de rutas.
  *
  * Las cuatro pantallas que van despues —datos, resumen y los dos cierres—
@@ -144,7 +144,7 @@ export { describeSelection } from './cart-view.ts';
  * lo que el comprador reconoce como su pedido.
  *
  * No sustituye a draftGaps(): aquella comprueba los datos de ENTREGA y devuelve
- * a /datos, que es donde se escriben. Son dos faltas distintas y cada una tiene
+ * a /mamayaya/datos, que es donde se escriben. Son dos faltas distintas y cada una tiene
  * su pantalla.
  */
 export function isEmptyCart(cart: Cart | null): boolean {

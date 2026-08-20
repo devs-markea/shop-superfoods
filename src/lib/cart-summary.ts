@@ -4,12 +4,12 @@
 // La tarjeta la pinta el servidor con los importes de la peticion, y despues la
 // mueven dos pantallas por motivos distintos:
 //
-//   /carrito  cambia una cantidad, y con ella el subtotal, los descuentos y —si
+//   /mamayaya/carrito  cambia una cantidad, y con ella el subtotal, los descuentos y —si
 //             se cruza el umbral— el envio
-//   /datos    se comparte la ubicacion (llega la cotizacion, y el envio deja de
+//   /mamayaya/datos    se comparte la ubicacion (llega la cotizacion, y el envio deja de
 //             estar "Por cotizar") o se cambia el modo de entrega, que quita y
 //             pone la fila del envio entera
-//   /pago     se cambia la propina, que es la ultima cifra que se suma al total
+//   /mamayaya/pago     se cambia la propina, que es la ultima cifra que se suma al total
 //
 // Las dos escriben en los mismos huecos, asi que quien los conoce es este modulo
 // y no cada script: con la escritura repetida, un cambio en el marcado de la
@@ -30,7 +30,7 @@ export interface CartSummaryAmounts {
   /** Lo que cuestan los productos ya descontados. */
   products: number;
   shipping: ShippingResult;
-  /** Propina elegida. Con 0, la fila se retira. Solo la hay en /pago. */
+  /** Propina elegida. Con 0, la fila se retira. Solo la hay en /mamayaya/pago. */
   tip?: number;
 }
 

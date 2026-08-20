@@ -1,23 +1,23 @@
 ---
-import Layout from '../../layouts/Layout.astro';
-import ScreenHeader from '../../components/ScreenHeader.astro';
-import NavbarDesktop from '../../components/NavbarDesktop.astro';
-import BankAccount from '../../components/BankAccount.astro';
-import OrderDetail from '../../components/OrderDetail.astro';
-import CartSummary from '../../components/CartSummary.astro';
-import ActionBar from '../../components/ActionBar.astro';
-import ScheduleSheet from '../../components/ScheduleSheet.astro';
-import LocationSheet from '../../components/LocationSheet.astro';
-import Footer from '../../components/Footer.astro';
-import FormError from '../../components/FormError.astro';
-import InfoNote from '../../components/InfoNote.astro';
-import { getCart, isEmptyCart, type Cart } from '../../lib/cart.ts';
-import { resolveCartToken } from '../../lib/cart-session.ts';
-import { quoteForDraft } from '../../lib/shipping-quote.ts';
-import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
-import { resolveShipping } from '../../lib/shipping.ts';
-import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
-import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts';
+import Layout from '../../../layouts/Layout.astro';
+import ScreenHeader from '../../../components/ScreenHeader.astro';
+import NavbarDesktop from '../../../components/NavbarDesktop.astro';
+import BankAccount from '../../../components/BankAccount.astro';
+import OrderDetail from '../../../components/OrderDetail.astro';
+import CartSummary from '../../../components/CartSummary.astro';
+import ActionBar from '../../../components/ActionBar.astro';
+import ScheduleSheet from '../../../components/ScheduleSheet.astro';
+import LocationSheet from '../../../components/LocationSheet.astro';
+import Footer from '../../../components/Footer.astro';
+import FormError from '../../../components/FormError.astro';
+import InfoNote from '../../../components/InfoNote.astro';
+import { getCart, isEmptyCart, type Cart } from '../../../lib/cart.ts';
+import { resolveCartToken } from '../../../lib/cart-session.ts';
+import { quoteForDraft } from '../../../lib/shipping-quote.ts';
+import { DRAFT_COOKIE, parseDraft } from '../../../lib/checkout-draft.ts';
+import { resolveShipping } from '../../../lib/shipping.ts';
+import { getStoreConfig, getStoreSchedule } from '../../../lib/store-config.ts';
+import { ALL_CATEGORIES, getCategories, getProducts } from '../../../lib/catalog.ts';
 
 // DOS PANTALLAS, UN MARCADO
 //
@@ -80,7 +80,7 @@ const [store, schedule, cart, categories, quote] = await Promise.all([
 // Sin pedido no hay nada que transferir. Esta pantalla ensena una CLABE y un
 // importe, y con el carrito vacio ese importe seria la propina sobre $0: una
 // cuenta de la tienda invitando a pagar por nada. Se vuelve al pedido.
-if (isEmptyCart(cart)) return Astro.redirect('/carrito');
+if (isEmptyCart(cart)) return Astro.redirect('/mamayaya/carrito');
 
 const items = cart?.items ?? [];
 const products = cart?.total ?? 0;
@@ -91,7 +91,7 @@ const discount = cart?.discountTotal ?? 0;
 
 const { bankTransfer } = store;
 
-// El envio, con la misma cuenta que /pago: la distancia medida en /datos con la
+// El envio, con la misma cuenta que /mamayaya/pago: la distancia medida en /mamayaya/datos con la
 // tarifa, y por encima de ella las dos reglas que mandan —al recoger no hay
 // envio, y el envio gratis del negocio manda sobre cualquier distancia—. Este es
 // el importe que se va a transferir, asi que tiene que ser exactamente el mismo
@@ -127,7 +127,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 >
   {/* Una cabecera por pantalla: la de 124 con el control de vuelta en movil, y de
       md hacia arriba la barra de la tienda. */}
-  <ScreenHeader title="Pago por transferencia" backHref="/pago" mobileOnly />
+  <ScreenHeader title="Pago por transferencia" backHref="/mamayaya/pago" mobileOnly />
 
   <NavbarDesktop
     shortAddress={store.location?.shortAddress}
@@ -157,7 +157,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
         method="post"
         data-confirm-form
         data-method="bank_transfer"
-        data-next="/recibido"
+        data-next="/mamayaya/recibido"
         data-shipping={shipping.cost}
       >
         <!-- Contenedor 1: lo que hay que leer antes de transferir. -->
@@ -220,12 +220,12 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 </Layout>
 
 <script>
-  import '../../scripts/copy-button';
-  import '../../scripts/confirm-order';
+  import '../../../scripts/copy-button';
+  import '../../../scripts/confirm-order';
   // Abre las hojas del horario y la ubicacion desde la barra de desktop.
-  import '../../scripts/sheet';
+  import '../../../scripts/sheet';
   // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
   // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
   // que importarlo. Ver src/lib/discover.ts.
-  import '../../scripts/footer-discover';
+  import '../../../scripts/footer-discover';
 </script>

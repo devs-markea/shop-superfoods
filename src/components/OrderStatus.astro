@@ -17,7 +17,7 @@ interface Props {
 const { title, note, folio, state = 'success' } = Astro.props;
 
 // Cierre de una pantalla de resultado: sello, titular y aviso, todo centrado.
-// Lo comparten /confirmado y /recibido, que solo se diferencian en
+// Lo comparten /mamayaya/confirmado y /mamayaya/recibido, que solo se diferencian en
 // el sello, la copia y el folio.
 //
 // Spec: bloque gap 24 - circulo 80 con radius 40 - labels gap 8
@@ -143,7 +143,7 @@ const icons: Record<'success' | 'pending', IconName> = {
 
      El hueco de 24 del bloque, el de 8 de los rotulos y el centrado no cambian, asi
      que no se repiten. El folio tampoco: sus 40 en dorado siguen siendo la cifra
-     mas grande de /confirmado, que es lo que tiene que ser. */
+     mas grande de /mamayaya/confirmado, que es lo que tiene que ser. */
   @media (min-width: 768px) {
     .order-status__seal {
       flex: 0 0 64px;
