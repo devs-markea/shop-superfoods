@@ -21,6 +21,26 @@ import type { StoreSettings } from '../lib/store-config.ts';
 export const storeFallback: StoreSettings = {
   name: 'SuperFoods',
 
+  // Las redes del negocio, en el ORDEN en que se quieren pintar en el pie. Cada
+  // una se escribe entera:
+  //
+  //   { network: 'instagram', label: 'Instagram', url: 'https://instagram.com/superfoods' }
+  //
+  // `network` solo puede ser uno de estos seis: facebook, instagram, whatsapp,
+  // tiktok, youtube, x. Es con lo que se elige el icono, asi que cualquier otro
+  // se ignora. La `url` va ABSOLUTA y con https://, y la de WhatsApp escrita ya
+  // como https://wa.me/<numero> —el enlace, no el telefono—.
+  //
+  // Vacio a proposito: los perfiles los publica el panel, y esta lista se usa
+  // entera o nada, nunca mezclada con la suya. Sin redes en ninguno de los dos
+  // sitios el pie no pinta la fila de iconos, que es lo correcto: no hay perfil
+  // al que mandar.
+  //
+  // OJO: el WhatsApp de aqui NO es el `whatsapp.phone` de abajo. Aquel es el
+  // numero al que llega el comprobante del pedido; este es un enlace mas del
+  // pie, y el negocio puede querer apuntarlo a otro numero.
+  socialLinks: [],
+
   whatsapp: {
     // Telefono de la tienda. Se acepta escrito como se quiera —con lada, con
     // espacios, con el 1 de los moviles mexicanos—: se normaliza al pintarlo.

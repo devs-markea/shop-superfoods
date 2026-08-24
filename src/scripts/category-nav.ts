@@ -88,8 +88,8 @@ function initScrollIntoView(track: HTMLElement): void {
 // 'nearest'` —acercar el borde que se salio, y nada mas— con las medidas en
 // pantalla, que no dependen de quien sea el `offsetParent` de la etiqueta.
 //
-// A partir de lg no hace nada: los chips se reparten en varias lineas y el
-// carrusel deja de tener scroll (ver components/CategoryNav.astro).
+// Corre en todas las pantallas: la pista es una sola linea que scrollea tambien
+// en desktop (ver components/CategoryNav.astro).
 function revealChecked(track: HTMLElement): void {
   const checked = track.querySelector<HTMLInputElement>('input[name="category"]:checked');
   if (!checked) return;

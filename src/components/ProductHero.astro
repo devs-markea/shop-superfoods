@@ -1,12 +1,20 @@
 ---
 import Icon from './Icon.astro';
-import { productImageSrc, type ProductDetail } from '../lib/catalog.ts';
 
 interface Props {
-  product: ProductDetail;
+  /**
+   * La foto, ya resuelta: `src` absoluto y `alt` listo para el atributo.
+   *
+   * Llega hecha en lugar del platillo entero porque quien decide si este bloque
+   * existe es la ficha: un platillo SIN foto no lo monta —monta la cabecera con
+   * el control de volver, y la ficha se queda en una columna—. Resolverla aqui
+   * otra vez era abrir la puerta a que las dos respuestas se separaran. Ver
+   * pages/mamayaya/[slug].astro y src/lib/product-image.ts.
+   */
+  image: { src: string; alt: string };
 }
 
-const { product } = Astro.props;
+const { image } = Astro.props;
 ---
 
 <div class="product-hero">
@@ -14,8 +22,8 @@ const { product } = Astro.props;
        original y la recorta el CSS del bloque. -->
   <img
     class="product-hero__image"
-    src={productImageSrc(product)}
-    alt={product.image.alt}
+    src={image.src}
+    alt={image.alt}
     loading="eager"
     decoding="async"
   />
@@ -31,8 +39,12 @@ const { product } = Astro.props;
      Block: product-hero
      ---------------------------------------------------------------------------
      Spec: alto 240 - degradado 180deg #F5A623 -> #D5AA53
-     El degradado vive en el contenedor, asi que si la imagen no existe (o no
-     carga) queda como fondo, tal como pide la spec.
+     El degradado vive en el contenedor, asi que es lo que se ve mientras la foto
+     baja —y lo que queda si no llega—, tal como pide la spec.
+
+     Lo que NO es es el respaldo del platillo sin foto: ese no monta este bloque
+     (ver pages/mamayaya/[slug].astro), porque 240 de degradado a sangre —o 520x480 en
+     desktop— es el mismo hueco vacio que se viene a cerrar.
      --------------------------------------------------------------------------- */
   .product-hero {
     position: relative;

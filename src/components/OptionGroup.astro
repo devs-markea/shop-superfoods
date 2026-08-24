@@ -22,9 +22,10 @@ const labelId = `${group.id}-label`;
 const errorId = `${group.id}-error`;
 
 // Los tres controles comparten la misma estructura: lo unico que cambia son los
-// valores, y de ellos sale todo lo demas. min y max cuentan opciones distintas
-// en los tres; maxPerOption cuenta unidades y solo existe en `quantity`, donde
-// convive con los otros dos.
+// valores, y de ellos sale todo lo demas. min y max cuentan unidades DEL GRUPO
+// en los tres —en radio y checkbox una casilla marcada es una unidad, asi que
+// alli da el mismo numero de siempre—; maxPerOption cuenta unidades de UNA
+// opcion y solo existe en `quantity`, donde convive con los otros dos.
 const rule: OptionRule = {
   control: group.control,
   min: group.min,
@@ -36,10 +37,11 @@ const rule: OptionRule = {
 // lectura: cualquier cosa que se enviara de el la rechaza el carrito.
 const inert = isInert(rule);
 
-// min mayor que el numero de opciones no lo impide el panel y deja el grupo
+// min mayor que lo que el grupo puede dar no lo impide el panel y deja el grupo
 // imposible de completar. Se dice desde el primer render en vez de esperar al
 // 422; el boton de agregar queda bloqueado solo, porque el minimo nunca se
-// alcanza.
+// alcanza. En el contador el techo son sus opciones POR maxPerOption, no el
+// numero de opciones: con una sola opcion y tope 4, un min de 8 es inalcanzable.
 const unfulfillable = isUnfulfillable(rule, group.choices.length);
 
 // La etiqueta de una opcion son dos cosas pegadas: el NOMBRE y, detras, lo que
@@ -111,10 +113,11 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
       group.control === 'quantity'
         ? group.choices.map((choice) => (
             // El techo del CONTADOR lo pone maxPerOption —unidades de esta
-            // opcion—; sin el, queda el tope de forma de la API: 99. El otro
-            // tope del grupo, max, no acota este contador sino cuantas opciones
-            // llevan unidades, y lo aplica el script deshabilitando el `+` de
-            // las que estan en 0.
+            // opcion—, acotado por max: una sola opcion tampoco puede pasar del
+            // total del grupo. Sin ninguno de los dos queda el tope de forma de
+            // la API, 99. Lo que este render no puede saber es cuanto han
+            // gastado las demas, y de eso se encarga el script: al llegar el
+            // grupo a max deshabilita el `+` de TODAS, tengan unidades o no.
             <div
               class="option option--quantity"
               data-choice
@@ -332,17 +335,19 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
     color: var(--sf-ink);
   }
 
-  /* El tope de opciones distintas alcanzado: las que quedan sin marcar no se
-     pueden marcar. Bootstrap ya atenua el .form-check-input deshabilitado. */
+  /* El tope de unidades del grupo alcanzado: las casillas que quedan sin marcar
+     ya no se pueden marcar. Bootstrap ya atenua el .form-check-input
+     deshabilitado. */
   .option__input:disabled ~ .option__label {
     color: var(--sf-placeholder);
     cursor: not-allowed;
   }
 
-  /* Tope de opciones distintas alcanzado en un control de cantidad: esta opcion
-     esta en 0 y ya no se puede abrir. Mismo tratamiento que el checkbox
-     deshabilitado porque significa lo mismo. Ojo: no se atenua una opcion que
-     llego a su tope de UNIDADES —esa si esta elegida. */
+  /* Tope de unidades del grupo alcanzado en un control de cantidad: esta opcion
+     esta en 0 y ya no se puede abrir, porque el total esta repartido entre las
+     demas. Mismo tratamiento que el checkbox deshabilitado porque significa lo
+     mismo. Ojo: no se atenua una opcion CON unidades aunque su `+` este frenado
+     —esa si esta elegida. */
   .option--quantity[data-blocked] .option__label {
     color: var(--sf-placeholder);
   }

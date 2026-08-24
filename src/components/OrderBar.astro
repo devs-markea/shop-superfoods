@@ -104,6 +104,24 @@ const { categories, estimate, shipping, pickup, hasLocation, selected } = Astro.
        Tampoco cede ancho: encogerla parte los rotulos de las dos opciones. Quien
        cede es el carrusel, que para eso lleva scroll.
 
+       LOS 136 SON UN SUELO (min-width), NO UNA BASE (flex-basis)
+       Con `flex: 0 0 136px` la medida solo existia dentro del reparto, y con la
+       pista en `width: auto` hay que saber cuanto miden las opciones ANTES de
+       repartir nada. Justo ahi los navegadores no coinciden: Chrome y Edge cuentan
+       la base de 136, mientras que Firefox y Safari miden el rotulo, que es mas
+       corto. Salia una pista mas estrecha que sus dos pastillas de 136, y con ellas
+       asomando por fuera de su propio fondo gris.
+
+       De suelo, en cambio, la medida la respetan los cuatro: min-width acota la
+       aportacion de cada opcion se calcule como se calcule, y la base pasa a ser el
+       rotulo, que es lo unico que todos miden igual. Comprobado en Firefox: la
+       pista vuelve a los 280, los mismos que da Chrome. Y de regalo, un rotulo mas
+       ancho de lo previsto —otra fuente, un idioma mas largo— ensancha su pastilla
+       en lugar de desbordarla.
+
+       La pista no necesita suelo propio: sale de sus dos opciones, que ya lo
+       tienen. La medida vive en un solo sitio.
+
        `margin-inline: 0` no es cosmetico: los margenes automaticos se sirven ANTES
        que justify-content, asi que el `auto` que centra el switch en movil se
        comeria todo el espacio libre y no quedaria nada que repartir entre los dos
@@ -115,7 +133,8 @@ const { categories, estimate, shipping, pickup, hasLocation, selected } = Astro.
       margin-inline: 0;
     }
     .order-bar__inner .switch__option {
-      flex: 0 0 136px;
+      flex: 1 1 auto;
+      min-width: 136px;
     }
     /* La sangria del carrusel es de cuando ocupaba la fila entera y tenia que
        llegar hasta el borde de la pantalla; compartiendo linea, solo lo meteria
@@ -128,6 +147,10 @@ const { categories, estimate, shipping, pickup, hasLocation, selected } = Astro.
       min-width: 0;
       margin-inline: 0;
       padding-inline: 0;
+      /* Y con la sangria, su scroll-padding: es el margen que el navegador deja
+         al acercar un chip —al pulsarlo, o al llegar marcado de "Descubre"—, y
+         sin padding que lo justifique dejaria el chip 32 metido hacia dentro. */
+      scroll-padding-inline: 0;
     }
   }
 </style>
