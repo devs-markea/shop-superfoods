@@ -58,9 +58,13 @@ export function assetBase(): string {
 /**
  * Resuelve una URL de imagen contra el host de la API.
  *
- * `image.url` es absoluta salvo el placeholder de los platillos sin foto, que
- * puede llegar como ruta (`/images/placeholder-dish.svg`). Esa ruta existe en
- * el Laravel, no en este front, asi que servirla tal cual daria un 404.
+ * `image.url` llega absoluta; una que empiece por `/` es una ruta del Laravel, no
+ * de este front, asi que servirla tal cual daria un 404.
+ *
+ * Lo que ya no llega aqui es el relleno de los platillos sin foto: cuenta como
+ * "sin foto" y no se pinta ninguna caja (ver src/lib/product-image.ts). Y ojo con
+ * el subpath: endpoint() lo conserva —bien para `/api/...`— asi que una ruta de
+ * asset solo resuelve mientras API_URL sea el host a secas.
  */
 export function assetUrl(url: string): string {
   return url.startsWith('/') ? endpoint(url) : url;

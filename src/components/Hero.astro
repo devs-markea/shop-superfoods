@@ -77,12 +77,13 @@ const style = photo ? `--sf-hero-photo: url(${JSON.stringify(photo)})` : undefin
     }
     .hero__panel {
       width: 100%;
-      /* 48 + 44 (titulo) + 12 + 24 (bajada) + 48. Lo declara como minimo y no como
-         alto para que el banner no cambie de tamano segun lo que traiga: un
-         titular de dos lineas lo estira, y uno que llega solo con foto —sin texto
-         que lo sostenga— sigue siendo un banner y no una tira de 96. */
+      /* El minimo es para el banner que llega SOLO con foto: sin texto que lo
+         sostenga se quedaria en los 116 del padding, y una tira asi no es un
+         banner. Con texto no llega a aplicar —58 + 44 (titulo) + 12 + 24 (bajada)
+         + 58 = 196—, y un titular de dos lineas lo estira todavia mas. Es minimo y
+         no alto justamente para eso: el panel crece con lo que le echen. */
       min-height: 176px;
-      padding: 48px;
+      padding: 58px 48px;
       border-radius: 16px;
       /* Dos capas: el velo oscuro y, debajo, la foto que manda el panel. El velo
          no es decoracion —es lo que sostiene el texto blanco—: una foto de comida
@@ -108,6 +109,11 @@ const style = photo ? `--sf-hero-photo: url(${JSON.stringify(photo)})` : undefin
        unico titular de este tamano del diseno. */
     .hero__title {
       margin: 0;
+      /* El titular no cruza el panel de lado a lado: pasados los ~500 la linea se
+         hace demasiado larga para leerla de un vistazo, y en un panel de 176 de
+         alto el texto tiene que entrar de golpe. Lo que sobra rompe a la linea
+         siguiente, que el panel ya estira. */
+      max-width: 500px;
       font-size: 36px;
       font-weight: 700;
       line-height: 44px;

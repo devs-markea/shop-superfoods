@@ -7,6 +7,7 @@
 import {
   ICON_PATHS,
   iconClass,
+  iconPx,
   iconViewBox,
   type IconName,
   type IconSize,
@@ -21,10 +22,19 @@ interface Props {
 }
 
 const { name, size = 'md', class: className } = Astro.props;
+
+// La medida va tambien como atributo, no solo en .icon: sin ella el navegador
+// da a un <svg> los 300x150 de un elemento reemplazado sin medidas, y eso es lo
+// que se ve —iconos enormes empujando la pantalla— en el instante que va del
+// HTML pintado a la hoja de estilos aplicada. El CSS le gana igualmente, asi que
+// un glifo con medida propia (el carrito de la barra, 28) sigue mandando.
+const px = iconPx(size);
 ---
 
 <svg
   class:list={[iconClass(size), className]}
+  width={px}
+  height={px}
   viewBox={iconViewBox(name)}
   aria-hidden="true"
   focusable="false"

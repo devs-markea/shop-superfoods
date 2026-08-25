@@ -153,10 +153,12 @@ const { steps } = Astro.props;
       height: 24px;
       font-size: 12px;
     }
-    /* Y con el numero en 24, lo que centra la primera linea contra el es 2:
-       (24 - 20) / 2. */
+    /* El texto sube a 15 y el interlineado se queda en los 20 de movil: es lo que
+       mantiene el paso en una linea y lo que centra su primera linea contra el
+       numero de 24 con un padding de 2 —(24 - 20) / 2—. */
     .steps__text {
       padding-top: 2px;
+      font-size: 15px;
     }
   }
 </style>

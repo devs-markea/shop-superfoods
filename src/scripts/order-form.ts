@@ -18,9 +18,8 @@
 import { formatPrice } from '../lib/price';
 import {
   OPTION_ENTRIES_MAX,
-  isUnfulfillable,
-  missingMessage,
-  unfulfillableMessage,
+  groupIsFull,
+  stepCeiling,
   unitCap,
   type OptionControl,
   type OptionRule,
@@ -52,10 +51,18 @@ interface Selection {
   options: SelectedOption[];
 }
 
-/** Un minimo sin cumplir. Sin grupo cuando afecta al conjunto del envio. */
+/**
+ * Algo que impide comprar. Sin grupo cuando afecta al conjunto del envio.
+ *
+ * `message` puede ser null, y ese es el caso normal del minimo: bloquea la
+ * compra sin redactar nada, porque cuanto hace falta ya lo dice el rotulo del
+ * grupo. Un problema mudo sigue apagando el boton y sigue atrayendo el foco al
+ * enviar; lo unico que no hace es pintar una linea roja. Ver la nota de
+ * src/lib/options.ts.
+ */
 interface Problem {
   group: HTMLElement | null;
-  message: string;
+  message: string | null;
 }
 
 const groupsOf = (form: HTMLFormElement) => [
@@ -89,11 +96,27 @@ function ruleOf(group: HTMLElement): OptionRule {
 }
 
 /**
- * Opciones DISTINTAS elegidas en el grupo, que es lo que acotan min y max en los
- * tres controles. En el contador, una opcion cuenta como elegida a partir de una
- * unidad: el 0 no es una eleccion, y bajar a 0 libera el hueco en el grupo.
+ * UNIDADES del grupo, que es lo que acotan min y max en los tres controles. En
+ * el contador es la SUMA de todos: lo que gasta una opcion deja de estar
+ * disponible para las demas, y bajar una a 0 devuelve sus unidades al total.
+ *
+ * En radio y checkbox una casilla marcada vale exactamente 1 unidad, asi que
+ * aqui sale el mismo numero de siempre.
  */
-function countSelected(group: HTMLElement): number {
+function countUnits(group: HTMLElement): number {
+  if (group.dataset.control === 'quantity') {
+    return choicesOf(group).reduce((units, row) => units + quantityOf(row), 0);
+  }
+
+  return group.querySelectorAll('[data-choice]:checked').length;
+}
+
+/**
+ * Opciones DISTINTAS con seleccion, que es otra cuenta: cada una ocupa UNA
+ * entrada del arreglo `options` de la peticion, lleve 1 unidad o 4. Es lo que
+ * mide el tope de forma de la API, no los topes del grupo.
+ */
+function countEntries(group: HTMLElement): number {
   if (group.dataset.control === 'quantity') {
     return choicesOf(group).filter((row) => quantityOf(row) > 0).length;
   }
@@ -179,7 +202,7 @@ function applyProductLimits(form: HTMLFormElement): void {
 /**
  * Aplica los topes que se pueden dibujar, en lugar de avisar despues. Los
  * maximos se dejan cumplir deshabilitando controles; el minimo no se puede
- * dibujar —solo avisar— y de eso se encarga problemsOf().
+ * dibujar, asi que lo sostiene problemsOf() bloqueando la compra.
  */
 function applyLimits(group: HTMLElement): void {
   // Grupo con max: 0. No admite ninguna opcion y llega ya inerte del servidor.
@@ -190,8 +213,11 @@ function applyLimits(group: HTMLElement): void {
 
   if (control === 'quantity') {
     const rows = choicesOf(group);
-    const selected = rows.filter((row) => quantityOf(row) > 0).length;
     const cap = unitCap(rule);
+
+    // El tope general se mide UNA vez para todo el grupo: es la suma de los
+    // contadores, y al llegar a `max` se cierra el grupo entero.
+    const full = groupIsFull(rule, countUnits(group));
 
     for (const row of rows) {
       const quantity = quantityOf(row);
@@ -200,37 +226,43 @@ function applyLimits(group: HTMLElement): void {
       const minus = row.querySelector<HTMLButtonElement>('[data-step="-1"]');
       if (minus) minus.disabled = quantity === 0;
 
-      // Los DOS topes del control, que cuentan magnitudes distintas y pueden
-      // estar activos a la vez en el mismo grupo:
+      // Los DOS topes del control, que acotan alcances distintos y pueden estar
+      // activos a la vez en el mismo grupo:
       //
-      //   atUnitCap    esta opcion llego a sus unidades maximas (maxPerOption)
-      //   atGroupCap   el grupo ya tiene max opciones elegidas, y esta esta en 0
+      //   atUnitCap  esta opcion llego a SUS unidades maximas (maxPerOption)
+      //   full       el GRUPO llego a las suyas (max), sumando todos los
+      //              contadores
       //
-      // El segundo solo cierra la puerta a ABRIR una opcion nueva: el `+` de las
-      // ya elegidas sigue subiendo. Para elegir otra hay que bajar una a 0, que
-      // es lo que libera el hueco.
+      // El segundo alcanza a TODAS las opciones, incluidas las que ya tienen
+      // unidades: el total esta repartido y no cabe una mas. Para mover unidades
+      // de una opcion a otra hay que bajar primero con el `−`, que es lo que
+      // libera el hueco.
       const atUnitCap = quantity >= cap;
-      const atGroupCap = max !== null && quantity === 0 && selected >= max;
 
       // Los dos se COMUNICAN deshabilitando el boton, a diferencia del checkbox,
       // que ignora el clic en silencio. Es deliberado: un contador se sube
       // pulsando repetidamente, y un boton que deja de responder sin senal se
       // lee como una averia.
       const plus = row.querySelector<HTMLButtonElement>('[data-step="1"]');
-      if (plus) plus.disabled = atUnitCap || atGroupCap;
+      if (plus) plus.disabled = atUnitCap || full;
 
-      // Solo el tope del grupo atenua la etiqueta, con el mismo lenguaje visual
-      // que un checkbox deshabilitado: significan lo mismo, que esa opcion no se
-      // puede elegir. Una opcion en su tope de unidades SI esta elegida, asi que
-      // atenuarla seria mentir.
-      row.toggleAttribute('data-blocked', atGroupCap);
+      // La etiqueta solo se atenua en lo que no se puede elegir: una opcion en 0
+      // con el grupo lleno, que es el mismo lenguaje visual del checkbox
+      // deshabilitado. Una opcion CON unidades esta elegida aunque su `+` este
+      // frenado —por su tope o por el del grupo—, asi que atenuarla seria mentir.
+      row.toggleAttribute('data-blocked', full && quantity === 0);
 
       // El importe solo dice algo a partir de la segunda unidad: con una, la
       // etiqueta de la opcion ya lleva el precio.
+      //
+      // Y se retira al tocar el techo de la opcion. Ahi la fila ya esta en su
+      // momento mas cargado —el numero mas alto que admite y el `+` apagado— y
+      // la suma en negrita pegada a un stepper muerto no sienta bien. La cifra
+      // no se pierde: el boton de agregar lleva el total, que es donde se paga.
       const amount = row.querySelector<HTMLElement>('[data-option-amount]');
       if (amount) {
         const price = priceOf(row);
-        const visible = quantity > 1 && price > 0;
+        const visible = quantity > 1 && price > 0 && !atUnitCap;
         amount.textContent = visible ? `+ ${formatPrice(price * quantity)}` : '';
         amount.hidden = !visible;
       }
@@ -238,6 +270,11 @@ function applyLimits(group: HTMLElement): void {
     return;
   }
 
+  // El mismo tope general del contador, sobre la misma columna: aqui cada
+  // casilla marcada vale una unidad, asi que "unidades del grupo" y "casillas
+  // marcadas" son el mismo numero. Lo que cambia es que este no se comunica —la
+  // casilla se deshabilita y ya—, porque marcar es un gesto de una vez y no una
+  // pulsacion repetida que se quede sin respuesta.
   if (control !== 'checkbox' || max === null) return;
 
   const inputs = [...group.querySelectorAll<HTMLInputElement>('[data-choice]')];
@@ -261,11 +298,13 @@ function setFormError(form: HTMLFormElement, message: string | null): void {
 
 /**
  * Un grupo de cantidad obligatorio nace incumplido: todos los contadores
- * arrancan en 0 y nada indica que falta algo. El contrato pide que sea el
- * cliente quien bloquee la compra hasta que se cumpla el minimo.
+ * arrancan en 0. El contrato pide que sea el cliente quien bloquee la compra
+ * hasta que se cumpla el minimo.
  *
- * El boton se apaga pero sigue siendo pulsable: un `disabled` real no emite
- * click y no habria forma de contar que falta.
+ * El boton se apaga pero sigue siendo pulsable, y ahora eso pesa mas que antes:
+ * como el minimo ya no redacta ningun aviso, el click es lo unico que queda
+ * para senalar donde falta algo —el submit lleva el foco y desplaza hasta el
+ * grupo—. Un `disabled` real no emite click y se llevaria tambien esa pista.
  */
 function setBlocked(form: HTMLFormElement, blocked: boolean): void {
   const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
@@ -282,16 +321,24 @@ function problemsOf(form: HTMLFormElement): Problem[] {
 
   for (const group of groupsOf(form)) {
     const rule = ruleOf(group);
-    const choices = choicesOf(group).length;
-    const selected = countSelected(group);
+
+    // Las dos cuentas del grupo, que no son la misma en el control de cantidad:
+    // el minimo se mide en unidades y el tope de la peticion en entradas del
+    // arreglo `options`, una por opcion con seleccion.
+    const units = countUnits(group);
 
     // La variante no viaja en `options`, asi que no cuenta para el tope.
-    if (group.dataset.kind !== 'variant') entries += selected;
+    if (group.dataset.kind !== 'variant') entries += countEntries(group);
 
-    if (isUnfulfillable(rule, choices)) {
-      problems.push({ group, message: unfulfillableMessage(rule, choices) });
-    } else if (selected < rule.min) {
-      problems.push({ group, message: missingMessage(rule, group.dataset.label ?? '') });
+    // Solo el minimo, y solo en unidades: cuantas opciones distintas tenga el
+    // grupo no es una condicion del grupo.
+    //
+    // Sin mensaje, a proposito: cuanto hace falta ya lo dice ruleLabel() encima
+    // de las opciones, y repetirlo en rojo debajo era decirlo dos veces. El
+    // problema se registra igual —de el salen el boton bloqueado y el foco al
+    // enviar—, solo que mudo.
+    if (units < rule.min) {
+      problems.push({ group, message: null });
     }
   }
 
@@ -429,14 +476,20 @@ function initOrderForm(form: HTMLFormElement): void {
     const problems = problemsOf(form);
     setBlocked(form, problems.length > 0);
 
+    // El primero que tenga algo que decir, no el primero a secas: los minimos
+    // son mudos y ahora pueden venir por delante del tope de entradas, que si
+    // habla. Buscar el mensaje evita que un problema mudo tape al que no lo es.
     if (!revealed) {
-      setFormError(form, problems[0]?.message ?? null);
+      setFormError(form, problems.find((problem) => problem.message !== null)?.message ?? null);
       return;
     }
 
+    // Los problemas mudos no llegan al mapa ni a la lista: un hueco con cadena
+    // vacia se pintaria como un aviso en blanco, peor que no pintar nada.
     const byGroup = new Map<HTMLElement, string>();
     const loose: string[] = [];
     for (const problem of problems) {
+      if (problem.message === null) continue;
       if (problem.group) byGroup.set(problem.group, problem.message);
       else loose.push(problem.message);
     }
@@ -480,11 +533,14 @@ function initOrderForm(form: HTMLFormElement): void {
     const value = row?.querySelector<HTMLElement>('[data-quantity]');
     if (!row || !group || !value) return;
 
-    // Piso en 0 y techo en el tope de unidades de la opcion. El `+` ya esta
-    // deshabilitado al llegar, asi que esto es solo el cinturon: pasarse solo
-    // serviria para cobrar un 422.
+    // Piso en 0 y techo en el mas bajo de los dos topes: las unidades que le
+    // quedan a esta opcion y las que le quedan al grupo. El `+` ya esta
+    // deshabilitado al llegar a cualquiera de los dos, asi que esto es solo el
+    // cinturon: pasarse solo serviria para cobrar un 422.
     const delta = Number.parseInt(step.dataset.step ?? '', 10) || 0;
-    const next = Math.min(unitCap(ruleOf(group)), Math.max(0, quantityOf(row) + delta));
+    const quantity = quantityOf(row);
+    const ceiling = stepCeiling(ruleOf(group), countUnits(group), quantity);
+    const next = Math.min(ceiling, Math.max(0, quantity + delta));
 
     value.textContent = String(next);
     refresh();

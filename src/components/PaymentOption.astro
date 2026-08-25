@@ -219,6 +219,19 @@ const hasLogo = Astro.slots.has('media');
       width: 76px;
       height: 32px;
     }
+
+    /* Los dos textos crecen un punto: aqui la tarjeta es mas ancha y el metodo se
+       elige leyendo lo que hace cada uno, no reconociendo el icono. La nota baja
+       ademas a 400 —el 500 de movil sobre 13px la ponia a pelear con el titulo
+       que tiene justo encima— y sigue siendo la voz secundaria de la caja. */
+    .payment-option__title {
+      font-size: 15px;
+    }
+
+    .payment-option__note {
+      font-weight: 400;
+      font-size: 13px;
+    }
   }
 
   /* Este bloque lo comparten <OptionGroup>, <ProductCard> y <PaymentOption>.

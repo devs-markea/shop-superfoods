@@ -28,6 +28,7 @@
 
 import { formatPrice } from './price';
 import { iconHtml } from './icons';
+import { hasImage } from './product-image';
 
 export interface CartOption {
   /** null en lineas antiguas sin id en el snapshot. */
@@ -274,9 +275,24 @@ function controlsHtml(options: {
 </div>`;
 }
 
-function mediaHtml(image: { url: string; alt: string }, resolveImage: (url: string) => string): string {
+/**
+ * La caja de la foto, o nada.
+ *
+ * Un platillo sin foto no deja hueco: el cuerpo —el unico hijo que queda de la
+ * linea— ocupa los 70 de la caja y sus 12 de separacion, y la linea no cambia de
+ * alto porque ese min-height de 70 lo trae el propio cuerpo. Quien decide es el
+ * MISMO hasImage() que usan las tarjetas y la ficha en el servidor, que es lo que
+ * garantiza que el repintado del navegador no pinte una caja que el primer
+ * render no puso.
+ */
+function mediaHtml(
+  image: { url?: string | null; alt?: string | null } | null | undefined,
+  resolveImage: (url: string) => string,
+): string {
+  if (!hasImage(image)) return '';
+
   return `<div class="order-item__media">
-  <img class="order-item__image" src="${escape(resolveImage(image.url))}" width="70" height="70" alt="${escape(image.alt)}" loading="lazy" decoding="async">
+  <img class="order-item__image" src="${escape(resolveImage(image.url))}" width="70" height="70" alt="${escape(image.alt ?? '')}" loading="lazy" decoding="async">
 </div>`;
 }
 
