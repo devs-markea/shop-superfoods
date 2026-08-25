@@ -107,6 +107,31 @@ export function iconViewBox(name: IconName): string {
   return ICON_VIEWBOX[name] ?? DEFAULT_VIEWBOX;
 }
 
+/**
+ * La medida de cada tamano, en px. Es la misma que declara .icon en
+ * components/Icon.astro, repetida aqui porque hace falta como ATRIBUTO del <svg>
+ * y no solo como regla.
+ *
+ * POR QUE COMO ATRIBUTO
+ * Un <svg> sin width/height propios mide, para el navegador, 300x150: es el
+ * tamano por defecto de todo elemento reemplazado que no diga otra cosa. Con la
+ * hoja de estilos aplicada da igual —.icon lo lleva a 20— pero en el instante
+ * anterior, con el HTML ya pintado y el CSS todavia en camino, cada icono ocupa
+ * una plancha de 300x150 y la pantalla se deforma entera. Es el parpadeo que se
+ * ve al entrar en una ficha.
+ *
+ * Los atributos viajan en el propio marcado, asi que valen desde el primer
+ * pintado. Y no le disputan nada a la hoja: cualquier regla de CSS —.icon, o el
+ * width propio de un glifo como el del carrito— le gana a un atributo de
+ * presentacion.
+ */
+const ICON_PX: Record<IconSize, number> = { sm: 16, md: 20, lg: 40 };
+
+/** La medida en px del tamano pedido. */
+export function iconPx(size: IconSize = 'md'): number {
+  return ICON_PX[size];
+}
+
 /** Las mismas clases que pone <Icon>, para que el SVG de cliente no se salga del sistema. */
 export function iconClass(size: IconSize = 'md'): string {
   if (size === 'sm') return 'icon icon--sm';
@@ -119,5 +144,6 @@ export function iconClass(size: IconSize = 'md'): string {
  * servido se usa <Icon>, que lee este mismo diccionario.
  */
 export function iconHtml(name: IconName, size: IconSize = 'md'): string {
-  return `<svg class="${iconClass(size)}" viewBox="${iconViewBox(name)}" aria-hidden="true" focusable="false">${ICON_PATHS[name]}</svg>`;
+  const px = iconPx(size);
+  return `<svg class="${iconClass(size)}" width="${px}" height="${px}" viewBox="${iconViewBox(name)}" aria-hidden="true" focusable="false">${ICON_PATHS[name]}</svg>`;
 }

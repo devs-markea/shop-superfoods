@@ -1,6 +1,6 @@
 ---
 import BrandLogo from './BrandLogo.astro';
-import { whatsAppUrl } from '../lib/whatsapp.ts';
+import BrandIcon from './BrandIcon.astro';
 import { storeYear } from '../lib/schedule.ts';
 import type { StoreSettings } from '../lib/store-config.ts';
 
@@ -14,7 +14,7 @@ const { store, categories } = Astro.props;
 
 // Pie de pagina, SOLO desktop: en movil no se pinta (ver los estilos de este archivo). Tres
 // franjas separadas por 32: marca y enlaces, la divisoria, y el aviso de derechos
-// con las redes.
+// con los iconos de las redes.
 //
 // El nombre no se escribe a mano en ningun sitio de aqui: lo pone la tienda. Sin
 // el, la frase de presentacion se cae entera antes que quedarse sin sujeto —y el
@@ -46,17 +46,32 @@ const copyright = name
 // completo, y con el boton central o un Ctrl+click se abre en otra pestana.
 const discover = categories.slice(0, 3);
 
-// Las redes: de las tres, solo WhatsApp tiene dato. Facebook e Instagram no se
-// pueden enlazar —`GET /api/store` no publica sus perfiles— y se quedan en texto
-// en lugar de fingir un enlace a "#": la misma regla que el resto de la tienda,
-// sin dato se degrada en vez de mentir.
-const phone = store.whatsapp?.phone;
-
-const socials: Array<{ label: string; href: string | null }> = [
-  { label: 'Facebook', href: null },
-  { label: 'Instagram', href: null },
-  { label: 'WhatsApp', href: phone ? whatsAppUrl(phone) : null },
-];
+// Las redes. Ya no son tres rotulos escritos aqui: `GET /api/store` publica
+// `socialLinks`, y con el perfil viene su enlace, asi que lo que antes era texto
+// muerto —"Facebook" e "Instagram" sin nada detras, porque la API no los daba—
+// es ahora una fila de iconos que llevan a alguna parte.
+//
+// Se pinta la lista TAL CUAL viene:
+//
+//   El orden es dato. Es el que el negocio capturo en el panel, y es el orden en
+//   que quiere sus iconos. No se reordena ni se completa con las que faltan.
+//
+//   El icono lo elige `network`, uno de seis tokens (ver BrandIcon.astro). Las
+//   redes que la tienda no sabe pintar ya se cayeron al normalizar la
+//   configuracion, asi que aqui todo lo que llega tiene glifo.
+//
+//   El nombre accesible lo manda la API en `label`, y por eso el pie no
+//   mantiene una tabla de nombres: capitalizar el token daria "Tiktok" y "X"
+//   donde la marca escribe "TikTok" y "X (Twitter)".
+//
+// Sin redes configuradas no hay fila que pintar y la franja de abajo se queda
+// con el aviso de derechos solo. Es la regla de siempre: sin dato se degrada, no
+// se finge un enlace a "#".
+//
+// El WhatsApp de esta fila NO sale de `store.whatsapp.phone`, que es el numero
+// al que llega el comprobante del pedido: son dos datos y el negocio los
+// configura en dos sitios del panel.
+const socials = store.socialLinks ?? [];
 ---
 
 <footer class="footer">
@@ -96,26 +111,26 @@ const socials: Array<{ label: string; href: string | null }> = [
     <div class="footer__bottom">
       <p class="footer__copyright">{copyright}</p>
 
-      <ul class="footer__social list-unstyled">
-        {
-          socials.map((social) => (
-            <li>
-              {social.href ? (
+      {
+        socials.length > 0 && (
+          <ul class="footer__social list-unstyled">
+            {socials.map((social) => (
+              <li>
                 <a
                   class="footer__social-link"
-                  href={social.href}
+                  href={social.url}
                   target="_blank"
                   rel="noopener"
+                  aria-label={social.label}
+                  title={social.label}
                 >
-                  {social.label}
+                  <BrandIcon name={social.network} />
                 </a>
-              ) : (
-                <span class="footer__social-link">{social.label}</span>
-              )}
-            </li>
-          ))
-        }
-      </ul>
+              </li>
+            ))}
+          </ul>
+        )
+      }
     </div>
   </div>
 </footer>
@@ -279,18 +294,25 @@ const socials: Array<{ label: string; href: string | null }> = [
       gap: 16px;
       margin: 0;
     }
-    /* Igual que .footer__link: Facebook e Instagram son texto hasta que la tienda
-       publique sus perfiles, y no pueden verse distintos de WhatsApp, que si lo es. */
+    /* Los tres rotulos de la spec son ahora iconos: la API publica el perfil con
+       su enlace, y una fila de glifos reconocibles dice lo mismo en menos sitio
+       que "Facebook · Instagram · WhatsApp" escrito.
+
+       El glifo es la unica etiqueta visible, asi que el nombre accesible va en
+       el `aria-label` del enlace —lo manda la API— y el `title` lo repite para
+       el raton. El SVG queda `aria-hidden`, como el resto de BrandIcon.
+
+       Los 20 del icono son los mismos del sistema, aunque el rotulo de al lado
+       sea de 13: es un blanco pulsable, no un texto. El color arranca en el gris
+       del aviso de derechos —la fila es del mismo rango— y va al dorado en
+       hover, igual que los enlaces de "Descubre". */
     .footer__social-link {
-      font-size: 13px;
-      font-weight: 400;
-      line-height: 1;
+      display: flex;
+      align-items: center;
       color: var(--sf-placeholder);
-    }
-    a.footer__social-link {
       transition: color 160ms ease;
     }
-    a.footer__social-link:hover {
+    .footer__social-link:hover {
       color: var(--sf-gold);
     }
   }

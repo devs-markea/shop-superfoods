@@ -79,9 +79,10 @@ const { quantity, itemName, min = 1, max, disabled = false } = Astro.props;
   .stepper__button:active {
     transform: scale(0.92);
   }
-  /* El tope de unidades por opcion se ve: atenuado y sin respuesta al hover.
-     Es la diferencia deliberada con el checkbox, que al llegar a su maximo de
-     opciones ignora el clic sin ninguna senal. */
+  /* Los dos topes del contador se ven: atenuado y sin respuesta al hover, lo
+     frene el maximo de esta opcion o el del grupo entero. Es la diferencia
+     deliberada con el checkbox, que al llegar al maximo ignora el clic sin
+     ninguna senal. */
   .stepper__button:disabled {
     opacity: 0.4;
     transform: none;

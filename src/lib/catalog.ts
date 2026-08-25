@@ -23,6 +23,7 @@
 
 import { ApiError, apiGet, assetUrl } from './api.ts';
 import { formatPrice } from './price.ts';
+import { hasImage } from './product-image.ts';
 import type { OptionControl } from './options.ts';
 
 export interface ProductImage {
@@ -143,9 +144,23 @@ export function productHref(item: Pick<ProductListItem, 'slug'>): string {
   return `/mamayaya/${encodeURIComponent(item.slug)}`;
 }
 
-/** URL lista para el `src`, con el placeholder ya resuelto. */
-export function productImageSrc(item: { image: ProductImage }): string {
-  return assetUrl(item.image.url);
+/**
+ * La foto lista para el `<img>`, o null cuando el platillo no tiene ninguna.
+ *
+ * Devolver null —y no una URL de relleno— es lo que permite que la tarjeta y la
+ * ficha no pinten la caja y el contenido ocupe su sitio. Quien decide es
+ * hasImage(), que es la misma pregunta que se hace el pedido en el navegador:
+ * ver src/lib/product-image.ts.
+ */
+export function productImageView(item: {
+  image?: { url?: string | null; alt?: string | null } | null;
+}): { src: string; alt: string } | null {
+  if (!hasImage(item.image)) return null;
+
+  // El alt puede llegar vacio, o no llegar: entonces la foto es decorativa —el
+  // nombre del platillo esta escrito al lado— y lo que no puede quedar es un
+  // <img> sin el atributo.
+  return { src: assetUrl(item.image.url), alt: item.image.alt ?? '' };
 }
 
 // ---------------------------------------------------------------------------
@@ -188,17 +203,20 @@ export interface Customization {
   control: OptionControl;
   required: boolean;
   /**
-   * Opciones DISTINTAS minimas y maximas, no unidades. Significan lo mismo en
-   * los tres controles, `quantity` incluido: alli una opcion cuenta como
-   * elegida cuando su contador es >= 1.
+   * UNIDADES minimas y maximas DEL GRUPO, no opciones distintas. Significan lo
+   * mismo en los tres controles: en radio y checkbox una opcion marcada vale
+   * exactamente 1 unidad, asi que ahi las dos lecturas dan el mismo numero; en
+   * `quantity` son la SUMA de los contadores.
    */
   min: number;
   max: number | null;
   /**
-   * UNIDADES maximas de una misma opcion, 1..99. Solo tiene valor en el control
+   * UNIDADES maximas de UNA misma opcion, 1..99. Solo tiene valor en el control
    * `quantity`, el unico donde una opcion puede valer mas de 1; null significa
-   * sin tope de negocio. Es la OTRA magnitud, no el espejo de `max`: en un
-   * grupo de cantidad los dos pueden venir con valor y se aplican los dos.
+   * sin tope de negocio. Es el mismo tipo de cuenta que `max` —unidades— con
+   * otro alcance: el general reparte el total y este pone techo a cada parte.
+   * En un grupo de cantidad los dos pueden venir con valor y se aplican los dos,
+   * y el panel ya impide guardar un individual por encima del general.
    */
   maxPerOption: number | null;
   defaultOptionId: string | null;
@@ -284,6 +302,7 @@ export interface OptionGroupView {
   required: boolean;
   min: number;
   max: number | null;
+  /** Unidades de UNA opcion, con el mismo significado que en Customization. */
   maxPerOption: number | null;
   /**
    * `variant`: el precio ES el precio del platillo, sustituye a los demas.
@@ -326,7 +345,8 @@ export function toOptionGroups(product: ProductDetail): OptionGroupView[] {
       required: true,
       min: 1,
       max: 1,
-      // Las variantes no son una personalizacion: no hay unidades que acotar.
+      // Las variantes no son una personalizacion: se elige una y vale por 1
+      // unidad, asi que no hay tope individual que repartir.
       maxPerOption: null,
       kind: 'variant',
       choices: product.variants.map((variant, index) => ({

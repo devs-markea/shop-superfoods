@@ -79,8 +79,8 @@ const slug = (value: string) => `cat-${value.toLowerCase().replace(/\s+/g, '-')}
      pasa de 20 a 32. Es el mismo salto que dan .navbar, .product-list y el resto:
      el primer chip tiene que seguir alineado con el contenido de al lado.
 
-     De lg en adelante el carrusel deja de sangrar —mas abajo se ponen a 0— pero
-     el scroll-padding se queda en 32, que es como estaba. */
+     Compartiendo linea con el switch la sangria sobra, y ahi la barra de pedido
+     la pone a 0 junto con su scroll-padding (ver components/OrderBar.astro). */
   @media (min-width: 768px) {
     .category-nav {
       margin-inline: calc(32px * -1);
@@ -89,21 +89,16 @@ const slug = (value: string) => `cat-${value.toLowerCase().replace(/\s+/g, '-')}
     }
   }
 
-  /* --- Desktop -------------------------------------------------------------
-     Con espacio de sobra los chips se acomodan en varias lineas centradas y el
-     carrusel deja de necesitar scroll. */
-  @media (min-width: 992px) {
-    .category-nav {
-      height: auto;
-      flex-wrap: wrap;
-      justify-content: center;
-      overflow: visible;
-      margin-inline: 0;
-      padding-inline: 0;
-      padding-bottom: 0;
-      cursor: default;
-    }
-  }
+  /* No hay bloque de desktop: la pista es la misma en todas las pantallas.
+
+     Antes, de lg en adelante, los chips se repartian en varias lineas centradas
+     y el carrusel dejaba de scrollear. Eso rompia la fila de la barra de pedido
+     —que es de una sola linea, con el switch en el otro extremo, ver
+     components/OrderBar.astro—: en cuanto las categorias no cabian, la pista
+     crecia hacia abajo, desalineaba el switch y empujaba la rejilla. Una linea
+     que scrollea mide siempre lo mismo, y el gesto para recorrerla es el que ya
+     se conoce del movil: arrastrar —con el raton lo resuelve
+     scripts/category-nav.ts—. */
   /* ---------------------------------------------------------------------------
      Block: chip  (sobre .btn + .btn-check de Bootstrap)
      ---------------------------------------------------------------------------

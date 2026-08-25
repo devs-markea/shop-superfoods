@@ -1,6 +1,7 @@
 ---
 import Layout from '../../layouts/Layout.astro';
 import NavbarDesktop from '../../components/NavbarDesktop.astro';
+import BackHeader from '../../components/BackHeader.astro';
 import ScheduleSheet from '../../components/ScheduleSheet.astro';
 import LocationSheet from '../../components/LocationSheet.astro';
 import ProductHero from '../../components/ProductHero.astro';
@@ -20,6 +21,7 @@ import {
   getProduct,
   getProducts,
   initialTotal,
+  productImageView,
   promotionView,
   toOptionGroups,
   variantPrice,
@@ -30,9 +32,15 @@ import {
 // misma forma: control, required, min, max, maxPerOption, defaultOptionId y
 // options. La API ya resolvio de que depende cada uno, asi que aqui no se
 // deriva nada; un solo <OptionGroup> ramifica por `control` y
-// src/scripts/order-form.ts se encarga del total, de los dos topes —opciones
-// distintas y unidades por opcion— y de bloquear la compra mientras falte un
+// src/scripts/order-form.ts se encarga del total, de los dos topes —unidades
+// del grupo y unidades por opcion— y de bloquear la compra mientras falte un
 // minimo.
+//
+// Los dos topes cuentan UNIDADES y se distinguen por el alcance: `max` es el
+// total del grupo y `maxPerOption` lo que puede acaparar una sola opcion dentro
+// de ese total. En radio y checkbox una casilla marcada vale una unidad, asi que
+// alli la distincion no se nota; en el contador si, y el general manda: lo que
+// gasta una opcion deja de estar disponible para las demas.
 
 // DOS PANTALLAS, UN MARCADO
 //
@@ -45,6 +53,15 @@ import {
 // convivir con un contador de unidades. Nada de eso duplica marcado: son los
 // mismos elementos recolocados por CSS (ver los estilos de este archivo), asi
 // que hay un solo boton de agregar y un solo formulario que enviar.
+//
+// Y EL PLATILLO SIN FOTO
+//
+// No hay hueco que rellenar: la ficha no monta el bloque de la foto y el sitio se
+// lo queda el contenido. En desktop eso deja UNA columna centrada —la de 720 que
+// ya usa el tramo md—, y en movil deja la ficha sin su unica salida, porque el
+// control de volver vivia encima de la foto: lo releva <BackHeader>, que ademas
+// reserva su alto para que no se pose sobre el nombre del platillo. En desktop esa
+// cabecera no se pinta, que ahi el logo de la barra ya lleva al menu.
 
 // On-demand por el mismo motivo que la portada: `available` depende del horario
 // de la categoria. Y ya no se puede prerenderizar de todas formas, porque
@@ -120,6 +137,12 @@ if (!product) {
 const groups = product ? toOptionGroups(product) : [];
 const variant = product ? defaultVariant(product) : undefined;
 
+// La foto, resuelta UNA vez: de ella dependen las dos columnas de desktop, si se
+// monta el bloque de la foto y si hace falta la cabecera de vuelta de movil. Que
+// las tres decisiones salgan del mismo valor es lo que evita una ficha con dos
+// columnas y una sola cosa dentro. Ver src/lib/product-image.ts.
+const image = product ? productImageView(product) : null;
+
 // Total de UNA unidad: es con lo que se abre la ficha y con lo que arranca el
 // contador. A partir de ahi lo recalcula order-form.ts, que multiplica por las
 // unidades que se elijan.
@@ -171,8 +194,17 @@ const closed = isClosed(schedule);
   el respaldo del Layout.
 */}
 <Layout title={title} description={product?.description || undefined}>
-  {/* Solo la barra de desktop: en movil la cabecera de esta pantalla es la foto,
-      con su control de volver, y dos cabeceras seguidas serian una de mas. */}
+  {/* Solo cuando no hay foto: en movil la cabecera de esta pantalla ES la foto,
+      con su control de volver encima, y dos cabeceras seguidas serian una de mas.
+      Sin foto no hay ninguna, y sin ella la ficha no tendria salida.
+
+      Los 64 de la barra son ademas la distancia que pide el enunciado: el control
+      ocupa su sitio en el flujo, asi que no puede taparle el nombre al platillo. En
+      desktop se retira —de eso va `mobileOnly`— porque ahi el logo de la barra
+      lleva al menu. */}
+  {product && !image && <BackHeader backHref="/mamayaya" mobileOnly />}
+
+  {/* La barra de la tienda, la misma de la portada. */}
   <NavbarDesktop
     shortAddress={store.location?.shortAddress}
     estimate={store.delivery?.estimate}
@@ -188,8 +220,12 @@ const closed = isClosed(schedule);
         // La rejilla solo existe en desktop —en movil es `display: contents`, ver
         // los estilos de este archivo—, asi que envolver no cambia nada de lo
         // que ya habia.
-        <div class="product-page__grid">
-          <ProductHero product={product} />
+        //
+        // El modifier es lo que parte la ficha en dos columnas, y por eso lo pone
+        // la foto: sin ella no hay nada que repartir y la ficha se queda en la
+        // columna centrada de 720.
+        <div class:list={['product-page__grid', image && 'product-page__grid--split']}>
+          {image && <ProductHero image={image} />}
 
           <form
             class="product-page__panel d-flex flex-column flex-grow-1"
@@ -234,9 +270,11 @@ const closed = isClosed(schedule);
             {unavailableNotice ? (
               <p class="product-detail__notice">{unavailableNotice}</p>
             ) : (
-              // Doble uso, y en este orden: mientras falte un minimo dice cual
-              // es —si no, el boton apagado no explicaria nada—, y despues del
-              // envio recoge lo que no cabe junto a un grupo concreto.
+              // El minimo que falta ya NO pasa por aqui: lo dice el rotulo de
+              // cada grupo y el boton apagado, sin repetirlo en rojo (ver la
+              // nota de src/lib/options.ts). Este hueco recoge lo que no cabe
+              // junto a un grupo concreto: el tope de entradas de la peticion y
+              // los errores del 422 que no nombran personalizacion.
               <p
                 class="product-detail__notice product-detail__notice--error"
                 role="alert"
@@ -468,6 +506,10 @@ const closed = isClosed(schedule);
      columna se parte en dos con 48 entre ellas: foto a la izquierda, informacion y
      seleccion a la derecha. Y con las dos columnas se va la barra fija del fondo:
      el boton baja a la fila de compra, junto al contador de unidades.
+
+     El platillo SIN foto se queda en esa columna centrada de 720 tambien de lg en
+     adelante —no hay dos columnas porque no hay dos cosas—, y el boton igualmente
+     baja a la fila: eso es de md, no de las columnas.
      --------------------------------------------------------------------------- */
   /* display: contents: en movil el envoltorio no pinta ni ocupa, asi que la foto y
      el formulario siguen siendo hijos de <main> a efectos de layout —y con ellos
@@ -543,15 +585,23 @@ const closed = isClosed(schedule);
   /* --- Dos columnas ---------------------------------------------------------
      De lg: 520 de foto + 48 + lo que quede para la informacion. Antes no se piden
      porque no caben: a 768 la columna de opciones se quedaria en menos de 300 y sus
-     filas —etiqueta, precio y contador— no entran. */
+     filas —etiqueta, precio y contador— no entran.
+
+     Todo cuelga del modifier, que lo pone la foto (ver el marcado de este
+     archivo): SIN foto no se aplica nada de aqui y la ficha se queda con las reglas
+     de md —columna de 720, centrada, con 24 entre sus piezas—, que es exactamente
+     lo que tiene que ser cuando no hay dos cosas que repartir. Se hace asi, y no
+     con un modifier que deshaga estas tres declaraciones, porque deshacer un
+     `flex: 1 1 420px` en una columna significa quitarle 420 de ALTO al panel: la
+     regla que no se pone no hay que corregirla. */
   @media (min-width: 992px) {
-    .product-page__grid {
+    .product-page__grid--split {
       flex-direction: row;
       align-items: flex-start;
       gap: 48px;
       max-width: 1140px;
     }
-    .product-page__panel {
+    .product-page__grid--split .product-page__panel {
       /* Base de 420 y no 0: entre lg y xl el contenido no da los 1120 del lienzo, y
          repartir la diferencia entre las dos columnas —la foto tiene su propia base,
          ver components/ProductHero.astro— la estrecha menos que dejarla crecer

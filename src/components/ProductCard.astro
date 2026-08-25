@@ -4,7 +4,7 @@ import PromoBadge from './PromoBadge.astro';
 import { formatPrice } from '../lib/price.ts';
 import {
   productHref,
-  productImageSrc,
+  productImageView,
   promotionView,
   type ProductListItem,
 } from '../lib/catalog.ts';
@@ -58,6 +58,13 @@ const NAME_MAX = 24;
 
 const displayName =
   product.name.length > NAME_MAX ? `${product.name.slice(0, NAME_MAX).trimEnd()}...` : product.name;
+
+// La foto, si la hay. Sin ella la tarjeta NO pinta la caja: en movil el cuerpo
+// arranca en el borde y se queda con los 80 de la miniatura y sus 12 de hueco, y
+// en desktop ocupa los 330 de alto de la tarjeta. El pie sigue al fondo —lo manda
+// su `margin-top: auto`—, asi que el precio de un platillo sin foto queda a la
+// misma altura que el de sus vecinos con foto. Ver src/lib/product-image.ts.
+const image = productImageView(product);
 ---
 
 <!-- data-card: por aqui la alcanza el filtro para ponerle y quitarle el estado de
@@ -79,18 +86,25 @@ const displayName =
       viewport—.
 
       El esqueleto del cambio de categoria es otra cosa y va aparte, en
-      .product-card--loading: ahi no se espera ninguna descarga. */}
-  <div class="product-card__media skeleton" data-skeleton>
-    <img
-      class="product-card__image"
-      src={productImageSrc(product)}
-      width="80"
-      height="80"
-      alt={product.image.alt}
-      loading={eager ? 'eager' : 'lazy'}
-      decoding="async"
-    />
-  </div>
+      .product-card--loading: ahi no se espera ninguna descarga.
+
+      Sin foto no hay nada de esto: ni caja, ni esqueleto, ni hueco. La tarjeta se
+      queda en cuerpo, que es su unico hijo y ocupa el ancho entero. */}
+  {
+    image && (
+      <div class="product-card__media skeleton" data-skeleton>
+        <img
+          class="product-card__image"
+          src={image.src}
+          width="80"
+          height="80"
+          alt={image.alt}
+          loading={eager ? 'eager' : 'lazy'}
+          decoding="async"
+        />
+      </div>
+    )
+  }
 
   <div class="product-card__body">
     <h3 class="product-card__title">

@@ -3,7 +3,7 @@ import SectionLabel from './SectionLabel.astro';
 import { formatPrice } from '../lib/price.ts';
 import { formatKm, type ShippingResult } from '../lib/shipping.ts';
 import { describeSelection } from '../lib/cart-view.ts';
-import { assetUrl } from '../lib/api.ts';
+import { productImageView } from '../lib/catalog.ts';
 import type { CartItem } from '../lib/cart.ts';
 
 interface Props {
@@ -79,27 +79,34 @@ const breakdown = discount > 0 || tip > 0 || shipping.state !== 'none';
           // dos cosas distintas de la misma linea.
           const selection = describeSelection(item, ' - ');
 
+          // Sin foto no hay caja: en desktop el texto de la linea arranca en el
+          // borde y ocupa los 56 y sus 16 de hueco. En movil no cambia nada, que
+          // ahi la caja ya no se pintaba. Ver src/lib/product-image.ts.
+          const image = productImageView(item);
+
           return (
             <li class="order-detail__item">
-              {/* Solo desktop. La foto llega absoluta salvo el placeholder de los
-                  platillos sin foto, que es una ruta del Laravel: assetUrl() es
-                  quien lo resuelve.
+              {/* Solo desktop. La URL la resuelve productImageView(): la foto llega
+                  absoluta, pero el platillo puede no tener ninguna y entonces no se
+                  pinta nada.
 
                   `loading="lazy"` es aqui lo que evita que un movil pague por una
                   foto que no va a ver: una imagen dentro de un `display: none` no
                   llega a entrar en pantalla, asi que la carga se queda esperando
                   un momento que en movil no ocurre. */}
-              <span class="order-detail__media">
-                <img
-                  class="order-detail__image"
-                  src={assetUrl(item.image.url)}
-                  width="56"
-                  height="56"
-                  alt={item.image.alt}
-                  loading="lazy"
-                  decoding="async"
-                />
-              </span>
+              {image && (
+                <span class="order-detail__media">
+                  <img
+                    class="order-detail__image"
+                    src={image.src}
+                    width="56"
+                    height="56"
+                    alt={image.alt}
+                    loading="lazy"
+                    decoding="async"
+                  />
+                </span>
+              )}
 
               <span class="order-detail__line">
                 <span class="order-detail__head">
