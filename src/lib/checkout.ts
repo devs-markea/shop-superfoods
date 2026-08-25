@@ -14,6 +14,8 @@
 // navegador no lo tiene, es una cookie httpOnly.
 // ---------------------------------------------------------------------------
 
+import { throttleMessage } from './throttle.ts';
+
 export type DeliveryType = 'delivery' | 'pickup';
 
 /** Los tres que acepta la API. `efectivo` no esta en el diseno todavia. */
@@ -300,7 +302,15 @@ export async function placeOrder(
   const body = await response.json().catch(() => null);
 
   if (!response.ok) {
-    return { ok: false, message: readError(body, response.status), status: response.status };
+    // El 429 va ANTES que readError: no es un error del pedido —los datos estaban bien— sino un
+    // techo de ritmo, y su respuesta no trae `errors` que mostrar. Ver src/lib/throttle.ts.
+    const throttled = throttleMessage(response);
+
+    return {
+      ok: false,
+      message: throttled ?? readError(body, response.status),
+      status: response.status,
+    };
   }
 
   const order = (body as { data?: StoreOrder } | null)?.data;
@@ -348,8 +358,12 @@ export async function startPayment(orderId: string): Promise<PaymentAttempt> {
   if (!response.ok) {
     // Respaldo propio: aqui el pedido ya existe, asi que hablar de crearlo
     // asustaria sin motivo. Los mensajes de negocio siguen mandando cuando vienen
-    // ("Este pedido ya no admite un pago nuevo.").
-    return { ok: false, message: readError(body, response.status, PAYMENT_ERROR) };
+    // ("Este pedido ya no admite un pago nuevo."), y el techo de ritmo por delante de todos:
+    // reintentar el cobro es justo lo que trae a alguien hasta aqui varias veces seguidas.
+    return {
+      ok: false,
+      message: throttleMessage(response) ?? readError(body, response.status, PAYMENT_ERROR),
+    };
   }
 
   // Aqui `data` es el cobro, no el pedido: este endpoint no devuelve la orden.

@@ -50,6 +50,25 @@ export default defineConfig({
     schema: {
       API_URL: envField.string({ context: 'server', access: 'public' }),
 
+      // Clave del CLIENTE autorizado de la API. Viaja en la cabecera `X-Shop-Key` de cada
+      // llamada al backend y es lo que distingue a esta tienda de cualquiera que conozca la
+      // URL de la API: sin ella, el catalogo, la lista de precios y la configuracion del
+      // negocio —telefono de WhatsApp, CLABE, plantillas— quedan servidos a quien pase.
+      //
+      // `secret` y no `public`: no se inlinea en ningun bundle del navegador. Puede ser un
+      // secreto de verdad precisamente porque este front es un BFF —el navegador llama a
+      // /api/* de Astro y es el SERVIDOR quien reenvia al backend—. El dia que una pantalla
+      // llame directo a la API desde el cliente, esta clave deja de serlo.
+      //
+      // Opcional a proposito, y en este orden: se despliega ANTES aqui que en el backend.
+      // Mientras el Laravel la tenga vacia no exige nada, asi que mandarla no rompe nada;
+      // al reves —backend primero— la tienda entera responde 401 hasta el segundo despliegue.
+      SHOP_API_KEY: envField.string({
+        context: 'server',
+        access: 'secret',
+        optional: true,
+      }),
+
       // Modo de pruebas: silencia el aviso de la zona de reparto, que es lo unico
       // que hace desde que cotizar es cosa del backend. Sin ese aviso por delante,
       // el equipo puede recorrer el pedido desde donde vive.
