@@ -22,6 +22,7 @@
 // de la barra de arriba.
 
 import { formatPrice } from '../lib/price';
+import { throttleMessage } from '../lib/throttle';
 import {
   cartChipLabel,
   imageResolver,
@@ -185,7 +186,9 @@ if (summary) {
         | null;
 
       if (!response.ok || !body?.data) {
-        setError(body?.message ?? 'No pudimos actualizar tu pedido.');
+        // El techo de ritmo tiene su propio texto: dice cuanto falta, y `message` de la API
+        // no se muestra tal cual por la regla de siempre. Ver src/lib/throttle.ts.
+        setError(throttleMessage(response) ?? body?.message ?? 'No pudimos actualizar tu pedido.');
         return;
       }
 

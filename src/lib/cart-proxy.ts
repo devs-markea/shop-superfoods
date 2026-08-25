@@ -35,6 +35,13 @@ export async function proxyCart(
       'Content-Type': upstream.headers.get('Content-Type') ?? 'application/json',
       // El carrito es de esta sesion: que no lo cachee nadie por el camino.
       'Cache-Control': 'no-store',
+      // `Retry-After` se reenvia porque es el UNICO dato util de un 429: sin el, la pantalla
+      // solo puede decir "espera un momento" cuando la API sabe decir cuantos segundos faltan.
+      // Es tambien la razon de que las cabeceras se nombren una a una en lugar de copiarlas
+      // todas: lo que sube y lo que baja de este proxy se decide aqui, no se hereda.
+      ...(upstream.headers.has('Retry-After')
+        ? { 'Retry-After': upstream.headers.get('Retry-After') as string }
+        : {}),
     },
   });
 }
