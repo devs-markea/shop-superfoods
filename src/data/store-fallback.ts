@@ -52,11 +52,19 @@ export const storeFallback: StoreSettings = {
     },
   },
 
+  // Vacia a proposito, por lo mismo que la ubicacion y con mas motivo: una CLABE
+  // equivocada manda el dinero del comprador a otra cuenta. La cuenta la publica
+  // el panel, y esta se usa ENTERA o nada —no se cose el titular de aqui con la
+  // CLABE de alla—, asi que con dejarse uno de los tres no hay respaldo.
+  //
+  // Sin cuenta en ninguno de los dos sitios, /mamayaya/pago no ofrece la
+  // transferencia: quedan el efectivo y Mercado Pago. Es la degradacion de
+  // siempre —no se ofrece lo que no se puede cumplir—, no un error.
   bankTransfer: {
-    holder: 'SuperFoods Restaurante SA de CV',
-    bank: 'BBVA',
+    holder: '',
+    bank: '',
     // 18 digitos seguidos, sin espacios: es lo que se copia al portapapeles.
-    clabe: '012345678901234567',
+    clabe: '',
   },
 
   location: {

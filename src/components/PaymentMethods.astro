@@ -12,12 +12,40 @@ interface Props {
    * marcado: al recoger, el unico es efectivo; a domicilio estan los tres.
    */
   deliveryType?: DeliveryType;
+  /**
+   * Si el negocio publico su cuenta bancaria —los tres datos, ver
+   * lib/store-config.ts—. Sin ella no se pinta la transferencia: la pantalla
+   * siguiente ensena la cuenta a la que hay que transferir, y sin cuenta que
+   * ensenar ese camino solo lleva a una tarjeta vacia y a un pedido que el
+   * comprador no puede pagar. Mejor no ofrecerlo que romperlo a la mitad.
+   */
+  hasBankTransfer?: boolean;
 }
 
 // Transferencia por defecto: es el metodo que hoy se cobra de verdad.
-const { selected = 'bank_transfer', deliveryType = 'delivery' } = Astro.props;
+const {
+  selected = 'bank_transfer',
+  deliveryType = 'delivery',
+  hasBankTransfer = true,
+} = Astro.props;
 
 const pickup = deliveryType === 'pickup';
+
+// Al recoger no viene a cuento —se paga en el local— y sin cuenta publicada no
+// hay a donde transferir. Las dos cosas quitan la opcion, no solo su marca.
+const transfer = !pickup && hasBankTransfer;
+
+// Cual llega marcado, resuelto aqui y no opcion por opcion. La transferencia es
+// la de por defecto, pero solo existe con cuenta: sin ella el defecto cae al
+// efectivo, que es el otro metodo que el negocio cobra de verdad. Dejar el grupo
+// sin marcar mandaria a quien no tocara nada a un "Elige un metodo de pago." por
+// una opcion que ni siquiera llego a ver.
+const checked: PaymentMethod =
+  selected === 'mercado_pago'
+    ? 'mercado_pago'
+    : transfer && selected !== 'efectivo'
+      ? 'bank_transfer'
+      : 'efectivo';
 
 // Spec: etiqueta + opciones, gap 12 en los dos contenedores.
 //
@@ -54,14 +82,16 @@ const pickup = deliveryType === 'pickup';
         />
       ) : (
         <>
-          <PaymentOption
-            id="payment-transfer"
-            value="transferencia"
-            title="Transferencia bancaria"
-            icon="phone"
-            note="Transferencia bancaria"
-            checked={selected !== 'mercado_pago' && selected !== 'efectivo'}
-          />
+          {transfer && (
+            <PaymentOption
+              id="payment-transfer"
+              value="transferencia"
+              title="Transferencia bancaria"
+              icon="phone"
+              note="Transferencia bancaria"
+              checked={checked === 'bank_transfer'}
+            />
+          )}
 
           {/*
             Efectivo a domicilio: se paga al repartidor al recibir el pedido. Va
@@ -77,10 +107,14 @@ const pickup = deliveryType === 'pickup';
             title="Efectivo"
             icon="cash"
             note="Pagas al recibir tu pedido"
-            checked={selected === 'efectivo'}
+            checked={checked === 'efectivo'}
           />
 
           {/*
+            Lleva nota como los otros dos: sin ella era la unica tarjeta de una
+            sola linea, y la fila de metodos alternaba alturas segun cuales
+            estuvieran disponibles.
+
             El unico metodo con marca: en lugar del icono de tarjeta va su logo,
             que llego como archivo y vive en assets/icons. No pasa por Icon.astro
             ni por BrandIcon.astro —los dos pintan un trazo que hereda el color
@@ -100,7 +134,8 @@ const pickup = deliveryType === 'pickup';
             id="payment-mercadopago"
             value="mercadopago"
             title="Mercado Pago"
-            checked={selected === 'mercado_pago'}
+            note="Paga con Mercado Pago"
+            checked={checked === 'mercado_pago'}
           >
             {/* El slot va en el Fragment y no en el logo: los atributos que se
                 le pasan al archivo terminan en su <svg>, y `slot` no pinta

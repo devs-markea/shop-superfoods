@@ -91,6 +91,14 @@ const discount = cart?.discountTotal ?? 0;
 
 const { bankTransfer } = store;
 
+// Sin cuenta publicada no hay transferencia que hacer: la tarjeta saldria vacia
+// y su "Confirmar pedido" crearia un pedido esperando un dinero que nadie sabe a
+// donde mandar. /mamayaya/pago ya no ofrece el metodo cuando falta la cuenta —ver
+// components/PaymentMethods.astro—, asi que aqui se llega por un enlace guardado, por
+// el atras del navegador o porque la cuenta se despublico a mitad del pedido. Se
+// devuelve al resumen, que es donde estan los metodos que si se pueden pagar.
+if (!bankTransfer) return Astro.redirect('/mamayaya/pago');
+
 // El envio, con la misma cuenta que /mamayaya/pago: la distancia medida en /mamayaya/datos con la
 // tarifa, y por encima de ella las dos reglas que mandan —al recoger no hay
 // envio, y el envio gratis del negocio manda sobre cualquier distancia—. Este es

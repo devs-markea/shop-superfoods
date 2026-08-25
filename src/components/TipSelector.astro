@@ -198,6 +198,21 @@ const customValue = custom ? String(selected) : '';
     outline-offset: 2px;
   }
 
+  /* --- Desktop -------------------------------------------------------------
+     El importe sube a 15/600. En movil el boton hereda los 14/400 de la pagina y
+     con cinco en fila no daba para mas; en la columna del checkout la fila es mas
+     ancha y el numero es lo que se elige, asi que se lee como el dato que es.
+
+     La familia no se declara aunque la spec la nombre: el <label> hereda la Inter
+     de la pagina, y repetirla aqui seria un sitio mas donde cambiarla el dia que
+     la tienda cambie de fuente. */
+  @media (min-width: 768px) {
+    .tip__option {
+      font-size: 15px;
+      font-weight: 600;
+    }
+  }
+
   /* ---------------------------------------------------------------------------
      Element: tip__custom  (el campo del importe libre)
      ---------------------------------------------------------------------------

@@ -6,9 +6,7 @@ import { VARIANT_FALLBACK_LABEL, type OptionGroupView } from '../lib/catalog.ts'
 import {
   OPTIONAL_LABEL,
   isInert,
-  isUnfulfillable,
   ruleLabel,
-  unfulfillableMessage,
   unitCap,
   type OptionRule,
 } from '../lib/options.ts';
@@ -36,13 +34,6 @@ const rule: OptionRule = {
 // max: 0 significa grupo que no admite ninguna opcion. Se dibuja, pero en solo
 // lectura: cualquier cosa que se enviara de el la rechaza el carrito.
 const inert = isInert(rule);
-
-// min mayor que lo que el grupo puede dar no lo impide el panel y deja el grupo
-// imposible de completar. Se dice desde el primer render en vez de esperar al
-// 422; el boton de agregar queda bloqueado solo, porque el minimo nunca se
-// alcanza. En el contador el techo son sus opciones POR maxPerOption, no el
-// numero de opciones: con una sola opcion y tope 4, un min de 8 es inalcanzable.
-const unfulfillable = isUnfulfillable(rule, group.choices.length);
 
 // La etiqueta de una opcion son dos cosas pegadas: el NOMBRE y, detras, lo que
 // cuesta. Se escriben por separado —no una cadena sola, como antes— porque en
@@ -128,8 +119,9 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
                 <span class="option__name">{choiceName(choice.label)}</span>{choicePrice(choice.price)}
               </span>
 
-              {/* Lo rellena el script en cuanto hay mas de una unidad: es el
-                  unico control donde el precio se multiplica. */}
+              {/* Lo rellena el script entre la segunda unidad y el techo de la
+                  opcion: es el unico control donde el precio se multiplica, y
+                  al llegar al tope se retira para no recargar la fila. */}
               <span class="option__amount" data-option-amount hidden />
 
               <QuantityStepper
@@ -180,18 +172,12 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
     }
   </div>
 
-  <!-- Lo rellena src/scripts/order-form.ts: primero con los minimos que faltan
-       y despues con lo que devuelva el 422, que la API nombra por grupo en
+  <!-- Nace vacio SIEMPRE: nada de lo que se sabe en el servidor justifica un
+       aviso antes de que el comprador toque el grupo. Lo rellena
+       src/scripts/order-form.ts, primero con los minimos que faltan y despues
+       con lo que devuelva el 422, que la API nombra por grupo en
        `options.{personalizationId}`. El servidor revalida igualmente. -->
-  <p
-    class="option-group__error"
-    id={errorId}
-    role="alert"
-    hidden={!unfulfillable}
-    data-group-error
-  >
-    {unfulfillable && unfulfillableMessage(rule, group.choices.length)}
-  </p>
+  <p class="option-group__error" id={errorId} role="alert" hidden data-group-error></p>
 </div>
 
 <style is:global>
@@ -215,7 +201,7 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
   }
 
   /* La etiqueta usa el bloque .section-label, compartido con el resto de grupos. */
-  /* Element: hint — "Elige hasta 3", cuando el grupo tiene min o max.
+  /* Element: hint — "Selecciona 2", "Hasta 3", cuando el grupo tiene min o max.
      El gap del bloque ya separa; el margen propio se anula. */
   .option-group__hint {
     margin: calc(16px * -1 + 4px) 0 0;
@@ -310,7 +296,8 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
 
   /* Element: importe — cantidad x precio de la opcion. Solo lo dibuja el control
      de cantidad, que es el unico donde el precio se multiplica por algo distinto
-     de 0 o 1. El margen automatico lo pega al stepper. */
+     de 0 o 1, y solo mientras la opcion pueda seguir creciendo: en el tope se
+     oculta. El margen automatico lo pega al stepper. */
   .option__amount {
     margin-inline-start: auto;
     font-size: 12px;
@@ -360,7 +347,7 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
 
   /* --- Desktop -------------------------------------------------------------
      El nombre de la opcion sube a 15/15 y se lleva el estado de la fila: sin elegir
-     es Inter 500 gris y elegida Inter 600 negra. En la columna de la derecha la
+     es Inter 400 gris y elegida Inter 600 negra. En la columna de la derecha la
      lista es lo que se recorre para elegir, asi que la elegida se reconoce por su
      nombre y no solo por la casilla.
 
@@ -374,7 +361,7 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
   @media (min-width: 768px) {
     .option__name {
       font-size: 15px;
-      font-weight: 500;
+      font-weight: 400;
       line-height: 1;
       color: var(--sf-slate);
       transition: color 160ms ease;
@@ -398,7 +385,7 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
        nombre de algo que no se puede elegir no debe leerse como elegido. */
     .option__input:disabled ~ .option__label .option__name,
     .option--quantity[data-blocked] .option__name {
-      font-weight: 500;
+      font-weight: 400;
       color: var(--sf-placeholder);
     }
   }

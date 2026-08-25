@@ -19,11 +19,24 @@ const { image } = Astro.props;
 
 <div class="product-hero">
   <!-- La API no expone variantes de tamano de la foto, asi que se pide la
-       original y la recorta el CSS del bloque. -->
+       original y la recorta el CSS del bloque.
+
+       Los 520x480 son los de la spec de desktop (ver los estilos de mas abajo), y
+       van como ATRIBUTO por lo mismo que los iconos llevan el suyo: un <img> sin
+       medidas se pinta al tamano del archivo que llegue mientras la hoja de
+       estilos no este aplicada, y una foto de platillo a tamano original tapa la
+       pantalla entera.
+
+       No prometen la caja real —esa la deciden el bloque y su object-fit, y cambia
+       con el ancho: a sangre en movil, 360 de alto en md, 520x480 de lg—. Son la
+       medida por defecto y, con ella, la proporcion con la que el navegador
+       reserva el hueco antes de tener la foto. -->
   <img
     class="product-hero__image"
     src={image.src}
     alt={image.alt}
+    width="520"
+    height="480"
     loading="eager"
     decoding="async"
   />

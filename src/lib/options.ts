@@ -69,7 +69,7 @@ export interface OptionRule {
  *   99            el tope de forma de la API, que se aplica siempre
  *
  * Fuera del control de cantidad devuelve 1: una opcion marcada vale una unidad
- * (C26), y ese 1 es lo que hace que groupCapacity() valga para los tres.
+ * (C26), y con ese 1 la funcion sirve para los tres controles sin ramificar.
  */
 export function unitCap(rule: OptionRule): number {
   if (rule.control !== 'quantity') return 1;
@@ -79,15 +79,6 @@ export function unitCap(rule: OptionRule): number {
     rule.max ?? OPTION_MAX_QUANTITY,
     OPTION_MAX_QUANTITY,
   );
-}
-
-/**
- * Unidades que el grupo puede llegar a dar entre todas sus opciones. Con
- * `maxPerOption` es lo que reparte el techo individual; sin el, el tope de forma
- * de la API. Es el numero contra el que se mide un minimo imposible.
- */
-export function groupCapacity(rule: OptionRule, optionCount: number): number {
-  return optionCount * unitCap(rule);
 }
 
 /**
@@ -121,21 +112,32 @@ export function isInert(rule: OptionRule): boolean {
   return rule.max === 0;
 }
 
-/**
- * `min` mayor que lo que el grupo puede dar pasa la validacion del panel y deja
- * el platillo imposible de pedir: el minimo no se cumple ni marcandolo todo. Se
- * detecta aqui para decirlo en la ficha en vez de dejar que el carrito lo
- * rechace una y otra vez.
- *
- * Desde que `min` cuenta unidades, el techo del grupo de cantidad ya no es
- * "cuantas opciones tiene" sino opciones x tope individual: `min: 8` con UNA
- * opcion y `maxPerOption: 4` da 4, y el platillo no se puede comprar. El panel
- * no lo comprueba —el numero de opciones y el minimo se editan en secciones
- * distintas del mismo formulario—, asi que lo absorbe la tienda.
- */
-export function isUnfulfillable(rule: OptionRule, optionCount: number): boolean {
-  return rule.min > groupCapacity(rule, optionCount);
-}
+// LO QUE ESTE MODULO YA NO COMPRUEBA: SI EL MINIMO ES ALCANZABLE
+//
+// Habia aqui un par isUnfulfillable()/unfulfillableMessage() que media `min`
+// contra el numero de opciones del grupo —o contra opciones x tope individual,
+// en cantidad— y hacia que la ficha pintara un aviso rojo desde el primer
+// render: "Este grupo pide 3 opciones distintas y solo tiene 2...".
+//
+// Ya no. Lo que acota un grupo son sus condicionales —`min`, `max` y
+// `maxPerOption`, y los tres cuentan UNIDADES desde el 2026-08-24—, no cuantas
+// opciones distintas se hayan dado de alta: contarlas era la lectura vieja de
+// `min`, y con ella se colaba en la tienda una comparacion que ya no significa
+// nada. El caso que de verdad preocupaba —los set counts: `min: 8` con una
+// opcion y `maxPerOption: 4`— lo resuelve ese mismo cambio, porque el general
+// manda y reparte.
+//
+// Queda un grupo cuyo rotulo pide mas de lo que hay: eso es una personalizacion
+// desactualizada en el panel, no algo que el comprador pueda arreglar, y
+// anunciarselo con una etiqueta solo ensucia la ficha.
+//
+// Tampoco hay ya un missingMessage(): el minimo que falta NO se redacta en la
+// tienda. ruleLabel() ya dice arriba del grupo cuanto hace falta —ese es el
+// sitio del rotulo— y repetirlo abajo en rojo era decir dos veces lo mismo. El
+// minimo se sigue aplicando, pero sin texto: el boton se queda bloqueado y el
+// submit lleva el foco al grupo que falta (ver src/scripts/order-form.ts). Si
+// aun asi se envia, el 422 del servidor trae su propia redaccion y esa si se
+// pinta junto al grupo.
 
 /** Etiqueta del grupo cuando no admite ninguna opcion. */
 export const INERT_LABEL = 'No se puede elegir ninguna opcion';
@@ -148,8 +150,8 @@ export const OPTIONAL_LABEL = 'Opcional';
  * dos interfaces digan lo mismo del mismo grupo.
  *
  * Lo unico que ramifica por control es la MAGNITUD, y la pone amount(): en
- * radio y checkbox se cuentan opciones —"Elige 2"— y en cantidad, unidades del
- * grupo —"Elige 2 unidades"—. Es la diferencia que el cambio del 2026-08-24
+ * radio y checkbox se cuentan opciones —"Selecciona 2"— y en cantidad, unidades
+ * del grupo —"Selecciona 2 unidades"—. Es la diferencia que el cambio del 2026-08-24
  * hace visible: un grupo de cantidad con min 2 y max 2 ya no pide dos opciones
  * distintas, sino dos unidades, y con `maxPerOption` de sobra las dos pueden
  * salir de la misma.
@@ -163,20 +165,23 @@ export function ruleLabel(rule: OptionRule): string {
   const { min, max } = rule;
 
   // Eleccion unica: el control llega como radio solo con min = 1 y max = 1, asi
-  // que "Elige 1" es siempre exacto y se lee mejor que derivarlo de min === max.
-  if (rule.control === 'radio') return 'Elige 1';
+  // que "Selecciona 1" es siempre exacto y se lee mejor que derivarlo de
+  // min === max.
+  if (rule.control === 'radio') return 'Selecciona 1';
 
   if (isInert(rule)) return INERT_LABEL;
   if (min >= 1 && max !== null)
-    return min === max ? `Elige ${amount(rule, min)}` : `Elige entre ${min} y ${amount(rule, max)}`;
-  if (min >= 1) return `Elige al menos ${amount(rule, min)}`;
+    return min === max
+      ? `Selecciona ${amount(rule, min)}`
+      : `Selecciona entre ${min} y ${amount(rule, max)}`;
+  if (min >= 1) return `Selecciona al menos ${amount(rule, min)}`;
   if (max !== null) return `Hasta ${amount(rule, max)}`;
   return OPTIONAL_LABEL;
 }
 
 /**
  * El numero con su unidad, cuando la unidad no se sobreentiende. En radio y
- * checkbox sale pelado —"Elige 2" son dos casillas y no hay otra lectura—; en
+ * checkbox sale pelado —"Selecciona 2" son dos casillas y no hay otra lectura—; en
  * cantidad se dice "unidades" porque ahi el mismo 2 podria confundirse con dos
  * opciones distintas, que es justo lo que `min` y `max` dejaron de contar.
  */
@@ -187,35 +192,3 @@ function amount(rule: OptionRule, count: number): string {
 
 const plural = (count: number, one: string, many: string) => (count === 1 ? one : many);
 
-/**
- * Falta de minimo, con el mismo texto que devuelve el servidor en
- * `options.{personalizationId}`. Los dos mensajes acaban en el mismo hueco de
- * la ficha, asi que conviene que no se contradigan — y el servidor tambien
- * cambia de magnitud en el control de cantidad: alli el minimo se reclama en
- * unidades del grupo, no en opciones.
- */
-export function missingMessage(rule: OptionRule, groupLabel: string): string {
-  if (rule.control === 'quantity') {
-    return `Elige al menos ${amount(rule, rule.min)} de «${groupLabel}».`;
-  }
-
-  return rule.min === 1
-    ? `Elige una opcion de «${groupLabel}».`
-    : `Elige al menos ${rule.min} opciones de «${groupLabel}».`;
-}
-
-/**
- * Grupo que nadie puede completar: se avisa en lugar de pedir lo imposible.
- *
- * Se dice con lo que le falta al grupo para dar el minimo, y eso son dos cuentas
- * distintas: en radio y checkbox el techo son sus opciones, y en cantidad lo que
- * suman todas con el tope individual puesto.
- */
-export function unfulfillableMessage(rule: OptionRule, optionCount: number): string {
-  if (rule.control === 'quantity') {
-    const capacity = groupCapacity(rule, optionCount);
-    return `Este grupo pide ${amount(rule, rule.min)} y como mucho admite ${capacity}: el platillo no se puede pedir todavia.`;
-  }
-
-  return `Este grupo pide ${rule.min} opciones distintas y solo tiene ${optionCount}: el platillo no se puede pedir todavia.`;
-}

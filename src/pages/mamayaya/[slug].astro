@@ -270,9 +270,11 @@ const closed = isClosed(schedule);
             {unavailableNotice ? (
               <p class="product-detail__notice">{unavailableNotice}</p>
             ) : (
-              // Doble uso, y en este orden: mientras falte un minimo dice cual
-              // es —si no, el boton apagado no explicaria nada—, y despues del
-              // envio recoge lo que no cabe junto a un grupo concreto.
+              // El minimo que falta ya NO pasa por aqui: lo dice el rotulo de
+              // cada grupo y el boton apagado, sin repetirlo en rojo (ver la
+              // nota de src/lib/options.ts). Este hueco recoge lo que no cabe
+              // junto a un grupo concreto: el tope de entradas de la peticion y
+              // los errores del 422 que no nombran personalizacion.
               <p
                 class="product-detail__notice product-detail__notice--error"
                 role="alert"

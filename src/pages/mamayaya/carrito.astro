@@ -552,6 +552,35 @@ const closed = isClosed(schedule);
     color: var(--sf-ink);
   }
 
+  /* --- Desktop -------------------------------------------------------------
+     La fila gana cuerpo en la columna ancha: el nombre y el importe suben a 16 y
+     la personalizacion a 13. En movil los tres van con la tipografia general de
+     la pantalla porque el ancho es el que es; aqui la lista es lo que se recorre
+     para repasar el pedido, y sus dos datos —que pediste y cuanto cuesta— se leen
+     antes que el resto de la linea.
+
+     El importe se va ademas a 700, un peso por encima del nombre que tiene al
+     lado: es la cifra que se comprueba, y es la unica de la fila mientras no haya
+     descuento —el par de lista y final vive abajo, junto a la papelera—.
+
+     La personalizacion baja a 13 en lugar de subir: es la unica de las tres que
+     no crece, y asi el gris de debajo del nombre queda un escalon mas lejos en
+     vez de empatar con el. */
+  @media (min-width: 768px) {
+    .order-item__title {
+      font-size: 16px;
+    }
+
+    .order-item__custom {
+      font-size: 13px;
+    }
+
+    .order-item__price {
+      font-size: 16px;
+      font-weight: 700;
+    }
+  }
+
   /* Se repite en /mamayaya/carrito porque alli las unidades las pinta el JS
      (src/lib/cart-view.ts) y este componente no llega a montarse. Las dos
      pantallas nunca coinciden, asi que cada una carga una sola copia. */

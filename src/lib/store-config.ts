@@ -50,6 +50,18 @@ export interface SocialLink {
   url: string;
 }
 
+/**
+ * La cuenta a la que se transfiere. Los tres datos van juntos: sin titular no se
+ * sabe a nombre de quien va la transferencia, sin banco no se sabe desde donde
+ * puede hacerse, y sin CLABE no hay a donde mandarla.
+ */
+export interface BankTransfer {
+  holder: string;
+  bank: string;
+  /** 18 digitos en crudo. El formato 4-4-4-6 lo pone quien la pinta. */
+  clabe: string;
+}
+
 /** Como se decide el envio gratis. Tres decisiones excluyentes. */
 export type FreeShippingMode = 'none' | 'always' | 'threshold';
 
@@ -72,7 +84,11 @@ export interface StoreSettings {
     phone?: string;
     templates?: { paymentProof?: string; orderPlaced?: string };
   };
-  bankTransfer?: { holder?: string; bank?: string; clabe?: string };
+  /**
+   * La cuenta de destino de las transferencias. Los tres datos son obligatorios
+   * porque la cuenta se publica ENTERA o no se publica: ver resolveBankTransfer().
+   */
+  bankTransfer?: BankTransfer;
   /**
    * Tres datos, y ninguno se deriva de otro:
    *
@@ -129,6 +145,31 @@ export type { StoreSchedule };
  */
 function pick(value: string | undefined, fallback: string | undefined): string {
   return value?.trim() || fallback?.trim() || '';
+}
+
+/**
+ * La cuenta bancaria, entera o ninguna.
+ *
+ * Es la regla del contrato —`bankTransfer` solo viaja con los tres datos— y aqui
+ * se aplica tambien al respaldo: media cuenta no sirve para pagar y si para
+ * desconfiar. Por eso NO se rellena dato a dato como la ubicacion, que son tres
+ * datos que sirven por separado; coser el titular del respaldo con la CLABE del
+ * panel compondria una cuenta que nadie configuro. Es la regla de `tips` y de
+ * `socialLinks`: bloque entero o nada.
+ *
+ * Y por eso devuelve `undefined` en lugar de campos vacios: es lo que deja a las
+ * pantallas comprobar presencia. Sin cuenta, /mamayaya/pago no ofrece la
+ * transferencia como metodo —ver components/PaymentMethods.astro—, que es mejor que
+ * ofrecerla y acabar en una tarjeta sin CLABE a la que transferir.
+ */
+function resolveBankTransfer(account: Partial<BankTransfer> | undefined): BankTransfer | undefined {
+  const holder = account?.holder?.trim();
+  const bank = account?.bank?.trim();
+  const clabe = account?.clabe?.trim();
+
+  if (!holder || !bank || !clabe) return undefined;
+
+  return { holder, bank, clabe };
 }
 
 /**
@@ -220,11 +261,11 @@ export async function getStoreConfig(): Promise<StoreSettings> {
       },
     },
 
-    bankTransfer: {
-      holder: pick(remote.bankTransfer?.holder, fallback.bankTransfer?.holder),
-      bank: pick(remote.bankTransfer?.bank, fallback.bankTransfer?.bank),
-      clabe: pick(remote.bankTransfer?.clabe, fallback.bankTransfer?.clabe),
-    },
+    // La del panel o la del respaldo, nunca las dos mezcladas, y solo si esta
+    // completa: ver resolveBankTransfer(). Sin cuenta en ninguno de los dos
+    // sitios la clave no viaja y la transferencia deja de ofrecerse.
+    bankTransfer:
+      resolveBankTransfer(remote.bankTransfer) ?? resolveBankTransfer(fallback.bankTransfer),
 
     location: {
       address: pick(remote.location?.address, fallback.location?.address),
