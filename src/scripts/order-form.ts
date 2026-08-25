@@ -16,6 +16,7 @@
 // credentials: 'include' ni configuracion de CORS.
 
 import { formatPrice } from '../lib/price';
+import { throttleMessage } from '../lib/throttle';
 import {
   OPTION_ENTRIES_MAX,
   groupIsFull,
@@ -438,6 +439,16 @@ async function addToCart(form: HTMLFormElement): Promise<void> {
     if (response.ok) {
       // La linea ya esta en el carrito: el pedido es la confirmacion.
       window.location.assign(form.dataset.redirect || '/mamayaya/carrito');
+      return;
+    }
+
+    // El techo de ritmo no es un error de la seleccion, asi que no pasa por showApiErrors:
+    // su respuesta no trae `errors` que repartir por los grupos del formulario y acabaria en
+    // el mensaje generico. Ver src/lib/throttle.ts.
+    const throttled = throttleMessage(response);
+
+    if (throttled) {
+      setFormError(form, throttled);
       return;
     }
 

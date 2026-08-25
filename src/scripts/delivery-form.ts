@@ -17,6 +17,7 @@
 import 'bootstrap/js/dist/dropdown.js';
 
 import { paintCartSummary } from '../lib/cart-summary';
+import { throttleMessage } from '../lib/throttle';
 import {
   draftGaps,
   hasSharedLocation,
@@ -429,6 +430,18 @@ if (form) {
         });
 
         if (!response.ok) {
+          // El 429 SE DICE. Cotizar tiene dos techos —el de ritmo de la API y el de cuota del
+          // proveedor de rutas— y los dos se alcanzan compartiendo la ubicacion muchas veces
+          // seguidas, que es un gesto deliberado. Callarlo dejaria el envio en "Por cotizar"
+          // sin explicacion, y el comprador volveria a intentarlo: exactamente lo contrario de
+          // lo que hay que hacer. El pedido sigue en pie igual.
+          const throttled = throttleMessage(response);
+
+          if (throttled) {
+            showError(throttled);
+            return null;
+          }
+
           // 404 es el estado normal mientras la API no publique el endpoint: no
           // hay cotizacion, el envio se queda "Por cotizar" y el pedido sigue.
           // Cualquier otro estado si merece quedar anotado.

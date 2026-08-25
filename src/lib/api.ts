@@ -9,7 +9,7 @@
 // puede importarse desde un <script> de cliente.
 // ---------------------------------------------------------------------------
 
-import { API_URL } from 'astro:env/server';
+import { API_URL, SHOP_API_KEY } from 'astro:env/server';
 
 /** Cuerpo de error de Laravel: 422 de validacion y 404 traen esta forma. */
 export interface ApiErrorBody {
@@ -71,6 +71,20 @@ export function assetUrl(url: string): string {
 }
 
 /**
+ * Cabecera que identifica a ESTA aplicacion ante el backend, no al comprador.
+ *
+ * El backend la exige en todo `/api/*` de tienda (`EnsureShopClient`). Quien es el comprador
+ * lo sigue diciendo `X-Cart-Token`: las dos viajan juntas y responden a preguntas distintas
+ * —que aplicacion habla, y de quien es el carrito—.
+ *
+ * Sin clave configurada no se manda nada, que es lo que permite desplegar por partes: mientras
+ * el backend tampoco la tenga puesta, no exige ninguna. Ver .env.example.
+ */
+function clientHeaders(): Record<string, string> {
+  return SHOP_API_KEY ? { 'X-Shop-Key': SHOP_API_KEY } : {};
+}
+
+/**
  * Peticion cruda. No interpreta el resultado: quien llama decide si desenvuelve
  * el sobre o reenvia la respuesta tal cual.
  */
@@ -80,7 +94,9 @@ export async function apiFetch(path: string, init: RequestInit = {}): Promise<Re
   try {
     return await fetch(url, {
       ...init,
-      headers: { Accept: 'application/json', ...init.headers },
+      // clientHeaders() va AL FINAL: la clave de la aplicacion no es negociable por
+      // quien llama, y asi ningun `init.headers` puede pisarla por descuido.
+      headers: { Accept: 'application/json', ...init.headers, ...clientHeaders() },
     });
   } catch (cause) {
     // fetch solo rechaza por red, DNS o TLS: la API no llego a contestar.
