@@ -45,6 +45,28 @@ const token = resolveCartToken(Astro.cookies);
 const draft = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 const { tip } = draft;
 
+// AL RECOGER NO HAY TRANSFERENCIA
+//
+// Se paga en el local, asi que transferir no viene a cuento: es una forma de
+// pagar por adelantado un pedido que va a salir a la calle. /mamayaya/pago ya no
+// la ofrece con "para recoger" elegido —ahi queda una sola opcion, el efectivo,
+// ver components/PaymentMethods.astro—, asi que aqui se llega igual que sin cuenta
+// publicada: por un enlace guardado, por el atras del navegador, o cambiando el
+// modo de entrega despues de haber pasado por aqui.
+//
+// Sin esta guarda el pedido se cerraba como `pickup` + `bank_transfer`, una
+// combinacion que la tienda no ofrece y que ademas descuadra el acuse: no hay
+// plantilla de WhatsApp para ella, asi que el mensaje cae en la de domicilio y le
+// manda al comprador un bloque de direccion vacio en lugar de decirle donde esta
+// el local. Se devuelve al resumen, que es donde estan los metodos que si se
+// pueden pagar.
+//
+// Va aqui arriba, antes de pedir nada: es local y no cuesta, asi que quien no
+// deberia estar se va sin gastarle a la API cuatro llamadas.
+const pickup = draft.deliveryType === 'pickup';
+
+if (pickup) return Astro.redirect('/mamayaya/pago');
+
 // El pedido todavia no existe: se crea al confirmar. Asi que lo que se lista es
 // el carrito, que sigue en pie. Si no responde, la pantalla se sirve igual: la
 // cuenta bancaria es lo que se viene a leer aqui.
@@ -105,7 +127,7 @@ if (!bankTransfer) return Astro.redirect('/mamayaya/pago');
 // el importe que se va a transferir, asi que tiene que ser exactamente el mismo
 // que se acaba de ensenar en el resumen.
 const shipping = resolveShipping({
-  pickup: draft.deliveryType === 'pickup',
+  pickup,
   quote,
   products,
   freeShipping: store.delivery?.freeShipping,

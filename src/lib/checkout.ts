@@ -15,6 +15,7 @@
 // ---------------------------------------------------------------------------
 
 import { throttleMessage } from './throttle.ts';
+import type { CartOption } from './cart-view.ts';
 
 export type DeliveryType = 'delivery' | 'pickup';
 
@@ -77,6 +78,24 @@ export interface OrderLine {
   quantity: number;
   name: string;
   /**
+   * La variante elegida. La escribe `{platillos}` detras del nombre y con guion,
+   * porque es parte del nombre de lo que se pidio, no una nota al margen.
+   *
+   * Solo sale en el mensaje si el negocio encendio `whatsapp.items.showVariant`.
+   */
+  variantName?: string | null;
+  /**
+   * Precio BASE de la variante, POR UNIDAD. No es el total de la linea ni lleva
+   * las opciones dentro: el mensaje desglosa los importes para que sumados den
+   * el subtotal, y meter aqui el total de la linea rompe esa suma.
+   */
+  unitPrice?: number;
+  /**
+   * Como se prepara. Van una por renglon debajo del platillo, y solo si el
+   * negocio encendio `whatsapp.items.showCustomizations`.
+   */
+  options?: CartOption[];
+  /**
    * La promocion que la API aplico a la linea, para rotularla en el detalle.
    * Opcional porque solo la traen las lineas del carrito: el pedido ya creado
    * congela el nombre de la promocion, no su etiqueta.
@@ -138,10 +157,22 @@ export interface OrderPayment {
 /** Pedido creado. Solo los campos que consume la tienda. */
 export interface StoreOrder {
   /**
-   * Identificador de acceso: con el se relee el pedido, y es la numeracion que
-   * el negocio ya usa como folio (1, 2, 3...). Es lo que se rotula.
+   * Identificador de ACCESO: con el se relee el pedido y se le cobra. No se
+   * rotula ni se mete en el mensaje — para eso esta `folio`.
    */
   id: string;
+  /**
+   * EL NUMERO DE PEDIDO: el contador (1, 2, 3...) que el negocio ve en su panel,
+   * y el que va en `{folio}`. Se asigna al crear el pedido, en los tres metodos.
+   *
+   * Coincide hoy con `id` en los pedidos nuevos —los dos contadores arrancaron a
+   * la vez— pero son campos independientes: el folio puede reiniciarse o cambiar
+   * de formato y el id no. Llega null solo en pedidos anteriores al 2026-08-11,
+   * que nunca tuvieron uno.
+   */
+  folio?: number | null;
+  /** El mismo, ya rotulado por el backend: `#49` (o `#000` si no tiene). */
+  folioLabel?: string;
   /**
    * Llega null en transferencia hasta que la tienda valida el pago, asi que sirve
    * para saber si el pedido ya esta cobrado. No se rotula: hoy es un ULID de 26
@@ -154,21 +185,61 @@ export interface StoreOrder {
   statusLabel: string;
   isActive: boolean;
   deliveryType: DeliveryType;
+  /**
+   * Con que se paga. Viaja en los TRES flujos, con el mismo token que se mando
+   * al checkout, y es la llave de la plantilla de WhatsApp.
+   *
+   * Es lo que hace innecesario deducir el metodo de la presencia de `payment`,
+   * que solo distingue Mercado Pago y dejaba a transferencia y efectivo
+   * indistinguibles — asi es como el pedido de efectivo acabo pidiendo un
+   * comprobante que no existe.
+   */
+  paymentMethod?: PaymentMethod | null;
   subtotal: number;
   discountTotal: number;
   shippingTotal: number;
   tipTotal: number;
   total: number;
+  /**
+   * POR QUE ese envio. **Solo viaja cuando hubo cotizacion**, y esa ausencia es
+   * el dato: con `shippingTotal: 0` y sin este bloque el cero es un hueco, no un
+   * precio, y el mensaje tiene que gritarlo antes de que alguien cobre.
+   */
+  shipping?: {
+    quoteId: string;
+    distanceKm: number | null;
+    /** `ciudad` es la tarifa base, sin recargo de zona. */
+    zone: string | null;
+    tier: string | null;
+  };
+  /** Comentarios que escribio el comprador al cerrar. Van en `{notas}`. */
+  notes?: string | null;
   placedAt: string | null;
   /**
-   * Snapshot congelado del cliente. La tienda solo lee el nombre, para el mensaje
-   * de WhatsApp: el pedido historico no cambia si el cliente actualiza sus datos.
+   * Snapshot congelado del cliente, no el registro vivo: un pedido historico no
+   * cambia si el cliente actualiza su direccion despues.
+   *
+   * De aqui salen ocho de los veinte marcadores del mensaje. Las piezas de la
+   * direccion van todas sueltas a proposito: el mensaje las pinta una por
+   * renglon, y el que llega vacio se lleva el suyo.
    */
-  customer?: { name?: string };
+  customer?: {
+    name?: string;
+    phone?: string;
+    street?: string;
+    exteriorNumber?: string;
+    neighborhood?: string;
+    crossStreets?: string;
+    addressReferences?: string;
+    locationUrl?: string;
+  };
   items: OrderLine[];
   /**
-   * El cobro, solo en Mercado Pago. Su ausencia es el modo mas fiable de saber
-   * que el pedido no se paga por pasarela.
+   * El cobro, solo en Mercado Pago.
+   *
+   * Su ausencia NO es como se sabe con que se paga: para eso esta
+   * `paymentMethod`. Este bloque solo dice si hubo pasarela, y leerlo como
+   * metodo confunde transferencia con efectivo.
    */
   payment?: OrderPayment;
 }
