@@ -45,11 +45,20 @@ export const storeFallback: StoreSettings = {
     // Telefono de la tienda. Se acepta escrito como se quiera —con lada, con
     // espacios, con el 1 de los moviles mexicanos—: se normaliza al pintarlo.
     phone: '+52 1 998 756 6999',
-    templates: {
-      paymentProof:
-        'Hola, envio el comprobante de mi pedido #{folio} por {total} a nombre de {nombre}.',
-      orderPlaced: 'Hola, acabo de hacer el pedido #{folio} por {total} a nombre de {nombre}.',
-    },
+
+    // LAS PLANTILLAS DEL MENSAJE NO SE RESPALDAN, y no es un olvido.
+    //
+    // Son las tres —una por metodo de pago— que el negocio escribe en el panel,
+    // donde ademas las previsualiza rellenas con un pedido de verdad. Desde que
+    // ese panel inserta la estructura completa —quien lo hizo, a donde va, que
+    // lleva cada platillo y cuanto suma—, una plantilla escrita aqui ya no seria
+    // "la misma frase mas corta": seria otro mensaje.
+    //
+    // Y el hueco que rellenaria es justo el que no hay que rellenar: si el
+    // negocio borra una plantilla, lo que tiene que pasar es que su boton quede
+    // inerte, no que la tienda resucite un texto viejo en el chat del cliente.
+    // Es la regla de la CLABE de aqui abajo: no se inventa lo que nadie
+    // configuro.
   },
 
   // Vacia a proposito, por lo mismo que la ubicacion y con mas motivo: una CLABE

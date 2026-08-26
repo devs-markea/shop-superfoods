@@ -21,15 +21,24 @@ import {
   parseDraft,
   parseOrderPointer,
 } from '../../lib/checkout-draft.ts';
-import { PAYMENT_LABEL, type OrderLine, type PaymentMethod, type StoreOrder } from '../../lib/checkout.ts';
+import {
+  type DeliveryType,
+  type OrderLine,
+  type PaymentMethod,
+  type StoreOrder,
+} from '../../lib/checkout.ts';
 import {
   confirmationWithoutOrder,
   inferMethod,
   resolveConfirmation,
   type ConfirmationView,
 } from '../../lib/confirmation.ts';
-import { fillMessage, whatsAppUrl } from '../../lib/whatsapp.ts';
-import { formatPrice } from '../../lib/price.ts';
+import {
+  fillMessage,
+  orderMessageValues,
+  pickTemplate,
+  whatsAppUrl,
+} from '../../lib/whatsapp.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
 import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts';
 import { TEST_MODE } from 'astro:env/server';
@@ -198,25 +207,34 @@ if (!order && cart) {
 const MOCK_FOLIO = '91';
 const folio = order?.id ?? MOCK_FOLIO;
 
-// El chat de la tienda, con el pedido ya identificado. Aqui el mensaje no es un
-// comprobante —el pago no pasa por el comprador— sino el pedido recien hecho, asi
-// que usa la otra plantilla.
+// El chat de la tienda, con el pedido ya identificado.
+//
+// La plantilla la elige el metodo del PEDIDO, no esta pantalla: aunque aqui se
+// llega casi siempre desde Mercado Pago, la pantalla admite tambien una
+// transferencia ya validada, y ese pedido tiene que mandar su propio texto. El
+// `method` de arriba es el mismo dato con el respaldo del puntero, y es el que
+// rotula la interfaz.
 const phone = store.whatsapp?.phone ?? '';
 
+// La llave son dos datos del pedido: con que se pago y como se recibe. Aqui el
+// segundo casi siempre es a domicilio, pero un pedido para recoger tambien puede
+// acabar en esta pantalla —Mercado Pago no obliga a que se lo lleven a casa— y su
+// mensaje tiene que decir donde esta el local.
+const messageMethod = order?.paymentMethod ?? method;
+const messageDelivery: DeliveryType = order?.deliveryType ?? 'delivery';
+const template = pickTemplate(store.whatsapp?.templates, messageDelivery, messageMethod);
+
+// Sin telefono, sin pedido o sin la plantilla de este flujo el boton se queda
+// inerte: mejor eso que un chat vacio o el mensaje de otro metodo.
 const whatsapp =
-  phone && order
+  phone && order && template
     ? whatsAppUrl(
         phone,
-        fillMessage(store.whatsapp?.templates?.orderPlaced ?? '', {
-          folio: order.id,
-          // El mismo total que se rotula arriba, envio incluido: el mensaje lo
-          // lee la tienda, y dos importes distintos para un pedido abren una
-          // conversacion que nadie quiere tener.
-          total: formatPrice(total),
-          nombre: order.customer?.name,
-          estado: order.statusLabel,
-          metodo: PAYMENT_LABEL[method],
-        }),
+        fillMessage(
+          template,
+          // `{sucursal}` y `{mapa}` salen del local, no del pedido.
+          orderMessageValues(order, { items: store.whatsapp?.items, location: store.location }),
+        ),
       )
     : null;
 
