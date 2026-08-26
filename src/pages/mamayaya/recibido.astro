@@ -14,8 +14,13 @@ import { getCart, type Cart } from '../../lib/cart.ts';
 import { getOrder } from '../../lib/orders.ts';
 import { resolveCartToken } from '../../lib/cart-session.ts';
 import { ORDER_COOKIE, markPointerSeen, parseOrderPointer } from '../../lib/checkout-draft.ts';
-import { PAYMENT_LABEL, type StoreOrder } from '../../lib/checkout.ts';
-import { fillMessage, whatsAppUrl } from '../../lib/whatsapp.ts';
+import { type DeliveryType, type StoreOrder } from '../../lib/checkout.ts';
+import {
+  fillMessage,
+  orderMessageValues,
+  pickTemplate,
+  whatsAppUrl,
+} from '../../lib/whatsapp.ts';
 import { formatPrice } from '../../lib/price.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
 import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts';
@@ -98,17 +103,9 @@ const phone = store.whatsapp?.phone ?? '';
 //   transferencia  el dinero ya salio y hay que mandar el comprobante
 //   efectivo       el dinero se entrega en mano: al repartidor o en el local
 //
-// Asi que el metodo decide la pantalla entera —pasos, tarjeta y aviso—, y sale del
-// puntero, que es lo unico que queda del cierre. Sin puntero se rotula el flujo de
-// transferencia: en produccion no se llega —la guarda de arriba lo impide—, pero
-// es lo que se revisa en modo de pruebas.
-const cash = pointer?.method === 'efectivo';
-
-// En efectivo, el modo de entrega parte otra vez la copia: al recoger hay que ir al
-// local, a domicilio solo hay que esperar con el dinero preparado. Sin el dato manda
-// recoger: es de un puntero anterior a que el efectivo saliera a domicilio, cuando
-// era lo unico que habia.
-const cashPickup = cash && pointer?.deliveryType !== 'delivery';
+// Asi que el metodo decide la pantalla entera —pasos, tarjeta y aviso— y decide
+// tambien el mensaje. Se resuelve mas abajo, cuando el pedido ya esta leido: el
+// puntero es una cookie de este navegador y el pedido lo sabe de primera mano.
 
 // El pedido, releido de la API. Hace dos cosas: pone el folio y el total en el
 // mensaje de WhatsApp, y remata la guarda de arriba.
@@ -149,28 +146,52 @@ if (order && pointer && !pointer.seen) {
   markPointerSeen(Astro.cookies, pointer);
 }
 
-// Con efectivo no hay comprobante que mandar: el mensaje es el del pedido recien
-// hecho, la misma plantilla que usa el cierre de Mercado Pago.
-const template = cash
-  ? store.whatsapp?.templates?.orderPlaced
-  : store.whatsapp?.templates?.paymentProof;
+// CON QUE SE PAGA Y COMO SE RECIBE: los dos datos que parten esta pantalla
+//
+// Mandan los del PEDIDO, que es el que lo sabe de primera mano; el puntero es el
+// respaldo para cuando la lectura se cae, y el modo de entrega cae del lado de
+// recoger cuando no hay ninguno de los dos —es lo que hacia antes, de cuando el
+// efectivo no salia a domicilio—.
+//
+// Sin metodo se rotula el flujo de transferencia: en produccion no se llega —la
+// guarda de arriba lo impide—, pero es lo que se revisa en modo de pruebas.
+const method = order?.paymentMethod ?? pointer?.method ?? null;
+const deliveryType: DeliveryType = order?.deliveryType ?? pointer?.deliveryType ?? 'pickup';
 
-// El mensaje solo se arma si hay a quien escribir y de que hablar: sin telefono
-// configurado el boton no navega, y sin pedido leido no hay folio que poner.
+const cash = method === 'efectivo';
+
+// En efectivo, el modo de entrega parte otra vez la copia: al recoger hay que ir al
+// local, a domicilio solo hay que esperar con el dinero preparado.
+const cashPickup = cash && deliveryType !== 'delivery';
+
+// LA PLANTILLA LA ELIGEN ESOS DOS DATOS, NO ESTA PANTALLA
+//
+// Cada flujo viene a decir algo distinto: uno manda una captura, el otro solo abre
+// la conversacion porque paga al recibir. Y el efectivo dice ademas dos cosas
+// distintas segun como reciba el pedido: a domicilio paga al recibir, y al recoger
+// paga en el mostrador, donde lo que necesita es saber DONDE esta el mostrador.
+// Por eso la llave son dos datos y no uno.
+const template = method
+  ? pickTemplate(store.whatsapp?.templates, deliveryType, method)
+  : undefined;
+
+// El mensaje solo se arma si hay a quien escribir, de que hablar y que decir: sin
+// telefono no hay conversacion, sin pedido leido no hay nada que contar, y sin la
+// plantilla de ESTE flujo el boton se queda inerte en lugar de abrir un chat
+// vacio o mandar el texto de otro metodo.
+//
+// Los veinte marcadores salen del pedido en un solo sitio —orderMessageValues()—
+// para que las tres pantallas de cierre manden exactamente el mismo mensaje.
 const whatsapp =
-  phone && order && pointer
+  phone && order && template
     ? whatsAppUrl(
         phone,
-        fillMessage(template ?? '', {
-          folio: order.id,
-          // El total del pedido, con su envio ya incluido: es el importe que
-          // hay que transferir, y el comprobante que se manda por aqui tiene que
-          // cuadrar con el.
-          total: formatPrice(order.total),
-          nombre: order.customer?.name,
-          estado: order.statusLabel,
-          metodo: PAYMENT_LABEL[pointer.method],
-        }),
+        fillMessage(
+          template,
+          // La ubicacion va porque `{sucursal}` y `{mapa}` no salen del pedido:
+          // son del local, y son lo que un pedido para recoger viene a leer.
+          orderMessageValues(order, { items: store.whatsapp?.items, location: store.location }),
+        ),
       )
     : null;
 

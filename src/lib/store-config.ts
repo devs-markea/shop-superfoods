@@ -16,6 +16,8 @@
 import { apiGet } from './api.ts';
 import { normalizeSchedule, type StoreSchedule } from './schedule.ts';
 import { storeFallback } from '../data/store-fallback.ts';
+import type { DeliveryType, PaymentMethod } from './checkout.ts';
+import type { MessageTemplates } from './whatsapp.ts';
 
 /**
  * Las redes que la tienda sabe pintar. Es una lista CERRADA: `network` es con lo
@@ -82,7 +84,20 @@ export interface StoreSettings {
   socialLinks?: SocialLink[];
   whatsapp?: {
     phone?: string;
-    templates?: { paymentProof?: string; orderPlaced?: string };
+    /**
+     * Ya normalizadas a DOS NIVELES: modo de entrega y, dentro, metodo de pago.
+     * Se leen con pickTemplate(), que aplica la caida a `delivery`.
+     *
+     * Lo que llega de la API puede tener tres formas a la vez —los dos grupos,
+     * las claves planas por metodo y los dos alias por pantalla—, y todas se
+     * reducen aqui: ver resolveTemplates(). Las pantallas ven solo esta.
+     */
+    templates?: MessageTemplates;
+    /**
+     * Que escribe `{platillos}`. Son dos interruptores y no uno porque son dos
+     * datos distintos: que se cobro y como se prepara.
+     */
+    items?: { showVariant?: boolean; showCustomizations?: boolean };
   };
   /**
    * La cuenta de destino de las transferencias. Los tres datos son obligatorios
@@ -172,6 +187,71 @@ function resolveBankTransfer(account: Partial<BankTransfer> | undefined): BankTr
   return { holder, bank, clabe };
 }
 
+/** Lo que puede traer `whatsapp.templates` hoy: los dos grupos y las claves en retirada. */
+type RemoteTemplates = MessageTemplates & Partial<Record<PaymentMethod, string>> & {
+  efectivo_pickup?: string;
+};
+
+const METHODS: PaymentMethod[] = ['bank_transfer', 'efectivo', 'mercado_pago'];
+
+/**
+ * Las plantillas del panel, reducidas a los dos niveles del contrato vigente.
+ *
+ * Todo lo que la API publica en retirada se absorbe AQUI, en el borde, para que
+ * las pantallas vean una sola forma y el dia que los alias se retiren solo haya
+ * que encoger esta funcion. Las tres formas conviven hoy en la misma respuesta:
+ *
+ *   templates.delivery.<metodo>   el contrato vigente, agrupado
+ *   templates.pickup.<metodo>     idem. Lleva SOLO lo que cambia (hoy, efectivo)
+ *   templates.<metodo>            plano por metodo, apunta a delivery.<metodo>
+ *   templates.efectivo_pickup     el intermedio, apunta a pickup.efectivo
+ *
+ * Los dos alias mas viejos —`paymentProof` y `orderPlaced`, indexados por
+ * PANTALLA— no se leen: apuntan a `delivery.bank_transfer` y
+ * `delivery.mercado_pago`, que el nivel plano ya cubre, y eran justo los que
+ * mandaban al pedido de efectivo un texto que no era el suyo.
+ *
+ * La casilla que el negocio dejo vacia NO se rellena: su boton queda inerte.
+ */
+function resolveTemplates(templates: RemoteTemplates | undefined): MessageTemplates {
+  if (!templates) return {};
+
+  const group = (mode: DeliveryType): Partial<Record<PaymentMethod, string>> =>
+    Object.fromEntries(
+      METHODS.flatMap((method) => {
+        const template = templates[mode]?.[method]?.trim() || legacy(templates, mode, method);
+
+        return template ? [[method, template]] : [];
+      }),
+    );
+
+  const delivery = group('delivery');
+  const pickup = group('pickup');
+
+  // Un grupo sin ninguna plantilla no viaja, igual que en la API: ausente es
+  // mejor que vacio, y asi pickTemplate() cae a `delivery` por el mismo camino
+  // que cuando el grupo si viene pero le falta esa casilla.
+  return {
+    ...(Object.keys(delivery).length ? { delivery } : {}),
+    ...(Object.keys(pickup).length ? { pickup } : {}),
+  };
+}
+
+/** La clave plana equivalente, mientras la API siga emitiendolas. */
+function legacy(
+  templates: RemoteTemplates,
+  mode: DeliveryType,
+  method: PaymentMethod,
+): string | undefined {
+  if (mode === 'pickup') {
+    // Solo el efectivo tuvo clave propia para recoger. El resto no la necesita:
+    // pickTemplate() los resuelve cayendo a `delivery`.
+    return method === 'efectivo' ? templates.efectivo_pickup?.trim() : undefined;
+  }
+
+  return templates[method]?.trim();
+}
+
 /**
  * Rotulos de respaldo, y SOLO para el respaldo.
  *
@@ -247,17 +327,26 @@ export async function getStoreConfig(): Promise<StoreSettings> {
     // ninguno de los dos sitios la lista queda vacia y el pie no pinta la fila.
     socialLinks: socialLinks.length ? socialLinks : normalizeSocialLinks(fallback.socialLinks),
 
+    // El telefono si cae al respaldo —sin numero no hay conversacion que abrir y
+    // el boton queda inerte—, pero las plantillas NO.
+    //
+    // Son texto que el negocio escribe y previsualiza en su panel, y desde que
+    // el panel inserta la estructura completa del pedido, una plantilla de
+    // respaldo escrita aqui no es "el mismo mensaje mas corto": es otro mensaje,
+    // sin direccion, sin platillos y con otro formato de importes. Rellenar ese
+    // hueco resucitaria en el chat del cliente el texto que el negocio acaba de
+    // borrar, y sin que nadie se entere. Vacia, el boton se queda inerte, que es
+    // lo que manda el contrato.
     whatsapp: {
       phone: pick(remote.whatsapp?.phone, fallback.whatsapp?.phone),
-      templates: {
-        paymentProof: pick(
-          remote.whatsapp?.templates?.paymentProof,
-          fallback.whatsapp?.templates?.paymentProof,
-        ),
-        orderPlaced: pick(
-          remote.whatsapp?.templates?.orderPlaced,
-          fallback.whatsapp?.templates?.orderPlaced,
-        ),
+      templates: resolveTemplates(remote.whatsapp?.templates),
+      // Sin interruptores no se enciende nada. Viajan siempre que haya telefono,
+      // asi que su ausencia es una API vieja, no una decision del negocio — y
+      // ante la duda se escribe de menos: una variante de mas en el mensaje es
+      // un dato que el negocio eligio no publicar.
+      items: {
+        showVariant: remote.whatsapp?.items?.showVariant === true,
+        showCustomizations: remote.whatsapp?.items?.showCustomizations === true,
       },
     },
 
