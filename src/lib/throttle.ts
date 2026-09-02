@@ -28,7 +28,7 @@ const GENERIC = 'Estas yendo muy rapido. Espera un momento y vuelve a intentarlo
  * manda segundos: por eso solo se interpreta esa forma, y cualquier otra cae en `null` y se
  * responde el texto generico, que sigue siendo cierto.
  */
-function retryAfterSeconds(response: Response): number | null {
+export function retryAfterSeconds(response: Response): number | null {
   const raw = response.headers.get('Retry-After');
   if (!raw) return null;
 
@@ -66,4 +66,25 @@ export function throttleMessage(response: Response): string | null {
   return seconds === null
     ? GENERIC
     : `Estas yendo muy rapido. Espera ${humanize(seconds)} y vuelve a intentarlo.`;
+}
+
+/**
+ * El 429 de las pantallas de LECTURA (catalogo, ficha, configuracion de la tienda).
+ *
+ * Es otro mensaje y no el de arriba porque la culpa no es del comprador. El limite del
+ * carrito y el del cierre se cuentan por SESION, asi que quien los agota es siempre quien
+ * los esta viendo: "estas yendo muy rapido" describe lo que paso. El de lectura se cuenta
+ * por IP, y con este front —un BFF: el navegador habla con Astro y es el servidor de Astro
+ * quien llama al backend— todos los compradores llegan desde las mismas direcciones. O sea
+ * que ahi el cubo es COMUN: a quien le toca el 429 puede ser alguien en su primer clic,
+ * pagando la racha de otro. Decirle que va muy rapido seria mentirle.
+ *
+ * Tampoco es "no pudimos cargar el menu": eso suena a averia y la tienda esta perfectamente:
+ * hay un techo por minuto y se libera solo. El texto dice las dos cosas que el comprador
+ * necesita —que no se rompio nada y cuanto falta— y por eso NO invita a recargar a ciegas.
+ */
+export function busyMessage(seconds: number | null): string {
+  const espera = seconds === null ? 'un momento' : humanize(seconds);
+
+  return `La tienda esta recibiendo muchas visitas. El menu vuelve en ${espera}.`;
 }

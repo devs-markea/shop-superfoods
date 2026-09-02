@@ -11,6 +11,8 @@ import ProductCounter from '../../components/ProductCounter.astro';
 import ActionBar from '../../components/ActionBar.astro';
 import Footer from '../../components/Footer.astro';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
+import { ApiError } from '../../lib/api.ts';
+import { busyMessage } from '../../lib/throttle.ts';
 import { getCart } from '../../lib/cart.ts';
 import { peekCartToken } from '../../lib/cart-session.ts';
 import { isClosed } from '../../lib/schedule.ts';
@@ -119,12 +121,27 @@ const categoriesPending = getProducts()
 
 let product: ProductDetail | null = null;
 let unreachable = false;
+// Titulo y explicacion del aviso, ya redactados. Van juntos porque los tres casos
+// —limite por minuto, averia y platillo inexistente— cambian los dos a la vez.
+let noticeTitle = 'Platillo no encontrado';
+let noticeBody = 'Puede que ya no este en el menu.';
 
 try {
   product = await getProduct(slug);
 } catch (error) {
   console.error('[detalle] fallo la ficha de "%s"', slug, error);
   unreachable = true;
+
+  // Un 429 no es que la ficha no exista ni que la tienda este caida: es el techo
+  // por minuto de la API, comun a todos los compradores (ver busyMessage). Se
+  // separa para que el comprador sepa que basta con esperar, y para que el 503 de
+  // abajo deje de mezclar "no responde" con "va al limite".
+  const throttled = error instanceof ApiError && error.status === 429;
+
+  noticeTitle = throttled ? 'El menu esta muy solicitado' : 'No pudimos cargar el platillo';
+  noticeBody = throttled
+    ? busyMessage(error instanceof ApiError ? error.retryAfter : null)
+    : 'La tienda no responde en este momento. Intentalo de nuevo en unos minutos.';
 }
 
 if (!product) {
@@ -313,14 +330,8 @@ const closed = isClosed(schedule);
         <>
           <div class="product-detail">
             <div class="product-detail__intro">
-              <h1 class="product-detail__title">
-                {unreachable ? 'No pudimos cargar el platillo' : 'Platillo no encontrado'}
-              </h1>
-              <p class="product-detail__description">
-                {unreachable
-                  ? 'La tienda no responde en este momento. Intentalo de nuevo en unos minutos.'
-                  : 'Puede que ya no este en el menu.'}
-              </p>
+              <h1 class="product-detail__title">{noticeTitle}</h1>
+              <p class="product-detail__description">{noticeBody}</p>
             </div>
           </div>
 
