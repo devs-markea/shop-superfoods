@@ -10,6 +10,9 @@
 // ---------------------------------------------------------------------------
 
 import { API_URL, SHOP_API_KEY } from 'astro:env/server';
+// throttle.ts es isomorfico (no importa `astro:env`), asi que se puede usar desde aqui
+// igual que desde un <script> de la pagina.
+import { retryAfterSeconds } from './throttle.ts';
 
 /** Cuerpo de error de Laravel: 422 de validacion y 404 traen esta forma. */
 export interface ApiErrorBody {
@@ -23,18 +26,30 @@ export class ApiError extends Error {
   readonly path: string;
   /** Cuerpo de la respuesta cuando venia en JSON. Lleva `errors` en los 422. */
   readonly body?: ApiErrorBody;
+  /**
+   * Segundos que pide esperar la API, del `Retry-After` de un 429. `null` en todo
+   * lo demas.
+   *
+   * Se guarda AQUI y no se lee de la Response porque quien atiende el fallo suele
+   * estar lejos de ella: `apiGet` abre el sobre y descarta la respuesta, asi que
+   * para cuando la pantalla atrapa el error ya no hay cabeceras que consultar. Es
+   * el unico dato del 429 que se aprovecha —un numero, no un texto— y es lo que
+   * permite decir cuanto falta en vez de invitar a reintentar a ciegas.
+   */
+  readonly retryAfter: number | null;
 
   constructor(
     message: string,
     status: number,
     path: string,
-    options: { cause?: unknown; body?: ApiErrorBody } = {},
+    options: { cause?: unknown; body?: ApiErrorBody; retryAfter?: number | null } = {},
   ) {
     super(message, { cause: options.cause });
     this.name = 'ApiError';
     this.status = status;
     this.path = path;
     this.body = options.body;
+    this.retryAfter = options.retryAfter ?? null;
   }
 }
 
@@ -112,6 +127,7 @@ export async function unwrap<T>(response: Response, path: string): Promise<T> {
     const body = await response.json().catch(() => undefined);
     throw new ApiError(`La API respondio ${response.status} en ${path}.`, response.status, path, {
       body,
+      retryAfter: retryAfterSeconds(response),
     });
   }
 

@@ -397,8 +397,81 @@ export async function getStoreConfig(): Promise<StoreSettings> {
   };
 }
 
+/*
+|--------------------------------------------------------------------------
+| Reutilizacion del horario
+|--------------------------------------------------------------------------
+|
+| `GET /api/store/schedule` se pide en TODAS las pantallas —son ocho, y cada una
+| lo pide entera de nuevo— para pintar el rotulo de abierto/cerrado. No es un dato
+| que cambie entre dos de ellas, asi que se reutiliza durante unos segundos.
+|
+| POR QUE HACE FALTA ESCRIBIRLO AQUI. El backend YA dice cuanto vale su respuesta:
+| la manda con `Cache-Control: public, max-age=30` (StoreConfigController::schedule).
+| Pero esa cabecera solo la obedece quien tenga un cache HTTP, y en este camino no
+| hay ninguno: el navegador nunca ve estas respuestas —este front es un BFF, las
+| pide el servidor de Astro— y el `fetch` de Node no tiene cache. Comprobado: tres
+| llamadas seguidas a la misma URL con `max-age=300` son tres golpes al servidor.
+| O sea que la cabecera viaja y se descarta.
+|
+| QUE SE CEDE. `isOpen` viene RESUELTO del servidor (no se deriva aqui de los
+| turnos), asi que durante la ventana el rotulo puede ir hasta medio minuto tarde:
+| la tienda cierra y el sitio sigue diciendo "Abierto" un rato. Es exactamente el
+| desfase que el endpoint declara aceptable con su `max-age=30`, y es la razon de
+| que el horario viva en su propio endpoint y no dentro de `/api/store` —que se
+| declara valido cinco minutos y NO se reutiliza aqui: ahi va la CLABE, y un cambio
+| de cuenta tiene que llegar al primer pedido, no al de dentro de cinco minutos—.
+*/
+
+/**
+ * Ventana de reutilizacion, en milisegundos.
+ *
+ * SI CAMBIA EL `max-age` DEL BACKEND, HAY QUE CAMBIARLO AQUI: no se deduce de la
+ * respuesta porque `apiGet` abre el sobre y descarta la `Response`, y leer la
+ * cabecera obligaria a arrastrarla por todo el cliente para ahorrar una constante.
+ */
+const SCHEDULE_TTL_MS = 30_000;
+
+/**
+ * El ultimo horario pedido, con la hora en que se pidio.
+ *
+ * Se guarda la PROMESA y no el valor ya resuelto: asi dos renders simultaneos en la
+ * misma instancia esperan la MISMA peticion en vez de lanzar dos.
+ *
+ * VIVE EN LA INSTANCIA, no en un almacen compartido. En Vercel cada funcion tiene su
+ * propia memoria, de modo que esto ahorra llamadas dentro de una instancia caliente y
+ * no ahorra ninguna entre instancias distintas ni despues de un arranque en frio.
+ * Reduce el gasto; no lo elimina. Es a proposito: un cache compartido de verdad seria
+ * infraestructura nueva para un dato que caduca en treinta segundos.
+ */
+let cachedSchedule: { at: number; value: Promise<StoreSchedule | null> } | null = null;
+
 /** Horario de la tienda. `null` si no se pudo leer: el reloj no afirma nada. */
 export async function getStoreSchedule(): Promise<StoreSchedule | null> {
+  const now = Date.now();
+
+  if (cachedSchedule && now - cachedSchedule.at < SCHEDULE_TTL_MS) {
+    return cachedSchedule.value;
+  }
+
+  const pending = fetchStoreSchedule();
+  cachedSchedule = { at: now, value: pending };
+
+  const schedule = await pending;
+
+  // UN FALLO NO SE GUARDA. `fetchStoreSchedule` devuelve `null` cuando la API no
+  // responde, y congelar ese `null` treinta segundos convertiria un tropiezo en medio
+  // minuto de "no se sabe" para todas las pantallas que sirva esta instancia. Al
+  // soltarlo, la siguiente peticion reintenta. La comparacion evita pisar una entrada
+  // mas nueva que hubiera entrado mientras se esperaba.
+  if (schedule === null && cachedSchedule?.value === pending) {
+    cachedSchedule = null;
+  }
+
+  return schedule;
+}
+
+async function fetchStoreSchedule(): Promise<StoreSchedule | null> {
   try {
     return normalizeSchedule(await apiGet<Parameters<typeof normalizeSchedule>[0]>('/api/store/schedule'));
   } catch (error) {

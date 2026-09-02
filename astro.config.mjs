@@ -108,10 +108,31 @@ export default defineConfig({
     },
   },
 
-  // Precarga los links al pasar el raton: navegacion mas rapida en catalogo.
+  // Precarga los links al PULSARLOS —`touchstart` / `mousedown`—, no al pasar el raton por
+  // encima: navegacion mas rapida en el catalogo sin cobrarsela al backend.
+  //
+  // POR QUE NO 'hover', QUE ES EL VALOR POR OMISION. Precargar aqui no es bajarse un archivo:
+  // ninguna pantalla de la tienda esta prerenderizada (todas exportan `prerender = false`,
+  // porque `available` depende del horario resuelto al momento), asi que la URL de una ficha
+  // es una funcion en Vercel que RENDERIZA EN SERVIDOR, y ese render hace cuatro llamadas a la
+  // API: /store, /store/schedule, /products y /products/{slug}. El HTML pesa unos KB; lo que
+  // cuesta son las consultas que hay detras.
+  //
+  // Con 'hover' eso se disparaba con el CURSOR. Recorrer con el raton una rejilla de doce
+  // platillos —sin pulsar nada— lanzaba doce renders, unas cuarenta y ocho peticiones de
+  // lectura. Y el limite de lectura de la API se cuenta por IP, que con este front —un BFF: el
+  // navegador habla con Astro y es el servidor de Astro quien llama al backend— es UN CUBO
+  // COMUN para toda la tienda (600/min, ver services.shop.rate_limits.read). O sea que el gasto
+  // dejaba de depender de cuanta gente compraba y pasaba a depender de cuanto se movia el
+  // raton, y al agotarse el cubo la API responde 429 a TODOS: al que paso el cursor y al que
+  // acababa de entrar.
+  //
+  // 'tap' precarga cuando el comprador ya decidio entrar, que es cuando la precarga sirve de
+  // verdad. Se pierden los milisegundos de ventaja del hover; se gana que la factura sea
+  // proporcional a las visitas reales.
   prefetch: {
     prefetchAll: true,
-    defaultStrategy: 'hover',
+    defaultStrategy: 'tap',
   },
 
   // Inter, la tipografia de la maqueta. La API de fuentes de Astro descarga y
