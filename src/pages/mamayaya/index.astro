@@ -13,6 +13,8 @@ import {
   getProducts,
   type ProductListItem,
 } from '../../lib/catalog.ts';
+import { ApiError } from '../../lib/api.ts';
+import { busyMessage } from '../../lib/throttle.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
 import { getCart } from '../../lib/cart.ts';
 import { peekCartToken } from '../../lib/cart-session.ts';
@@ -29,7 +31,16 @@ import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
 export const prerender = false;
 
 let products: ProductListItem[] = [];
-let unreachable = false;
+
+// El aviso que sustituye a la rejilla, ya redactado, o null si el catalogo cargo.
+//
+// ES UN TEXTO Y NO UN BOOLEANO A PROPOSITO. Antes cualquier fallo pintaba el mismo
+// "no pudimos cargar el menu", y bajo ese texto caben tres cosas que no se parecen
+// en nada: la API caida, la API que no contesta (red, DNS, timeout) y un 429 —que
+// no es una averia, sino un techo por minuto que se libera solo—. Con un unico
+// mensaje, un limite temporal y una caida de verdad se veian igual, y ni el
+// comprador sabia si esperar ni nosotros que estaba pasando.
+let catalogNotice: string | null = null;
 
 try {
   products = await getProducts();
@@ -37,8 +48,16 @@ try {
   // Sin catalogo la pagina sigue en pie —cabecera y barra de pedido— con un
   // aviso en lugar de la rejilla. Una portada en blanco es peor que una
   // portada que explica que paso.
+  //
+  // El log conserva el error entero: `ApiError` lleva el `status` dentro del
+  // mensaje, asi que en las funciones de Vercel se distingue un 429 de un 500 sin
+  // tener que reproducirlo.
   console.error('[catalogo] fallo GET /api/products', error);
-  unreachable = true;
+
+  catalogNotice =
+    error instanceof ApiError && error.status === 429
+      ? busyMessage(error.retryAfter)
+      : 'No pudimos cargar el menu en este momento. Vuelve a intentarlo en unos minutos.';
 }
 
 const categories = getCategories(products);
@@ -164,9 +183,7 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
               </ul>
             ) : (
               <p class="product-list__notice">
-                {unreachable
-                  ? 'No pudimos cargar el menu en este momento. Vuelve a intentarlo en unos minutos.'
-                  : 'Todavia no hay platillos publicados.'}
+                {catalogNotice ?? 'Todavia no hay platillos publicados.'}
               </p>
             )
           }
