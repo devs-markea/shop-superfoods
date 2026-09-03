@@ -57,8 +57,46 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <meta name="theme-color" content="#ffffff" />
+
+    {
+      /*
+        Los iconos de la tienda. Los archivos viven en public/ y todos salen del
+        mismo trazo: la marca en dorado, el mismo #d5aa53 que --sf-gold.
+
+        Son varias declaraciones porque detras hay consumidores distintos y
+        ninguno lee el formato del vecino:
+
+        - El .ico lleva 16, 32 y 48 en un solo archivo y es el suelo de los
+          navegadores que no pintan un SVG en la pestana. `sizes="any"` no
+          describe su contenido: esta para que Chrome, que si pinta el SVG, no
+          se descargue los dos.
+        - El SVG es el que se ve en un navegador de hoy: una peticion y nitido a
+          cualquier zoom y a cualquier densidad.
+        - Los PNG de 32 y 16 se solapan con el .ico. No cuestan una peticion de
+          mas —el navegador elige UNO— y estan porque vienen con el juego de
+          iconos; el dia que se decida que sobran, se borran estas dos lineas y
+          sus dos archivos y no hay nada mas que tocar.
+        - El apple-touch-icon de 180 es el de la pantalla de inicio de iOS, y no
+          puede salir del manifest porque Safari no lo lee de ahi.
+        - El manifest lleva los de Android, el nombre y el color del arranque.
+          Ver public/site.webmanifest: su `start_url` es /mamayaya y no la raiz,
+          que solo es el 302 de astro.config.mjs —abrir una app instalada por
+          una redireccion es una pantalla en blanco de mas cada vez—.
+
+        `msapplication-*` son las dos etiquetas de Microsoft que siguen vivas:
+        el mosaico del menu de inicio de Windows. El dorado va aqui y no en
+        `theme-color` a proposito: el mosaico es una superficie de la marca, y
+        la barra del navegador es la de la tienda, que es blanca.
+      */
+    }
+    <link rel="icon" href="/favicon.ico" sizes="any" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <link rel="icon" href="/favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <meta name="msapplication-TileColor" content="#d5aa53" />
+    <meta name="msapplication-TileImage" content="/mstile-150x150.png" />
 
     <title>{title}</title>
     <meta name="description" content={description} />
