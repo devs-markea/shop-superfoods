@@ -10,6 +10,7 @@ import ScheduleSheet from '../../components/ScheduleSheet.astro';
 import LocationSheet from '../../components/LocationSheet.astro';
 import StoreClosedNotice from '../../components/StoreClosedNotice.astro';
 import Footer from '../../components/Footer.astro';
+import RetryNotice from '../../components/RetryNotice.astro';
 import {
   getCart,
   remainingForFreeShipping,
@@ -204,9 +205,26 @@ const closed = isClosed(schedule);
             set:html={linesHtml}
           />
 
-          <p class:list={['text-secondary', 'text-center', 'm-0', lines.length > 0 && 'd-none']} data-empty>
-            {unreachable ? 'No pudimos cargar tu pedido. Intentalo de nuevo.' : 'Tu carrito esta vacio.'}
-          </p>
+          {
+            unreachable ? (
+              // Antes decia "Intentalo de nuevo" sin ofrecer como, y en el mismo hueco que
+              // "Tu carrito esta vacio". Ahora lleva su enlace, igual que portada y ficha.
+              //
+              // 'manual' y no 'auto', a diferencia de ellas: el catch de arriba no distingue
+              // un 429, y `/api/cart` cuenta contra el limite de la SESION (`shop-cart`),
+              // donde el 429 lo provoca este mismo comprador. Una recarga sola podria
+              // meterlo en bucle contra su propio techo.
+              //
+              // Sin `data-empty`: ese hueco lo gobierna order-summary.ts al repintar tras un
+              // cambio, y sin lineas cargadas no hay cambio que hacer. Con el aviso fuera
+              // del hueco, el script no puede taparlo con un "carrito vacio" que no es cierto.
+              <RetryNotice body="No pudimos cargar tu pedido." retry="manual" center />
+            ) : (
+              <p class:list={['text-secondary', 'text-center', 'm-0', lines.length > 0 && 'd-none']} data-empty>
+                Tu carrito esta vacio.
+              </p>
+            )
+          }
 
           <!-- Lo rellena el script cuando la API rechaza un cambio. -->
           <p class="order-list__error" role="alert" hidden data-cart-error></p>
