@@ -10,6 +10,7 @@ import PromoBadge from '../../components/PromoBadge.astro';
 import ProductCounter from '../../components/ProductCounter.astro';
 import ActionBar from '../../components/ActionBar.astro';
 import Footer from '../../components/Footer.astro';
+import RetryNotice from '../../components/RetryNotice.astro';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
 import { ApiError } from '../../lib/api.ts';
 import { busyMessage } from '../../lib/throttle.ts';
@@ -96,6 +97,10 @@ const { slug = '' } = Astro.params;
 const cartToken = peekCartToken(Astro.cookies);
 
 const storePending = getStoreConfig();
+// Marcada como atendida desde ya: ver el mismo catch en la portada. getStoreConfig puede
+// lanzar fuera de su try si la API cambia el tipo de un campo, y esta promesa espera a la
+// ficha sin nadie atendiendola. El Promise.all de abajo la sigue recibiendo.
+storePending.catch(() => {});
 const schedulePending = getStoreSchedule();
 
 // Solo si la sesion ya tiene token: `GET /api/cart` crea el carrito si no existe,
@@ -126,6 +131,11 @@ let unreachable = false;
 let noticeTitle = 'Platillo no encontrado';
 let noticeBody = 'Puede que ya no este en el menu.';
 
+// Que se le ofrece al comprador para volver a intentarlo (ver <RetryNotice>). Arranca en
+// 'none', que es lo que corresponde al aviso de arriba: un platillo que no existe no aparece
+// por insistir, asi que ni recarga sola ni enlace de "Reintentar". El catch lo cambia.
+let noticeRetry: 'auto' | 'manual' | 'none' = 'none';
+
 try {
   product = await getProduct(slug);
 } catch (error) {
@@ -138,10 +148,20 @@ try {
   // abajo deje de mezclar "no responde" con "va al limite".
   const throttled = error instanceof ApiError && error.status === 429;
 
+  // Contra el techo por minuto no se recarga SOLA: gastaria otra ficha del mismo cubo y
+  // alejaria el momento en que se libera. Queda el enlace, para cuando se haya esperado.
+  // Contra la averia, recarga sola.
+  noticeRetry = throttled ? 'manual' : 'auto';
+
+  // El cuerpo ya no dice "La tienda no responde": fallo UNA llamada, y en esta misma
+  // pagina la barra, el pie y el horario pudieron cargar bien. Tampoco promete "unos
+  // minutos", que contradecia a la cuenta atras de debajo. Lo que si puede afirmar sin
+  // equivocarse es de quien es el problema: si el comprador esta leyendo este aviso, su
+  // conexion llego — lo que fallo fue la de la tienda con la API.
   noticeTitle = throttled ? 'El menu esta muy solicitado' : 'No pudimos cargar el platillo';
   noticeBody = throttled
     ? busyMessage(error instanceof ApiError ? error.retryAfter : null)
-    : 'La tienda no responde en este momento. Intentalo de nuevo en unos minutos.';
+    : 'El problema es nuestro, no de tu conexion.';
 }
 
 if (!product) {
@@ -331,7 +351,10 @@ const closed = isClosed(schedule);
           <div class="product-detail">
             <div class="product-detail__intro">
               <h1 class="product-detail__title">{noticeTitle}</h1>
-              <p class="product-detail__description">{noticeBody}</p>
+              {/* Sustituye al <p class="product-detail__description"> que habia aqui: el
+                  aviso se lee igual —el cuerpo de <RetryNotice> es la misma letra de
+                  14/20 en gris— y ademas trae la cuenta atras cuando toca. */}
+              <RetryNotice body={noticeBody} retry={noticeRetry} />
             </div>
           </div>
 

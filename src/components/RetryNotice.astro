@@ -1,0 +1,302 @@
+---
+interface Props {
+  /** El aviso ya redactado. Lo escribe la pantalla, que es quien sabe que fallo. */
+  body: string;
+  /**
+   * Que se le ofrece al comprador para volver a intentarlo.
+   *
+   * LO DECIDE QUIEN MONTA EL AVISO, y no se deduce aqui: desde dentro del componente no hay
+   * forma de distinguir los fallos que pintan un aviso, y cada uno pide una cosa distinta.
+   *
+   *   'auto'    averia transitoria. Cuenta atras, recarga sola y enlace manual. Es el caso
+   *             para el que existe esto.
+   *   'manual'  un 429, o una pantalla que no sabe distinguir un 429 de lo demas. Solo el
+   *             enlace: recargar SOLA contra un techo por minuto gasta otra ficha del mismo
+   *             cubo y aleja el momento en que se libera, pero el comprador si puede volver
+   *             a probar cuando haya esperado.
+   *   'none'    un 404. Ni cuenta atras ni enlace: el platillo no va a aparecer por
+   *             insistir, y un boton de "Reintentar" ahi seria una promesa vacia.
+   */
+  retry: 'auto' | 'manual' | 'none';
+  /**
+   * Centra el aviso. Para las pantallas que no lo montan dentro de un contenedor que ya
+   * centre: la portada no lo necesita, porque .product-list__notice lo hace por ella.
+   */
+  center?: boolean;
+}
+
+const { body, retry, center = false } = Astro.props;
+
+// La salida manual apunta a ESTA misma direccion. Es un <a> de verdad y no un boton
+// porque tiene que funcionar sin JavaScript: si el script no llega —y el aviso aparece
+// justo cuando algo va mal—, al comprador le queda un enlace que recarga.
+const here = Astro.url.pathname + Astro.url.search;
+---
+
+{/*
+  El aviso de "algo fallo y se puede volver a intentar".
+
+  POR QUE LA CUENTA ATRAS NO SE PINTA EN EL SERVIDOR. Nace con `hidden` y la descubre el
+  script, que es tambien quien escribe el numero. Si se pintara visible de entrada, una
+  pagina con el JavaScript caido prometeria un reintento que no va a ocurrir nunca, y la
+  promesa incumplida es peor que no hacerla: el comprador se queda mirando un numero que
+  no baja.
+
+  Y POR QUE EL REINTENTO DEL SERVIDOR NO SE VE. Antes de llegar aqui, `apiFetch` ya
+  reintento hasta tres veces (ver src/lib/api.ts). Eso pasa MIENTRAS se construye la
+  pagina, con el navegador esperando la respuesta, asi que no hay nada que ensenar: no
+  existe todavia pantalla donde ensenarlo. Esta cuenta atras es la SEGUNDA linea, la que
+  actua cuando aquellas tres tentativas tambien fallaron.
+*/}
+<div class:list={['retry-notice', center && 'retry-notice--center']} data-retry-mode={retry}>
+  {/* role="status" solo AQUI: es la frase que hay que anunciar, y una sola vez. La cuenta
+      atras se queda fuera a proposito —dentro seria una region viva cambiando cada
+      segundo, o sea un lector de pantalla repitiendo "3", "2", "1" encima del aviso—. */}
+  <p class="retry-notice__body" role="status">{body}</p>
+
+  {
+    retry === 'auto' && (
+      <p class="retry-notice__countdown" data-retry-countdown hidden>
+        {/* El 3 es solo un marcador: la espera real la calcula el script, con su
+            aleatoriedad, y la escribe antes de quitar el `hidden`. */}
+        <span aria-hidden="true">
+          Reintentando en <span data-retry-count>3</span>…
+        </span>
+
+        {/* Lo mismo, dicho una vez y sin numero: quien no ve la pantalla necesita saber
+            que va a recargarse sola —una recarga por sorpresa desorienta— pero no
+            necesita el conteo. */}
+        <span class="visually-hidden">La pagina se actualizara sola en unos segundos.</span>
+      </p>
+    )
+  }
+
+  {
+    retry !== 'none' && (
+      <a class="retry-notice__action" href={here} data-retry-action>
+        Reintentar ahora
+      </a>
+    )
+  }
+</div>
+
+<script>
+  // ---------------------------------------------------------------------------
+  // La cuenta atras y la recarga.
+  //
+  // POCAS RECARGAS Y CADA VEZ MAS ESPACIADAS: ESTO ES LO IMPORTANTE DE TODO EL ARCHIVO. Si
+  // cada pantalla que falla se recarga sola sin limite, lo que se ha construido es una
+  // avalancha contra un backend que justo estaba cayendo — y en este hosting cae
+  // precisamente por quedarse sin procesos de PHP. Cada recarga son hasta cinco llamadas a
+  // la API, y cada llamada hasta tres tentativas en el servidor: insistir deprisa le quita
+  // al backend los pocos procesos que le quedaban para levantarse.
+  //
+  // Asi que la recarga automatica tiene tres frenos:
+  //
+  //   espera creciente  3 s, 6 s, 12 s. El tropiezo del arranque en frio se cura en la
+  //                     primera; una caida mas larga no se arregla insistiendo mas deprisa.
+  //   aleatoriedad      +-25 %. Sin ella, todas las pestanas que fallaron en el mismo
+  //                     segundo vuelven a pedir en el mismo segundo, que es la rafaga otra
+  //                     vez.
+  //   un final          tras la tercera, el aviso se queda quieto con su enlace manual.
+  //
+  // La cuenta va por pantalla —agotarla en la portada no deja sin ella a la ficha— y se
+  // reinicia tras cinco minutos sin recargas: quien tropieza, sigue comprando y vuelve a
+  // tropezar media hora despues tiene otra vez sus intentos.
+  // ---------------------------------------------------------------------------
+
+  /** Primera espera, en segundos. Cada intento siguiente la dobla. */
+  const BASE_S = 3;
+  /** Recargas automaticas antes de dejar solo el enlace. */
+  const MAX_AUTO = 3;
+  /** Techo de la espera. Con tres intentos no se llega a el; esta por si sube MAX_AUTO. */
+  const MAX_DELAY_S = 30;
+  /** Sin recargas durante este tiempo, la cuenta vuelve a empezar. */
+  const RESET_MS = 5 * 60_000;
+
+  const KEY = `sf:retry:${location.pathname}`;
+
+  const notice = document.querySelector<HTMLElement>('.retry-notice[data-retry-mode="auto"]');
+  const action = document.querySelector<HTMLAnchorElement>('[data-retry-action]');
+
+  // El enlace recarga en lugar de navegar. Navegar a la misma direccion puede resolverse
+  // desde el cache del navegador y devolver el mismo aviso sin haber preguntado nada.
+  //
+  // Y NO toca la cuenta: es el comprador quien decide insistir, uno a uno, y eso no es la
+  // avalancha que la cuenta existe para frenar.
+  action?.addEventListener('click', (event) => {
+    event.preventDefault();
+    location.reload();
+  });
+
+  interface RetryState {
+    /** Recargas automaticas ya hechas en esta pantalla. */
+    attempts: number;
+    /** Cuando se hizo la ultima, en ms. 0 si nunca. */
+    last: number;
+  }
+
+  /** La cuenta de esta pantalla, o `null` si no hay donde guardarla. */
+  function readState(): RetryState | null {
+    let raw: string | null;
+
+    try {
+      raw = sessionStorage.getItem(KEY);
+    } catch {
+      // Sin almacenamiento —ventana privada, cookies bloqueadas— no hay forma de contar las
+      // recargas. Ante la duda NO se recarga: no poder contarlas es justo lo que convierte
+      // una recarga en un bucle.
+      return null;
+    }
+
+    try {
+      const parsed = JSON.parse(raw ?? '{}') as Partial<RetryState>;
+
+      return {
+        attempts: Number.isInteger(parsed.attempts) ? Number(parsed.attempts) : 0,
+        last: Number.isFinite(parsed.last) ? Number(parsed.last) : 0,
+      };
+    } catch {
+      // Un valor ilegible es una cuenta nueva, no un almacenamiento roto: si se tratara
+      // como lo segundo, esa pantalla no volveria a recargarse sola nunca.
+      return { attempts: 0, last: 0 };
+    }
+  }
+
+  /** Segundos de espera antes de la recarga numero `attempt` (0, 1, 2…). */
+  function delayFor(attempt: number): number {
+    const base = Math.min(BASE_S * 2 ** attempt, MAX_DELAY_S);
+    const jitter = base * (Math.random() * 0.5 - 0.25);
+
+    // Al segundo entero, porque es lo que se lee en pantalla; y nunca menos de uno.
+    return Math.max(1, Math.round(base + jitter));
+  }
+
+  const state = notice ? readState() : null;
+
+  if (notice && state) {
+    const attempts = Date.now() - state.last > RESET_MS ? 0 : state.attempts;
+
+    if (attempts < MAX_AUTO) {
+      const line = notice.querySelector<HTMLElement>('[data-retry-countdown]');
+      const slot = notice.querySelector<HTMLElement>('[data-retry-count]');
+
+      let left = delayFor(attempts);
+
+      if (slot) slot.textContent = String(left);
+      if (line) line.hidden = false;
+
+      const tick = setInterval(() => {
+        left -= 1;
+
+        if (left > 0) {
+          if (slot) slot.textContent = String(left);
+          return;
+        }
+
+        clearInterval(tick);
+
+        // Se anota ANTES de recargar: despues no hay despues, la pagina ya se fue. Y si no
+        // se puede anotar, tampoco se recarga — ver readState.
+        try {
+          sessionStorage.setItem(KEY, JSON.stringify({ attempts: attempts + 1, last: Date.now() }));
+        } catch {
+          return;
+        }
+
+        location.reload();
+      }, 1000);
+    }
+  }
+</script>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: retry-notice
+     ---------------------------------------------------------------------------
+     El aviso de fallo con su reintento. Lo montan la portada —en el sitio de la
+     rejilla—, la ficha —en el sitio del platillo— y el pedido —en el sitio de sus
+     lineas—, que son contextos con alineacion distinta: centrado en la portada y en
+     el pedido, a la izquierda en la ficha.
+
+     Por eso el bloque NO fija `text-align` ni margenes exteriores: hereda la
+     alineacion de quien lo monta y se limita a apilar sus piezas. Quien no tenga un
+     contenedor que centre por el, pide el modifier --center.
+     --------------------------------------------------------------------------- */
+  .retry-notice {
+    display: flex;
+    flex-direction: column;
+    /* align-items de start para que el enlace no se estire a todo lo ancho; el eje
+       horizontal lo resuelve el margen automatico de .retry-notice__action, que sigue
+       al text-align heredado. */
+    gap: 8px;
+  }
+
+  /* Modifier: centrado por su cuenta, para las pantallas que lo montan en un
+     contenedor alineado a la izquierda. */
+  .retry-notice--center {
+    text-align: center;
+  }
+
+  /* Element: el aviso. Inter 400 14/20 en gris — es la misma letra de servicio que ya
+     usaba .product-list__notice, que es lo que este bloque vino a sustituir. */
+  .retry-notice__body {
+    margin: 0;
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--sf-muted);
+  }
+
+  /* Element: la cuenta atras. Un punto por debajo del aviso —12/16— porque es el
+     acompanamiento, no la noticia: dice que algo va a pasar solo, y quien no quiera
+     esperar tiene el enlace justo debajo. */
+  .retry-notice__countdown {
+    margin: 0;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--sf-muted);
+    /* Tabular para que el numero no mueva la frase al bajar de 12 a 9. */
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Element: la salida manual. Contorneado y en negro, el mismo patron que
+     .store-closed__action: es una accion secundaria y pintarla dorada la haria pasar por
+     el boton de comprar. Alto 44 por el area tactil minima.
+
+     `margin-inline: auto` con `width: fit-content` es lo que hace que siga al text-align
+     del contenedor: centrado en la portada, pegado a la izquierda en la ficha. */
+  .retry-notice__action {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: fit-content;
+    min-width: 160px;
+    height: 44px;
+    margin-block-start: 4px;
+    padding-inline: 20px;
+    border: 1px solid var(--sf-border);
+    border-radius: 12px;
+    background-color: var(--sf-white);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--sf-ink);
+    text-decoration: none;
+    transition: background-color 160ms ease;
+  }
+  .retry-notice__action:hover {
+    background-color: var(--sf-body-bg);
+    color: var(--sf-ink);
+  }
+  .retry-notice__action:active {
+    background-color: var(--sf-border);
+  }
+
+  /* El centrado. `text-align: center` no alinea una caja flex, asi que el margen
+     automatico es lo que lo consigue — y en la ficha, sin ninguno de los dos
+     contenedores, `margin-inline` se queda en su valor y el enlace va a la izquierda. */
+  .product-list__notice .retry-notice__action,
+  .retry-notice--center .retry-notice__action {
+    margin-inline: auto;
+  }
+</style>

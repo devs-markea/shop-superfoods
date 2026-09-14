@@ -5,6 +5,7 @@ import OrderBar from '../../components/OrderBar.astro';
 import Hero from '../../components/Hero.astro';
 import ProductCard from '../../components/ProductCard.astro';
 import StoreClosedNotice from '../../components/StoreClosedNotice.astro';
+import RetryNotice from '../../components/RetryNotice.astro';
 import CartFab from '../../components/CartFab.astro';
 import Footer from '../../components/Footer.astro';
 import {
@@ -42,6 +43,52 @@ let products: ProductListItem[] = [];
 // comprador sabia si esperar ni nosotros que estaba pasando.
 let catalogNotice: string | null = null;
 
+// Que se le ofrece al comprador para volver a intentarlo (ver <RetryNotice>).
+//
+// Es el mismo reparto que hace el texto de arriba, con una raya distinta: alli se separa
+// el 429 para DECIR otra cosa, y aqui para no recargar SOLA. Recargar contra un techo por
+// minuto gasta otra ficha del mismo cubo y aleja el momento en que se libera; contra una
+// averia transitoria —que es lo que resulto ser— la recarga es justo lo que la arregla. Al
+// 429 le queda el enlace manual, para cuando el comprador haya esperado.
+let catalogRetry: 'auto' | 'manual' = 'auto';
+
+// Configuracion, horario y carrito ARRANCAN aqui, antes de esperar al catalogo, y se
+// recogen mas abajo. Las cuatro llamadas salen a la vez, igual que en la ficha.
+//
+// Antes el catalogo se esperaba primero y los otros tres arrancaban cuando el ya habia
+// terminado. Con un backend que responde deprisa no se notaba, pero con uno que acepta la
+// conexion y se calla —justo el caso para el que `apiFetch` tiene plazo— la portada sumaba
+// dos presupuestos seguidos: los 8 s del catalogo y DESPUES los 8 s de los otros tres. Unos
+// 16 s con la pestana en blanco, que pueden rebasar la vida de la funcion en Vercel y
+// acabar en su pagina de error en lugar de en el aviso. Lanzadas a la vez, el peor caso es
+// el de la llamada mas lenta: unos 8 s.
+//
+// Pueden quedar sin esperar mientras corre el `try` del catalogo porque ninguna lanza: las
+// dos de la tienda devuelven respaldo o null, y la del carrito trae su propio catch. Sin
+// ellas la cabecera se queda sin sus iconos o sin su importe, pero el catalogo se sirve
+// igual.
+//
+// El carrito lo pide la barra de desktop, que ensena importe y unidades. Solo se pide si la
+// sesion ya tiene token: ver peekCartToken en src/lib/cart-session.ts.
+const cartToken = peekCartToken(Astro.cookies);
+
+const storePending = getStoreConfig();
+// "Ninguna lanza" es cierto HOY, no una garantia: getStoreConfig llama a `.trim()` fuera de
+// su try, y si la API devolviera un numero donde espera texto, lanzaria. Lanzada antes de
+// tiempo, esa promesa se rechazaria mientras se espera al catalogo SIN NADIE ATENDIENDOLA, y
+// Node trata un rechazo sin atender como un error que puede tumbar la funcion entera —con
+// las demas visitas que estuviera sirviendo—. Este catch solo la marca como atendida: el
+// Promise.all de abajo la sigue recibiendo, y la pagina falla con un 500 como antes, pero
+// solo esta visita.
+storePending.catch(() => {});
+const schedulePending = getStoreSchedule();
+const cartPending = cartToken
+  ? getCart(cartToken).catch((error) => {
+      console.error('[portada] fallo GET /api/cart', error);
+      return null;
+    })
+  : null;
+
 try {
   products = await getProducts();
 } catch (error) {
@@ -51,13 +98,20 @@ try {
   //
   // El log conserva el error entero: `ApiError` lleva el `status` dentro del
   // mensaje, asi que en las funciones de Vercel se distingue un 429 de un 500 sin
-  // tener que reproducirlo.
+  // tener que reproducirlo. Desde que `apiFetch` reintenta, un error que llega hasta
+  // aqui es uno que YA fallo hasta tres veces: en el log es una averia, no un tropiezo.
   console.error('[catalogo] fallo GET /api/products', error);
 
-  catalogNotice =
-    error instanceof ApiError && error.status === 429
-      ? busyMessage(error.retryAfter)
-      : 'No pudimos cargar el menu en este momento. Vuelve a intentarlo en unos minutos.';
+  const throttled = error instanceof ApiError && error.status === 429;
+
+  catalogRetry = throttled ? 'manual' : 'auto';
+
+  // Sin "vuelve a intentarlo en unos minutos": debajo, la cuenta atras dice que se
+  // reintenta en segundos, y las dos frases juntas se contradecian en pantalla. El texto
+  // dice que paso; lo que va a pasar lo dicen la cuenta atras y el enlace.
+  catalogNotice = throttled
+    ? busyMessage(error instanceof ApiError ? error.retryAfter : null)
+    : 'No pudimos cargar el menu en este momento.';
 }
 
 const categories = getCategories(products);
@@ -66,25 +120,9 @@ const categories = getCategories(products);
 // categorias sin el chip que no filtra nada: "Todos" es de la barra, no del menu.
 const published = categories.filter((category) => category !== ALL_CATEGORIES);
 
-// Configuracion, horario y carrito van en paralelo con lo que ya se pidio, y
-// encadenarlos retrasaria la portada por nada. Ninguno lanza: sin ellos la
-// cabecera se queda sin sus iconos o sin su importe, pero el catalogo se sirve
-// igual.
-//
-// El carrito lo pide la barra de desktop, que ensena importe y unidades. Solo se
-// pide si la sesion ya tiene token: ver peekCartToken en src/lib/cart-session.ts.
-const cartToken = peekCartToken(Astro.cookies);
-
-const [store, schedule, cart] = await Promise.all([
-  getStoreConfig(),
-  getStoreSchedule(),
-  cartToken
-    ? getCart(cartToken).catch((error) => {
-        console.error('[portada] fallo GET /api/cart', error);
-        return null;
-      })
-    : null,
-]);
+// Las tres que arrancaron antes del catalogo. Ya estan en curso —o terminadas—, asi que
+// esperarlas aqui no suma tiempo al del catalogo: solo lo que les falte.
+const [store, schedule, cart] = await Promise.all([storePending, schedulePending, cartPending]);
 
 // El rotulo de envio lo compone la tienda a partir del modo, porque es un rotulo y
 // los rotulos son suyos. Con `none` no se pinta: prometer un envio gratis que el
@@ -182,9 +220,16 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
                 ))}
               </ul>
             ) : (
-              <p class="product-list__notice">
-                {catalogNotice ?? 'Todavia no hay platillos publicados.'}
-              </p>
+              // Dos avisos distintos en el mismo sitio: el catalogo vacio es un 200 con
+              // la lista vacia —no hay nada que reintentar, la tienda contesto— y el
+              // fallo si lleva su reintento.
+              catalogNotice ? (
+                <div class="product-list__notice">
+                  <RetryNotice body={catalogNotice} retry={catalogRetry} />
+                </div>
+              ) : (
+                <p class="product-list__notice">Todavia no hay platillos publicados.</p>
+              )
             )
           }
         </div>
