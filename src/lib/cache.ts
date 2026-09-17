@@ -66,14 +66,13 @@ export interface CachedRead<T> {
   /** La lectura de verdad. Si lanza, no se guarda nada. */
   load: () => Promise<T>;
   /**
-   * Hasta cuando vale lo leido, en epoch ms. Es una funcion y no una duracion porque el
-   * catalogo no caduca por tiempo sino en el proximo cambio de horario de la tienda.
+   * Hasta cuando vale lo leido, en epoch ms. Es una funcion y no una duracion para que quien
+   * lo use pueda decidirlo con lo leido —hoy las tres lo resuelven con el reloj, pero una
+   * caducidad que dependa del contenido no obliga a cambiar esto—.
    */
   freshUntil: (value: T, fetchedAt: number) => number | Promise<number>;
   /** Cuanto se sigue sirviendo despues de caducar, pero solo si la API falla. */
   staleFor?: number;
-  /** Salta la copia guardada y va a la API. La respuesta si se guarda. */
-  fresh?: boolean;
 }
 
 /**
@@ -86,9 +85,7 @@ export interface CachedRead<T> {
 const inFlight = new Map<string, Promise<unknown>>();
 
 export function cached<T>(read: CachedRead<T>): Promise<T> {
-  // La lectura fresca no comparte turno con la normal: quien la pide es una pantalla de
-  // pago, que no puede recibir una copia guardada por haber llegado tarde a la fila.
-  const lane = `${VERSION}:${read.key}${read.fresh ? '!fresh' : ''}`;
+  const lane = `${VERSION}:${read.key}`;
   const running = inFlight.get(lane) as Promise<T> | undefined;
 
   if (running) return running;
@@ -102,7 +99,7 @@ export function cached<T>(read: CachedRead<T>): Promise<T> {
 
 async function resolve<T>(read: CachedRead<T>): Promise<T> {
   const key = `${VERSION}:${read.key}`;
-  const entry = read.fresh ? null : await readEntry<T>(key);
+  const entry = await readEntry<T>(key);
   const now = Date.now();
 
   if (entry && now < entry.freshUntil) return entry.value;
