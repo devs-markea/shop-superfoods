@@ -1,7 +1,7 @@
 // ---------------------------------------------------------------------------
 // Configuracion de la tienda.
 //
-//   GET /api/store            datos de negocio. Se guarda una hora, salvo en las pantallas
+//   GET /api/store            datos de negocio. Se guarda un dia, salvo en las pantallas
 //                             que enseñan la CLABE y las plantillas, que lo piden fresco
 //   GET /api/store/schedule   horario. Se guarda 30 s, o una semana si el estado se calcula
 //                             aqui desde los rangos (SCHEDULE_FROM_SHIFTS)
@@ -310,8 +310,22 @@ function normalizeSocialLinks(links: SocialLink[] | undefined): SocialLink[] {
   });
 }
 
-/** Cuanto vale lo leido de `/api/store`, que el backend declara valido cinco minutos. */
-const CONFIG_FRESH_MS = 60 * 60_000;
+/**
+ * Cuanto vale lo leido de `/api/store`: un dia, igual que el catalogo.
+ *
+ * El backend declara su respuesta valida cinco minutos, pero esto son datos que el negocio
+ * cambia una vez al mes, no una vez por visita. Se alinea con el catalogo a proposito: una
+ * sola regla para quien purga —edita en el panel, purga, y se refresca todo—.
+ *
+ * LO QUE SE CEDE: si alguien apaga el envio gratis y olvida purgar, la tienda sigue
+ * prometiendolo hasta un dia mientras el backend ya cobra el envio. Por eso no se subio a
+ * una semana: el ahorro eran seis llamadas y el riesgo se multiplicaba por siete.
+ *
+ * Y AFECTA TAMBIEN A LA CLABE Y A LAS PLANTILLAS, que salen de aqui: las pantallas del pago
+ * leen esta misma copia. Cambiar la cuenta bancaria en el panel SIN PURGAR deja a la tienda
+ * pidiendo transferencias a la cuenta vieja hasta un dia.
+ */
+const CONFIG_FRESH_MS = 24 * 60 * 60_000;
 
 /**
  * Cuanto se sigue sirviendo la ultima copia buena si la API falla.
@@ -330,19 +344,20 @@ const CONFIG_STALE_MS = 24 * 60 * 60_000;
  * o, si no la hay, con el respaldo: un dato de configuracion caido no puede tumbar el
  * catalogo.
  *
- * `fresh` SALTA LA COPIA GUARDADA, y lo piden las cuatro pantallas que enseñan datos con los
- * que se paga —pago, transferencia, recibido y confirmado—. Ahi va la CLABE, y un cambio de
- * cuenta tiene que llegar al primer pedido, no al de dentro de una hora: quien transfiere a
- * la cuenta vieja no recupera el dinero con una purga. Lo leido asi tambien renueva la copia.
+ * LA LEEN LAS NUEVE PANTALLAS DEL MISMO SITIO: la copia guardada. Tambien las del pago, que
+ * es donde se pintan la CLABE y las plantillas de WhatsApp. Eso convierte la purga en parte
+ * del trabajo, no en un detalle: CAMBIAR LA CUENTA BANCARIA EN EL PANEL Y NO PURGAR deja a
+ * la tienda pidiendo transferencias a la cuenta vieja hasta un dia, y ese dinero no vuelve
+ * con una purga tardia. Ver src/lib/cache.ts y el procedimiento de purga en la
+ * documentacion.
  */
-export async function getStoreConfig(options: { fresh?: boolean } = {}): Promise<StoreSettings> {
+export async function getStoreConfig(): Promise<StoreSettings> {
   let remote: StoreSettings = {};
 
   try {
     remote = await cached<StoreSettings>({
       key: 'configuracion',
       tag: CACHE_TAGS.config,
-      fresh: options.fresh,
       load: () => apiGet<StoreSettings>('/api/store'),
       freshUntil: (_settings, fetchedAt) => fetchedAt + CONFIG_FRESH_MS,
       staleFor: CONFIG_STALE_MS,

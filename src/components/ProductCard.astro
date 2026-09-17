@@ -31,16 +31,32 @@ const UNAVAILABLE_LABEL: Record<string, string> = {
   out_of_schedule: 'Fuera de horario',
 };
 
-// Con la tienda cerrada no hay platillo comprable, diga lo que diga el catalogo:
-// la tarjeta se apaga igual que un no disponible cualquiera —atenuada y sin boton—
-// y sigue llevando a su ficha, que se puede leer entera.
-const orderable = product.available && !storeClosed;
+// EL HORARIO MANDA SOBRE `available`, EN LOS DOS SENTIDOS, y esto es lo que permite guardar
+// el catalogo un dia entero (ver CATALOG_FRESH_MS en src/lib/catalog.ts).
+//
+// `available` viene resuelto por el backend EN EL MOMENTO EN QUE SE LEYO el catalogo, asi que
+// en una copia guardada envejece: una lista pedida de madrugada trae todo "fuera de horario"
+// y, sin esto, la tienda abriria con el menu entero apagado. El horario no envejece —se pide
+// aparte y se resuelve al minuto—, asi que es el que decide:
+//
+//   tienda cerrada      nada es comprable, diga lo que diga el catalogo
+//   tienda abierta      un "fuera de horario" guardado se ignora
+//
+// Lo que NO se ignora es cualquier otro motivo: esos no dependen del reloj, y si el contrato
+// estrena uno —hoy `out_of_schedule` es el unico que se emite— la tarjeta lo respeta.
+//
+// Lo que se cede: una categoria con horario propio distinto al de la tienda puede verse
+// comprable fuera de SU horario hasta que se purgue el cache. La ficha, que se lee fresca,
+// dice la verdad, y el backend rechaza el alta con un 422.
+const staleSchedule = !product.available && product.unavailableReason === 'out_of_schedule';
+
+const orderable = (product.available || staleSchedule) && !storeClosed;
 
 // Lo unico que se calla con la tienda cerrada es la etiqueta del motivo: repetir
 // "Fuera de horario" en cada platillo convertiria el menu en una lista de
 // negativas, y eso ya lo dice una sola vez la tarjeta de tienda cerrada.
 const notice =
-  storeClosed || product.available
+  storeClosed || product.available || staleSchedule
     ? null
     : (UNAVAILABLE_LABEL[product.unavailableReason ?? ''] ?? 'No disponible');
 
