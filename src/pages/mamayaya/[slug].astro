@@ -13,6 +13,7 @@ import Footer from '../../components/Footer.astro';
 import RetryNotice from '../../components/RetryNotice.astro';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
 import { ApiError } from '../../lib/api.ts';
+import { ERROR_AREAS, errorCode, statusCode } from '../../lib/error-codes.ts';
 import { busyMessage } from '../../lib/throttle.ts';
 import { getCart } from '../../lib/cart.ts';
 import { peekCartToken } from '../../lib/cart-session.ts';
@@ -136,10 +137,17 @@ let noticeBody = 'Puede que ya no este en el menu.';
 // por insistir, asi que ni recarga sola ni enlace de "Reintentar". El catch lo cambia.
 let noticeRetry: 'auto' | 'manual' | 'none' = 'none';
 
+// El codigo del fallo. Arranca en el del platillo que no existe, que es el aviso de arriba:
+// un 404 tambien se reporta —"me pasaron un enlace y no abre"— y conviene poder distinguirlo
+// de una averia sin preguntar nada mas. Ver src/lib/error-codes.ts.
+let noticeCode = statusCode(ERROR_AREAS.detail, 404);
+
 try {
   product = await getProduct(slug);
 } catch (error) {
-  console.error('[detalle] fallo la ficha de "%s"', slug, error);
+  noticeCode = errorCode(ERROR_AREAS.detail, error);
+
+  console.error('[detalle] %s fallo la ficha de "%s"', noticeCode, slug, error);
   unreachable = true;
 
   // Un 429 no es que la ficha no exista ni que la tienda este caida: es el techo
@@ -354,7 +362,7 @@ const closed = isClosed(schedule);
               {/* Sustituye al <p class="product-detail__description"> que habia aqui: el
                   aviso se lee igual —el cuerpo de <RetryNotice> es la misma letra de
                   14/20 en gris— y ademas trae la cuenta atras cuando toca. */}
-              <RetryNotice body={noticeBody} retry={noticeRetry} />
+              <RetryNotice body={noticeBody} code={noticeCode} retry={noticeRetry} />
             </div>
           </div>
 

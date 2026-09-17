@@ -16,6 +16,7 @@
 // credentials: 'include' ni configuracion de CORS.
 
 import { formatPrice } from '../lib/price';
+import { ERROR_AREAS, offlineCode, statusCode, withCode } from '../lib/error-codes';
 import { throttleMessage } from '../lib/throttle';
 import {
   OPTION_ENTRIES_MAX,
@@ -370,7 +371,7 @@ const FIELD_MESSAGE: Record<string, string> = {
 
 const GENERIC_ERROR = 'No pudimos agregar el platillo.';
 
-function showApiErrors(form: HTMLFormElement, body: unknown): void {
+function showApiErrors(form: HTMLFormElement, body: unknown, code: string): void {
   const payload = body as { errors?: unknown } | null;
   const errors =
     payload && typeof payload.errors === 'object' && payload.errors !== null
@@ -405,7 +406,12 @@ function showApiErrors(form: HTMLFormElement, body: unknown): void {
 
   // El `message` de la respuesta tampoco se muestra: tambien puede venir en
   // ingles si el fallo fue de forma.
-  setFormError(form, loose.size > 0 ? [...loose].join(' ') : errors ? null : GENERIC_ERROR);
+  // El codigo solo acompana al aviso GENERAL. Los errores repartidos por grupo dicen que
+  // corregir y el comprador puede hacerlo: un codigo ahi sugiere averia donde no la hay.
+  setFormError(
+    form,
+    loose.size > 0 ? withCode([...loose].join(' '), code) : errors ? null : withCode(GENERIC_ERROR, code),
+  );
 }
 
 async function addToCart(form: HTMLFormElement): Promise<void> {
@@ -448,13 +454,20 @@ async function addToCart(form: HTMLFormElement): Promise<void> {
     const throttled = throttleMessage(response);
 
     if (throttled) {
-      setFormError(form, throttled);
+      setFormError(form, withCode(throttled, statusCode(ERROR_AREAS.cart, response.status)));
       return;
     }
 
-    showApiErrors(form, await response.json().catch(() => null));
+    showApiErrors(
+      form,
+      await response.json().catch(() => null),
+      statusCode(ERROR_AREAS.cart, response.status),
+    );
   } catch {
-    setFormError(form, 'No pudimos agregar el platillo. Revisa tu conexion.');
+    setFormError(
+      form,
+      withCode('No pudimos agregar el platillo. Revisa tu conexion.', offlineCode(ERROR_AREAS.cart)),
+    );
   } finally {
     if (button) button.disabled = false;
   }

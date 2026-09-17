@@ -12,6 +12,7 @@ import LocationSheet from '../../components/LocationSheet.astro';
 import Footer from '../../components/Footer.astro';
 import { getCart, type Cart } from '../../lib/cart.ts';
 import { getOrder } from '../../lib/orders.ts';
+import { ERROR_AREAS, errorCode } from '../../lib/error-codes.ts';
 import { resolveCartToken } from '../../lib/cart-session.ts';
 import { ORDER_COOKIE, markPointerSeen, parseOrderPointer } from '../../lib/checkout-draft.ts';
 import { type DeliveryType, type StoreOrder } from '../../lib/checkout.ts';
@@ -127,7 +128,10 @@ if (pointer) {
   try {
     order = await getOrder(pointer.id, token);
   } catch (error) {
-    console.error('[recibido] fallo GET /api/orders', error);
+    // Sin aviso en pantalla que lo muestre —esta pantalla se sirve con lo que haya
+    // cargado—, pero el log lleva el codigo igual: es lo que permite seguirlo si alguien
+    // reporta que su acuse salio a medias. Ver src/lib/error-codes.ts.
+    console.error(`[recibido] ${errorCode(ERROR_AREAS.receipt, error)} fallo GET /api/orders`, error);
     failed = true;
   }
 

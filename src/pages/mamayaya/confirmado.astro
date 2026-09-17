@@ -13,6 +13,7 @@ import Footer from '../../components/Footer.astro';
 import FormError from '../../components/FormError.astro';
 import { getCart, type Cart } from '../../lib/cart.ts';
 import { getOrder } from '../../lib/orders.ts';
+import { ERROR_AREAS, errorCode } from '../../lib/error-codes.ts';
 import { resolveCartToken } from '../../lib/cart-session.ts';
 import {
   DRAFT_COOKIE,
@@ -103,7 +104,10 @@ const orderPending: Promise<{ order: StoreOrder | null; failed: boolean }> = ord
   ? getOrder(orderId, token).then(
       (found) => ({ order: found, failed: false }),
       (error: unknown) => {
-        console.error('[confirmado] fallo GET /api/orders', error);
+        console.error(
+          `[confirmado] ${errorCode(ERROR_AREAS.receipt, error)} fallo GET /api/orders`,
+          error,
+        );
         return { order: null, failed: true };
       },
     )

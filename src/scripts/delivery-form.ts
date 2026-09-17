@@ -17,6 +17,7 @@
 import 'bootstrap/js/dist/dropdown.js';
 
 import { paintCartSummary } from '../lib/cart-summary';
+import { ERROR_AREAS, statusCode, withCode } from '../lib/error-codes';
 import { throttleMessage } from '../lib/throttle';
 import {
   draftGaps,
@@ -438,7 +439,7 @@ if (form) {
           const throttled = throttleMessage(response);
 
           if (throttled) {
-            showError(throttled);
+            showError(withCode(throttled, statusCode(ERROR_AREAS.shipping, response.status)));
             return null;
           }
 

@@ -1,7 +1,16 @@
 ---
+import { codeLabel } from '../lib/error-codes.ts';
+
 interface Props {
   /** El aviso ya redactado. Lo escribe la pantalla, que es quien sabe que fallo. */
   body: string;
+  /**
+   * El codigo del fallo —`SF-M202`, `SF-D404`—, para que quien lo reporte pueda decir cual
+   * fue y el equipo lo busque en el log. Lo compone src/lib/error-codes.ts.
+   *
+   * Sin codigo no se pinta la linea: hay avisos que no nacen de un fallo de la API.
+   */
+  code?: string;
   /**
    * Que se le ofrece al comprador para volver a intentarlo.
    *
@@ -25,7 +34,7 @@ interface Props {
   center?: boolean;
 }
 
-const { body, retry, center = false } = Astro.props;
+const { body, code, retry, center = false } = Astro.props;
 
 // La salida manual apunta a ESTA misma direccion. Es un <a> de verdad y no un boton
 // porque tiene que funcionar sin JavaScript: si el script no llega —y el aviso aparece
@@ -70,6 +79,11 @@ const here = Astro.url.pathname + Astro.url.search;
       </p>
     )
   }
+
+  {/* FUERA del `role="status"` de arriba a proposito: quien navega con lector de pantalla
+      necesita oir que paso, no "ese efe guion eme doscientos dos" por delante. El codigo
+      sigue estando ahi para cuando lo busque. */}
+  {code && <p class="retry-notice__code">{codeLabel(code)}</p>}
 
   {
     retry !== 'none' && (
@@ -250,6 +264,17 @@ const here = Astro.url.pathname + Astro.url.search;
   /* Element: la cuenta atras. Un punto por debajo del aviso —12/16— porque es el
      acompanamiento, no la noticia: dice que algo va a pasar solo, y quien no quiera
      esperar tiene el enlace justo debajo. */
+  /* El codigo del fallo. Misma letra que la cuenta atras —acompana, no compite con el
+     aviso— y `user-select: all` para que un clic seleccione el codigo entero: quien lo
+     reporta suele copiarlo, y a mano se corta por el guion. */
+  .retry-notice__code {
+    margin: 0;
+    font-size: 12px;
+    line-height: 16px;
+    color: var(--sf-muted);
+    user-select: all;
+  }
+
   .retry-notice__countdown {
     margin: 0;
     font-size: 12px;

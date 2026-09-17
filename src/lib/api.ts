@@ -37,12 +37,24 @@ export class ApiError extends Error {
    * permite decir cuanto falta en vez de invitar a reintentar a ciegas.
    */
   readonly retryAfter: number | null;
+  /**
+   * Si la API acepto la conexion y se callo hasta agotar el plazo, en lugar de no llegar a
+   * contestar. Las dos llegan con `status: 0` y son averias distintas —una es del backend,
+   * la otra de la red—, asi que el codigo que ve el comprador tambien las separa: `TMO`
+   * contra `NET`. Ver src/lib/error-codes.ts.
+   */
+  readonly timedOut: boolean;
 
   constructor(
     message: string,
     status: number,
     path: string,
-    options: { cause?: unknown; body?: ApiErrorBody; retryAfter?: number | null } = {},
+    options: {
+      cause?: unknown;
+      body?: ApiErrorBody;
+      retryAfter?: number | null;
+      timedOut?: boolean;
+    } = {},
   ) {
     super(message, { cause: options.cause });
     this.name = 'ApiError';
@@ -50,6 +62,7 @@ export class ApiError extends Error {
     this.path = path;
     this.body = options.body;
     this.retryAfter = options.retryAfter ?? null;
+    this.timedOut = options.timedOut ?? false;
   }
 }
 
@@ -323,7 +336,7 @@ async function readWithRetry(path: string, init: RequestInit): Promise<Response>
       : `Sin respuesta de la API en ${url}.`,
     0,
     path,
-    { cause: lastCause },
+    { cause: lastCause, timedOut: lastTimedOut },
   );
 }
 
