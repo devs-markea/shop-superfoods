@@ -69,6 +69,27 @@ export default defineConfig({
         optional: true,
       }),
 
+      // De donde sale "abierto" o "cerrado".
+      //
+      //   false (por omision)  del `isOpen` que resuelve el backend, como siempre. El horario
+      //                        se guarda 30 s, porque ese dato caduca al minuto.
+      //   true                 de los RANGOS de `days[].shifts`, calculados aqui en cada
+      //                        render (ver resolveSchedule en src/lib/schedule.ts). Como los
+      //                        rangos no caducan, el horario se guarda UNA SEMANA y el rotulo
+      //                        deja de ir hasta medio minuto tarde.
+      //
+      // Existe porque encender eso es mover al front una regla que hoy solo vive en el
+      // backend (`ScheduleAvailability`), y dos implementaciones de la misma regla pueden
+      // separarse. Apagado, el calculo se hace igual y SE COMPARA con el servidor en cada
+      // lectura, dejando en el log cualquier diferencia. Se enciende cuando ese log lleve un
+      // tiempo callado; si algo se tuerce, se apaga sin desplegar codigo.
+      SCHEDULE_FROM_SHIFTS: envField.boolean({
+        context: 'server',
+        access: 'secret',
+        optional: true,
+        default: false,
+      }),
+
       // Modo de pruebas: silencia el aviso de la zona de reparto, que es lo unico
       // que hace desde que cotizar es cosa del backend. Sin ese aviso por delante,
       // el equipo puede recorrer el pedido desde donde vive.

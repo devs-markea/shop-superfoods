@@ -15,6 +15,7 @@ import {
   type ProductListItem,
 } from '../../lib/catalog.ts';
 import { ApiError } from '../../lib/api.ts';
+import { ERROR_AREAS, errorCode } from '../../lib/error-codes.ts';
 import { busyMessage } from '../../lib/throttle.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
 import { getCart } from '../../lib/cart.ts';
@@ -42,6 +43,11 @@ let products: ProductListItem[] = [];
 // mensaje, un limite temporal y una caida de verdad se veian igual, y ni el
 // comprador sabia si esperar ni nosotros que estaba pasando.
 let catalogNotice: string | null = null;
+
+// El codigo del fallo, que se pinta bajo el aviso y se escribe en el log con el mismo
+// nombre: el comprador manda una captura con "SF-M502" y eso se busca literal en Vercel.
+// Ver src/lib/error-codes.ts.
+let catalogCode: string | null = null;
 
 // Que se le ofrece al comprador para volver a intentarlo (ver <RetryNotice>).
 //
@@ -100,7 +106,9 @@ try {
   // mensaje, asi que en las funciones de Vercel se distingue un 429 de un 500 sin
   // tener que reproducirlo. Desde que `apiFetch` reintenta, un error que llega hasta
   // aqui es uno que YA fallo hasta tres veces: en el log es una averia, no un tropiezo.
-  console.error('[catalogo] fallo GET /api/products', error);
+  catalogCode = errorCode(ERROR_AREAS.menu, error);
+
+  console.error(`[catalogo] ${catalogCode} fallo GET /api/products`, error);
 
   const throttled = error instanceof ApiError && error.status === 429;
 
@@ -225,7 +233,7 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
               // fallo si lleva su reintento.
               catalogNotice ? (
                 <div class="product-list__notice">
-                  <RetryNotice body={catalogNotice} retry={catalogRetry} />
+                  <RetryNotice body={catalogNotice} code={catalogCode ?? undefined} retry={catalogRetry} />
                 </div>
               ) : (
                 <p class="product-list__notice">Todavia no hay platillos publicados.</p>

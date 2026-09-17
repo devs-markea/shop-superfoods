@@ -14,6 +14,7 @@
 // navegador no lo tiene, es una cookie httpOnly.
 // ---------------------------------------------------------------------------
 
+import { ERROR_AREAS, offlineCode, statusCode, withCode } from './error-codes.ts';
 import { throttleMessage } from './throttle.ts';
 import type { CartOption } from './cart-view.ts';
 
@@ -367,10 +368,19 @@ export async function placeOrder(
       body: JSON.stringify(request),
     });
   } catch {
-    return { ok: false, message: 'No pudimos contactar con la tienda. Revisa tu conexion.' };
+    // El codigo acompana al mensaje en la misma linea: este aviso vive pegado a un boton y
+    // una segunda linea moveria lo que hay debajo. Ver src/lib/error-codes.ts.
+    return {
+      ok: false,
+      message: withCode(
+        'No pudimos contactar con la tienda. Revisa tu conexion.',
+        offlineCode(ERROR_AREAS.payment),
+      ),
+    };
   }
 
   const body = await response.json().catch(() => null);
+  const code = statusCode(ERROR_AREAS.payment, response.status);
 
   if (!response.ok) {
     // El 429 va ANTES que readError: no es un error del pedido —los datos estaban bien— sino un
@@ -379,13 +389,13 @@ export async function placeOrder(
 
     return {
       ok: false,
-      message: throttled ?? readError(body, response.status),
+      message: withCode(throttled ?? readError(body, response.status), code),
       status: response.status,
     };
   }
 
   const order = (body as { data?: StoreOrder } | null)?.data;
-  if (!order) return { ok: false, message: GENERIC_ERROR, status: response.status };
+  if (!order) return { ok: false, message: withCode(GENERIC_ERROR, code), status: response.status };
 
   return { ok: true, order };
 }
@@ -421,7 +431,13 @@ export async function startPayment(orderId: string): Promise<PaymentAttempt> {
       headers: { Accept: 'application/json', ...deviceHeader() },
     });
   } catch {
-    return { ok: false, message: 'No pudimos contactar con la tienda. Revisa tu conexion.' };
+    return {
+      ok: false,
+      message: withCode(
+        'No pudimos contactar con la tienda. Revisa tu conexion.',
+        offlineCode(ERROR_AREAS.payment),
+      ),
+    };
   }
 
   const body = await response.json().catch(() => null);
@@ -433,7 +449,10 @@ export async function startPayment(orderId: string): Promise<PaymentAttempt> {
     // reintentar el cobro es justo lo que trae a alguien hasta aqui varias veces seguidas.
     return {
       ok: false,
-      message: throttleMessage(response) ?? readError(body, response.status, PAYMENT_ERROR),
+      message: withCode(
+        throttleMessage(response) ?? readError(body, response.status, PAYMENT_ERROR),
+        statusCode(ERROR_AREAS.payment, response.status),
+      ),
     };
   }
 
@@ -441,7 +460,12 @@ export async function startPayment(orderId: string): Promise<PaymentAttempt> {
   const redirectUrl = (body as { data?: { redirectUrl?: string | null } } | null)?.data?.redirectUrl;
 
   if (!redirectUrl) {
-    return { ok: false, message: PAYMENT_ERROR };
+    // El cobro se creo —de ahi el 201— pero llego sin a donde mandar al comprador. Es su
+    // propio caso, y por eso lleva codigo propio: SF-P201.
+    return {
+      ok: false,
+      message: withCode(PAYMENT_ERROR, statusCode(ERROR_AREAS.payment, response.status)),
+    };
   }
 
   return { ok: true, redirectUrl };
