@@ -1,8 +1,13 @@
 // ---------------------------------------------------------------------------
 // Configuracion de la tienda.
 //
-//   GET /api/store            datos de negocio, cacheable 5 minutos
-//   GET /api/store/schedule   horario, cacheable 30 segundos (depende de la hora)
+//   GET /api/store            datos de negocio. Se guarda una hora, salvo en las pantallas
+//                             que enseñan la CLABE y las plantillas, que lo piden fresco
+//   GET /api/store/schedule   horario. Se guarda 30 s, o una semana si el estado se calcula
+//                             aqui desde los rangos (SCHEDULE_FROM_SHIFTS)
+//
+// Las dos pasan por el cache compartido de src/lib/cache.ts, que es lo que se purga desde
+// el panel de Vercel cuando el negocio edita algo.
 //
 // Los dos son publicos y no llevan sesion. La API omite el bloque entero cuando
 // un dato no esta configurado, asi que aqui se mezcla con el respaldo de
@@ -13,8 +18,15 @@
 // los componentes lo que necesiten.
 // ---------------------------------------------------------------------------
 
+import { SCHEDULE_FROM_SHIFTS } from 'astro:env/server';
 import { apiGet } from './api.ts';
-import { normalizeSchedule, type StoreSchedule } from './schedule.ts';
+import { CACHE_TAGS, cached } from './cache.ts';
+import {
+  normalizeSchedule,
+  resolveSchedule,
+  scheduleMismatch,
+  type StoreSchedule,
+} from './schedule.ts';
 import { storeFallback } from '../data/store-fallback.ts';
 import type { DeliveryType, PaymentMethod } from './checkout.ts';
 import type { MessageTemplates } from './whatsapp.ts';
@@ -298,17 +310,43 @@ function normalizeSocialLinks(links: SocialLink[] | undefined): SocialLink[] {
   });
 }
 
+/** Cuanto vale lo leido de `/api/store`, que el backend declara valido cinco minutos. */
+const CONFIG_FRESH_MS = 60 * 60_000;
+
+/**
+ * Cuanto se sigue sirviendo la ultima copia buena si la API falla.
+ *
+ * Un dia, y no cero, porque la alternativa no es "nada": es src/data/store-fallback.ts, que
+ * lo escribe a mano alguien que no despliega y se queda atras —el 2026-09-17 produccion
+ * anunciaba "envio gratis desde $400" con el envio gratis apagado en el panel—. Lo que el
+ * negocio configuro hace una hora se parece mas a la verdad que eso.
+ */
+const CONFIG_STALE_MS = 24 * 60 * 60_000;
+
 /**
  * Configuracion resuelta: lo de la API con los huecos rellenados.
  *
- * Nunca lanza. Si la API no responde, la tienda sigue vendiendo con el respaldo:
- * un dato de configuracion caido no puede tumbar el catalogo.
+ * Nunca lanza. Si la API no responde, la tienda sigue vendiendo con la ultima copia buena
+ * o, si no la hay, con el respaldo: un dato de configuracion caido no puede tumbar el
+ * catalogo.
+ *
+ * `fresh` SALTA LA COPIA GUARDADA, y lo piden las cuatro pantallas que enseñan datos con los
+ * que se paga —pago, transferencia, recibido y confirmado—. Ahi va la CLABE, y un cambio de
+ * cuenta tiene que llegar al primer pedido, no al de dentro de una hora: quien transfiere a
+ * la cuenta vieja no recupera el dinero con una purga. Lo leido asi tambien renueva la copia.
  */
-export async function getStoreConfig(): Promise<StoreSettings> {
+export async function getStoreConfig(options: { fresh?: boolean } = {}): Promise<StoreSettings> {
   let remote: StoreSettings = {};
 
   try {
-    remote = await apiGet<StoreSettings>('/api/store');
+    remote = await cached<StoreSettings>({
+      key: 'configuracion',
+      tag: CACHE_TAGS.config,
+      fresh: options.fresh,
+      load: () => apiGet<StoreSettings>('/api/store'),
+      freshUntil: (_settings, fetchedAt) => fetchedAt + CONFIG_FRESH_MS,
+      staleFor: CONFIG_STALE_MS,
+    });
   } catch (error) {
     console.error('[tienda] fallo GET /api/store, se usa el respaldo', error);
   }
@@ -399,83 +437,98 @@ export async function getStoreConfig(): Promise<StoreSettings> {
 
 /*
 |--------------------------------------------------------------------------
-| Reutilizacion del horario
+| El horario
 |--------------------------------------------------------------------------
 |
-| `GET /api/store/schedule` se pide en TODAS las pantallas —son ocho, y cada una
-| lo pide entera de nuevo— para pintar el rotulo de abierto/cerrado. No es un dato
-| que cambie entre dos de ellas, asi que se reutiliza durante unos segundos.
+| `GET /api/store/schedule` se pide en TODAS las pantallas para pintar el rotulo de
+| abierto/cerrado, y no es un dato que cambie entre dos de ellas. Se guarda en el cache
+| compartido (src/lib/cache.ts), no en la memoria de la instancia.
 |
-| POR QUE HACE FALTA ESCRIBIRLO AQUI. El backend YA dice cuanto vale su respuesta:
-| la manda con `Cache-Control: public, max-age=30` (StoreConfigController::schedule).
-| Pero esa cabecera solo la obedece quien tenga un cache HTTP, y en este camino no
-| hay ninguno: el navegador nunca ve estas respuestas —este front es un BFF, las
-| pide el servidor de Astro— y el `fetch` de Node no tiene cache. Comprobado: tres
-| llamadas seguidas a la misma URL con `max-age=300` son tres golpes al servidor.
-| O sea que la cabecera viaja y se descarta.
+| POR QUE NO BASTA LA CABECERA DEL BACKEND. La respuesta viene con `Cache-Control:
+| max-age=30`, pero esa cabecera solo la obedece quien tenga un cache HTTP y en este camino
+| no hay ninguno: el navegador nunca ve estas respuestas —este front es un BFF— y el `fetch`
+| de Node no cachea. Comprobado: tres llamadas seguidas son tres golpes al servidor.
 |
-| QUE SE CEDE. `isOpen` viene RESUELTO del servidor (no se deriva aqui de los
-| turnos), asi que durante la ventana el rotulo puede ir hasta medio minuto tarde:
-| la tienda cierra y el sitio sigue diciendo "Abierto" un rato. Es exactamente el
-| desfase que el endpoint declara aceptable con su `max-age=30`, y es la razon de
-| que el horario viva en su propio endpoint y no dentro de `/api/store` —que se
-| declara valido cinco minutos y NO se reutiliza aqui: ahi va la CLABE, y un cambio
-| de cuenta tiene que llegar al primer pedido, no al de dentro de cinco minutos—.
+| CUANTO SE GUARDA, Y DE QUE DEPENDE. De si el estado se calcula aqui:
+|
+|   SCHEDULE_FROM_SHIFTS=false   30 s, como hasta ahora. Se pinta el `isOpen` del servidor,
+|                                que caduca al minuto, asi que no se puede guardar mas.
+|   SCHEDULE_FROM_SHIFTS=true    una semana. Se pinta lo que sale de los RANGOS, que no
+|                                caducan: el horario de la semana es el mismo el lunes que
+|                                el viernes. Ver resolveSchedule() en src/lib/schedule.ts.
+|
+| Con el interruptor apagado el calculo igualmente se hace y SE COMPARA con el servidor en
+| cada lectura fresca: son dos implementaciones de la misma regla y esa comparacion es la
+| unica forma de enterarse de que se han separado, antes de que decida lo que ve el
+| comprador. Cuando el log lleve un tiempo callado, se enciende.
 */
 
-/**
- * Ventana de reutilizacion, en milisegundos.
- *
- * SI CAMBIA EL `max-age` DEL BACKEND, HAY QUE CAMBIARLO AQUI: no se deduce de la
- * respuesta porque `apiGet` abre el sobre y descarta la `Response`, y leer la
- * cabecera obligaria a arrastrarla por todo el cliente para ahorrar una constante.
- */
-const SCHEDULE_TTL_MS = 30_000;
+/** Una semana. Lo que vale el horario cuando el estado se calcula desde los rangos. */
+const SCHEDULE_WEEK_MS = 7 * 24 * 60 * 60_000;
 
 /**
- * El ultimo horario pedido, con la hora en que se pidio.
+ * Lo que vale mientras se pinte el `isOpen` del servidor.
  *
- * Se guarda la PROMESA y no el valor ya resuelto: asi dos renders simultaneos en la
- * misma instancia esperan la MISMA peticion en vez de lanzar dos.
- *
- * VIVE EN LA INSTANCIA, no en un almacen compartido. En Vercel cada funcion tiene su
- * propia memoria, de modo que esto ahorra llamadas dentro de una instancia caliente y
- * no ahorra ninguna entre instancias distintas ni despues de un arranque en frio.
- * Reduce el gasto; no lo elimina. Es a proposito: un cache compartido de verdad seria
- * infraestructura nueva para un dato que caduca en treinta segundos.
+ * SI CAMBIA EL `max-age` DEL BACKEND, HAY QUE CAMBIARLO AQUI: no se deduce de la respuesta
+ * porque `apiGet` abre el sobre y descarta la `Response`.
  */
-let cachedSchedule: { at: number; value: Promise<StoreSchedule | null> } | null = null;
+const SCHEDULE_SERVER_MS = 30_000;
 
-/** Horario de la tienda. `null` si no se pudo leer: el reloj no afirma nada. */
+/**
+ * Horario de la tienda. `null` si no se pudo leer: el reloj no afirma nada.
+ *
+ * Con el interruptor encendido, `isOpen`, `closesAt` y `opensAt` se recalculan EN CADA
+ * RENDER desde los rangos guardados, asi que el rotulo es exacto al minuto aunque la
+ * respuesta lleve dias guardada.
+ */
 export async function getStoreSchedule(): Promise<StoreSchedule | null> {
-  const now = Date.now();
+  let schedule: StoreSchedule;
 
-  if (cachedSchedule && now - cachedSchedule.at < SCHEDULE_TTL_MS) {
-    return cachedSchedule.value;
+  try {
+    schedule = await cached<StoreSchedule>({
+      key: 'horario',
+      tag: CACHE_TAGS.schedule,
+      load: fetchStoreSchedule,
+      freshUntil: (_value, fetchedAt) =>
+        fetchedAt + (SCHEDULE_FROM_SHIFTS ? SCHEDULE_WEEK_MS : SCHEDULE_SERVER_MS),
+      // La copia vieja solo se sirve con el interruptor encendido: los RANGOS no se vuelven
+      // falsos por pasar el tiempo, pero un `isOpen` del servidor si.
+      staleFor: SCHEDULE_FROM_SHIFTS ? SCHEDULE_WEEK_MS : 0,
+    });
+  } catch (error) {
+    console.error('[tienda] fallo GET /api/store/schedule', error);
+
+    return null;
   }
 
-  const pending = fetchStoreSchedule();
-  cachedSchedule = { at: now, value: pending };
+  if (!SCHEDULE_FROM_SHIFTS) return schedule;
 
-  const schedule = await pending;
+  const resolved = resolveSchedule(schedule.days);
 
-  // UN FALLO NO SE GUARDA. `fetchStoreSchedule` devuelve `null` cuando la API no
-  // responde, y congelar ese `null` treinta segundos convertiria un tropiezo en medio
-  // minuto de "no se sabe" para todas las pantallas que sirva esta instancia. Al
-  // soltarlo, la siguiente peticion reintenta. La comparacion evita pisar una entrada
-  // mas nueva que hubiera entrado mientras se esperaba.
-  if (schedule === null && cachedSchedule?.value === pending) {
-    cachedSchedule = null;
+  // Sin `dayOfWeek` en los dias no hay nada que calcular (la forma vieja de la API): se
+  // pinta lo que vino, que es lo que se hacia antes de todo esto.
+  if (!resolved) return schedule;
+
+  return {
+    ...schedule,
+    isOpen: resolved.isOpen,
+    closesAt: resolved.closesAt,
+    opensAt: resolved.opensAt,
+  };
+}
+
+/** La lectura de verdad. Aqui se compara el calculo con el servidor, mientras coincidan. */
+async function fetchStoreSchedule(): Promise<StoreSchedule> {
+  const schedule = normalizeSchedule(
+    await apiGet<Parameters<typeof normalizeSchedule>[0]>('/api/store/schedule'),
+  );
+
+  const resolved = resolveSchedule(schedule.days);
+  const mismatch = resolved && scheduleMismatch(schedule, resolved);
+
+  if (mismatch) {
+    console.warn(`[horario] el calculo desde los rangos no coincide con el servidor: ${mismatch}`);
   }
 
   return schedule;
-}
-
-async function fetchStoreSchedule(): Promise<StoreSchedule | null> {
-  try {
-    return normalizeSchedule(await apiGet<Parameters<typeof normalizeSchedule>[0]>('/api/store/schedule'));
-  } catch (error) {
-    console.error('[tienda] fallo GET /api/store/schedule', error);
-    return null;
-  }
 }

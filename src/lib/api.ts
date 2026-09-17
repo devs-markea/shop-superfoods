@@ -339,7 +339,25 @@ export async function unwrap<T>(response: Response, path: string): Promise<T> {
     });
   }
 
-  const body = (await response.json()) as { data: T };
+  // UNA RESPUESTA "BUENA" QUE NO TRAE JSON TAMBIEN ES UN FALLO, y hay que decirlo con su
+  // status. El 2026-09-17 el antibots del hosting contestaba al servidor de la tienda con un
+  // `202` y una pagina HTML que redirige a su captcha: `response.ok` valia true, `json()`
+  // reventaba con un SyntaxError que no era ApiError, y el log de Vercel hablaba de un token
+  // `<` inesperado en lugar del 202 que lo explicaba todo. Desde que hay cache, ademas, esto
+  // es lo que impide guardar una averia como si fuera el catalogo (ver src/lib/cache.ts).
+  const body = await response
+    .json()
+    .then((parsed) => parsed as { data: T })
+    .catch(() => null);
+
+  if (!body) {
+    throw new ApiError(
+      `La API respondio ${response.status} sin JSON en ${path}.`,
+      response.status,
+      path,
+    );
+  }
+
   return body.data;
 }
 

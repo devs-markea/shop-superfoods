@@ -128,7 +128,8 @@ const categoriesPending = getProducts()
 // El chat de la tienda sale de la configuracion, y las hojas del pin y el reloj
 // del horario: los dos los pide la barra de desktop.
 const [store, schedule, read, cart, categories] = await Promise.all([
-  getStoreConfig(),
+  // Fresca, sin pasar por el cache: de aqui salen las plantillas del mensaje de WhatsApp.
+  getStoreConfig({ fresh: true }),
   getStoreSchedule(),
   orderPending,
   cartPending,

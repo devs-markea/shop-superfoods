@@ -90,7 +90,9 @@ const categoriesPending = getProducts()
   });
 
 const [store, schedule, cart, categories] = await Promise.all([
-  getStoreConfig(),
+  // Fresca, sin pasar por el cache: de aqui salen la CLABE del acuse y las plantillas del
+  // mensaje de WhatsApp, que el negocio edita en su panel.
+  getStoreConfig({ fresh: true }),
   getStoreSchedule(),
   cartPending,
   categoriesPending,
