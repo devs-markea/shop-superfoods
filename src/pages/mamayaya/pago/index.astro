@@ -150,7 +150,9 @@ const pickup = draft.deliveryType === 'pickup';
 const quotePending = quoteForDraft(draft, token);
 
 const [store, schedule, categories, quote] = await Promise.all([
-  getStoreConfig(),
+  // Fresca, sin pasar por el cache: de aqui sale si se ofrece la transferencia, y eso
+  // depende de que el panel tenga una cuenta publicada AHORA.
+  getStoreConfig({ fresh: true }),
   getStoreSchedule(),
   categoriesPending,
   quotePending,

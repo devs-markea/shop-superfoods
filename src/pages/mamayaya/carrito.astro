@@ -11,6 +11,7 @@ import LocationSheet from '../../components/LocationSheet.astro';
 import StoreClosedNotice from '../../components/StoreClosedNotice.astro';
 import Footer from '../../components/Footer.astro';
 import RetryNotice from '../../components/RetryNotice.astro';
+import { ERROR_AREAS, errorCode } from '../../lib/error-codes.ts';
 import {
   getCart,
   remainingForFreeShipping,
@@ -46,6 +47,8 @@ export const prerender = false;
 
 let cart: Cart | null = null;
 let unreachable = false;
+// El codigo del fallo, para el aviso y para el log. Ver src/lib/error-codes.ts.
+let cartCode: string | null = null;
 
 // El catalogo, solo para los tres rotulos de categoria del pie. Se pide a la vez
 // que el carrito y si falla el pie se queda con "Menu completo": son tres rotulos
@@ -62,7 +65,9 @@ try {
   // aqui directo (sin pasar por una ficha) tambien deja sesion abierta.
   cart = await getCart(resolveCartToken(Astro.cookies));
 } catch (error) {
-  console.error('[pedido] fallo GET /api/cart', error);
+  cartCode = errorCode(ERROR_AREAS.cart, error);
+
+  console.error(`[pedido] ${cartCode} fallo GET /api/cart`, error);
   unreachable = true;
 }
 
@@ -218,7 +223,7 @@ const closed = isClosed(schedule);
               // Sin `data-empty`: ese hueco lo gobierna order-summary.ts al repintar tras un
               // cambio, y sin lineas cargadas no hay cambio que hacer. Con el aviso fuera
               // del hueco, el script no puede taparlo con un "carrito vacio" que no es cierto.
-              <RetryNotice body="No pudimos cargar tu pedido." retry="manual" center />
+              <RetryNotice body="No pudimos cargar tu pedido." code={cartCode ?? undefined} retry="manual" center />
             ) : (
               <p class:list={['text-secondary', 'text-center', 'm-0', lines.length > 0 && 'd-none']} data-empty>
                 Tu carrito esta vacio.
