@@ -23,8 +23,6 @@
 
 import { ApiError, apiGet, assetUrl } from './api.ts';
 import { CACHE_TAGS, cached } from './cache.ts';
-import { nextScheduleChange } from './schedule.ts';
-import { getStoreSchedule } from './store-config.ts';
 import { formatPrice } from './price.ts';
 import { hasImage } from './product-image.ts';
 import type { OptionControl } from './options.ts';
@@ -119,60 +117,41 @@ export const ALL_CATEGORIES = 'Todos';
  * Cuanto se sigue sirviendo el catalogo guardado si la API falla.
  *
  * Una hora: las averias que motivaron esto duran minutos, y ensenar el menu de hace un rato
- * es mejor que "No pudimos cargar el menu". Ojo con lo que se cede: si la copia se guardo con
- * la tienda cerrada, las tarjetas diran "Fuera de horario" mientras dure. Comprar no corre
- * riesgo —la ficha lee el platillo fresco y el backend revalida al anadir—.
+ * es mejor que "No pudimos cargar el menu". Lo que se cede es que los precios y las altas
+ * puedan ser de hace un dia y una hora; comprar no corre riesgo, porque la ficha lee el
+ * platillo fresco y el backend revalida al anadir.
  */
 const CATALOG_STALE_MS = 60 * 60_000;
 
-/** Lo que dura el catalogo cuando no se sabe cuando abre o cierra la tienda. */
-const CATALOG_BLIND_MS = 60 * 60_000;
-
-/** Tope, para que un horario sin ningun rango no congele el catalogo para siempre. */
-const CATALOG_MAX_MS = 7 * 24 * 60 * 60_000;
-
 /**
- * Margen para que los dos relojes no se pisen.
+ * Cuanto vale el catalogo guardado: un dia, o sea UNA lectura diaria por region.
  *
- * El de Vercel y el del backend no marcan el mismo segundo. Si la tienda pidiera el catalogo
- * en el primer segundo tras abrir y el backend fuera un poco atrasado, recibiria la lista de
- * "cerrado" y la guardaria hasta el cierre. Con el margen, la primera lectura del tramo llega
- * cuando el backend ya paso el borde seguro; se paga con hasta medio minuto del tramo
- * anterior, en el que manda igualmente el horario.
+ * No caduca en las aperturas ni en los cierres, y eso tiene una consecuencia que hay que
+ * saber: `available` queda congelado en el valor que tenia al leerse. Por eso la tarjeta no
+ * se fia de el cuando el motivo es el horario —ver src/components/ProductCard.astro—, y
+ * decide con el horario, que se lee aparte y si esta al minuto.
+ *
+ * Lo que cambia por decision de alguien —precios, altas, bajas, promociones— llega cuando se
+ * purga el cache. Con esta ventana, purgar al editar el panel deja de ser opcional.
  */
-const CLOCK_MARGIN_MS = 30_000;
+const CATALOG_FRESH_MS = 24 * 60 * 60_000;
 
 /**
  * Catalogo completo publicado. Sin paginacion por diseno: cabe en una
  * respuesta y el filtrado por categoria se hace en cliente sobre esta lista.
  *
- * SE GUARDA HASTA EL PROXIMO CAMBIO DE HORARIO, no un rato fijo. `available` y `promotion`
- * los resuelve el backend en el momento de leer, y lo unico que los mueve solo es el reloj:
- * la tienda abre y las tarjetas se encienden, cierra y se apagan. Renovando en cada apertura
- * y cierre, la copia siempre pertenece al tramo que se esta viviendo —unas dos lecturas al
- * dia, en lugar de una por visita— y la tarjeta puede seguir creyendo lo que dice
- * `available`. Lo que cambia por decision de alguien —precios, altas, bajas, promociones—
- * llega cuando se purga el cache (ver src/lib/cache.ts).
+ * SE GUARDA UN DIA ENTERO: una sola lectura diaria por region, en lugar de una por visita.
+ * Lo que el reloj mueve —abierto o cerrado— no sale de aqui, sino del horario, que se pide
+ * aparte y esta al minuto.
  */
 export function getProducts(): Promise<ProductListItem[]> {
   return cached<ProductListItem[]>({
     key: 'catalogo',
     tag: CACHE_TAGS.catalog,
     load: () => apiGet<ProductListItem[]>('/api/products'),
-    freshUntil: catalogFreshUntil,
+    freshUntil: (_items, fetchedAt) => fetchedAt + CATALOG_FRESH_MS,
     staleFor: CATALOG_STALE_MS,
   });
-}
-
-/** Hasta el proximo abre/cierra, o un rato prudente si el horario no se pudo leer. */
-async function catalogFreshUntil(_items: ProductListItem[], fetchedAt: number): Promise<number> {
-  const schedule = await getStoreSchedule();
-  const change = schedule ? nextScheduleChange(schedule.days, new Date(fetchedAt)) : null;
-  const ceiling = fetchedAt + CATALOG_MAX_MS;
-
-  if (!change) return Math.min(fetchedAt + CATALOG_BLIND_MS, ceiling);
-
-  return Math.min(change.getTime() + CLOCK_MARGIN_MS, ceiling);
 }
 
 /**

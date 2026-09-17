@@ -92,9 +92,7 @@ const categoriesPending = getProducts()
 const quotePending = quoteForDraft(draft, token);
 
 const [store, schedule, cart, categories, quote] = await Promise.all([
-  // Fresca, sin pasar por el cache: aqui se pinta la CLABE a la que el comprador va a
-  // transferir, y un cambio de cuenta tiene que llegar a este pedido, no al siguiente.
-  getStoreConfig({ fresh: true }),
+  getStoreConfig(),
   getStoreSchedule(),
   cartPending,
   categoriesPending,
