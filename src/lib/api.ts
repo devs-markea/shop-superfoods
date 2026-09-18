@@ -115,9 +115,18 @@ export function assetUrl(url: string): string {
  * salida de Vercel. Si el `202` vuelve —el log dice "sin JSON" y el comprador ve `SF-M202`—,
  * lo primero es probar a actualizar la version de Chrome de aqui abajo, y lo segundo, hablar
  * con SiteGround con la hora exacta en la mano.
+ *
+ * LA VERSION ENVEJECE, Y HAY QUE REVISARLA DE VEZ EN CUANDO. Es la estable de Chrome al
+ * escribirla: 153, del 2026-09-08. Chrome saca una cada dos semanas y se actualiza solo, asi
+ * que un numero viejo acaba siendo un navegador que ya nadie usa —justo lo contrario de lo
+ * que pidio SiteGround—. Se fija a mano y no se calcula por fecha a proposito: si Google
+ * cambia el ritmo, el calculo se adelantaria y la tienda diria ser un Chrome que aun no
+ * existe, que es mas raro que uno viejo. La actual esta en
+ * https://chromiumdash.appspot.com/schedule. El resto de la cadena no se toca: el sistema
+ * (`Windows NT 10.0; Win64; x64`) y los ceros de la version son los que Chrome deja fijos.
  */
 const BROWSER_USER_AGENT =
-  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36';
 
 /**
  * Las cabeceras que identifican a ESTA aplicacion ante el backend, no al comprador.
