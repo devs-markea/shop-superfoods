@@ -442,7 +442,16 @@ async function addToCart(form: HTMLFormElement): Promise<void> {
       }),
     });
 
-    if (response.ok) {
+    // El cuerpo se lee UNA vez, antes de decidir: hace falta para las dos ramas.
+    const body = (await response.json().catch(() => null)) as { data?: unknown } | null;
+
+    // EXITO ES QUE LLEGUE EL CARRITO, no que el status sea 2xx. El contrato responde el carrito
+    // completo en `data` (ver api/post-cart-items.md), y es la unica prueba de que la linea
+    // entro. El 2026-09-17 el antibots del hosting contestaba un `202` con la pagina de su
+    // captcha: `response.ok` valia true y esto mandaba al comprador a un carrito donde el
+    // platillo no estaba, sin decirle nada. Ahora ese caso cae abajo, al aviso con su codigo
+    // (SF-C202), y el comprador se queda en la ficha con su seleccion intacta.
+    if (response.ok && body?.data) {
       // La linea ya esta en el carrito: el pedido es la confirmacion.
       window.location.assign(form.dataset.redirect || '/mamayaya/carrito');
       return;
@@ -458,11 +467,7 @@ async function addToCart(form: HTMLFormElement): Promise<void> {
       return;
     }
 
-    showApiErrors(
-      form,
-      await response.json().catch(() => null),
-      statusCode(ERROR_AREAS.cart, response.status),
-    );
+    showApiErrors(form, body, statusCode(ERROR_AREAS.cart, response.status));
   } catch {
     setFormError(
       form,
