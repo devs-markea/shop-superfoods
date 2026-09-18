@@ -99,17 +99,43 @@ export function assetUrl(url: string): string {
 }
 
 /**
- * Cabecera que identifica a ESTA aplicacion ante el backend, no al comprador.
+ * El User-Agent con el que el servidor de la tienda llama al backend: el de un navegador de
+ * escritorio.
  *
- * El backend la exige en todo `/api/*` de tienda (`EnsureShopClient`). Quien es el comprador
- * lo sigue diciendo `X-Cart-Token`: las dos viajan juntas y responden a preguntas distintas
- * —que aplicacion habla, y de quien es el carrito—.
+ * NO LO PIDE LARAVEL, LO PIDE EL HOSTING. El backend no lee el User-Agent en ninguna ruta de
+ * la API. Quien lo lee es el antibots de SiteGround, que va delante: el 2026-09-17 contestaba
+ * con un `202` y su captcha de prueba de trabajo (`POWC` en sus registros) a las llamadas que
+ * se identificaban como `node` —el User-Agent por defecto del `fetch` de Node—, y un servidor
+ * no puede resolver un captcha. La tienda entera se quedo sin catalogo. SiteGround no permite
+ * desactivar esa capa ni para un subdominio ni para la cuenta, y su indicacion expresa fue
+ * esta: mandar una cadena de navegador moderno.
  *
- * Sin clave configurada no se manda nada, que es lo que permite desplegar por partes: mientras
- * el backend tampoco la tenga puesta, no exige ninguna. Ver .env.example.
+ * No es un blindaje. Sus mismos registros guardan la huella TLS de cada conexion, y un
+ * "node" desde otra IP si pasaba, asi que la decision tambien pesa la reputacion de la IP de
+ * salida de Vercel. Si el `202` vuelve —el log dice "sin JSON" y el comprador ve `SF-M202`—,
+ * lo primero es probar a actualizar la version de Chrome de aqui abajo, y lo segundo, hablar
+ * con SiteGround con la hora exacta en la mano.
+ */
+const BROWSER_USER_AGENT =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36';
+
+/**
+ * Las cabeceras que identifican a ESTA aplicacion ante el backend, no al comprador.
+ *
+ * `X-Shop-Key` la exige el backend en todo `/api/*` de tienda (`EnsureShopClient`). Quien es el
+ * comprador lo sigue diciendo `X-Cart-Token`: las dos viajan juntas y responden a preguntas
+ * distintas —que aplicacion habla, y de quien es el carrito—. Sin clave configurada no se
+ * manda, que es lo que permite desplegar por partes: mientras el backend tampoco la tenga
+ * puesta, no exige ninguna. Ver .env.example.
+ *
+ * El `User-Agent` va siempre: sin el, el hosting reta la llamada antes de que llegue a Laravel
+ * (ver BROWSER_USER_AGENT).
  */
 function clientHeaders(): Record<string, string> {
-  return SHOP_API_KEY ? { 'X-Shop-Key': SHOP_API_KEY } : {};
+  return {
+    'User-Agent': BROWSER_USER_AGENT,
+    ...(SHOP_API_KEY ? { 'X-Shop-Key': SHOP_API_KEY } : {}),
+  };
 }
 
 // ---------------------------------------------------------------------------
