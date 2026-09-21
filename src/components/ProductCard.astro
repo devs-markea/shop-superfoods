@@ -331,6 +331,20 @@ const image = productImageView(product);
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    /* El recorte con puntos suspensivos exige `overflow: hidden`, y eso corta por
+       los CUATRO lados, no solo por la derecha. La caja del enlace mide lo que mide
+       su linea, y en desktop la linea va a interlineado 100% —18 sobre 18—, menos
+       que los ~22 que Inter ocupa de ascendente a descendente. Lo que sobresale se
+       lo lleva el recorte: la cola de la "g", la "p", la "y" o la "j".
+
+       El hueco se abre con relleno —el recorte pasa por el borde del RELLENO, no
+       por el del contenido— y se devuelve con un margen negativo del mismo tamano,
+       asi que la fila del titulo sigue midiendo los 18 de la spec y la insignia no
+       se mueve de sitio. En `em` para que sirva en los dos tamanos: a 14 con
+       interlineado 20 ya sobraba hueco y no cambia nada, a 18 son los ~4 que
+       faltaban. */
+    padding-block: 0.2em;
+    margin-block: -0.2em;
   }
 
   /* Element: insignia de promocion — "15%", "2x1". En la fila del nombre pero
