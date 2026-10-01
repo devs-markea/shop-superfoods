@@ -67,8 +67,9 @@ export const storeFallback: StoreSettings = {
   // CLABE de alla—, asi que con dejarse uno de los tres no hay respaldo.
   //
   // Sin cuenta en ninguno de los dos sitios, /mamayaya/pago no ofrece la
-  // transferencia: quedan el efectivo y Mercado Pago. Es la degradacion de
-  // siempre —no se ofrece lo que no se puede cumplir—, no un error.
+  // transferencia: a domicilio queda Mercado Pago —el efectivo a domicilio esta
+  // oculto, ver components/PaymentMethods.astro—. Es la degradacion de siempre
+  // —no se ofrece lo que no se puede cumplir—, no un error.
   bankTransfer: {
     holder: '',
     bank: '',
