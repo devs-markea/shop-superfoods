@@ -17,7 +17,7 @@ interface Props {
 const { image } = Astro.props;
 ---
 
-<div class="product-hero">
+<div class="product-hero" data-product-hero>
   <!-- La API no expone variantes de tamano de la foto, asi que se pide la
        original y la recorta el CSS del bloque.
 
@@ -30,9 +30,15 @@ const { image } = Astro.props;
        No prometen la caja real —esa la deciden el bloque y su object-fit, y cambia
        con el ancho: a sangre en movil, 360 de alto en md, 520x480 de lg—. Son la
        medida por defecto y, con ella, la proporcion con la que el navegador
-       reserva el hueco antes de tener la foto. -->
+       reserva el hueco antes de tener la foto.
+
+       Es la foto del PLATILLO y la que se ve siempre al abrir la ficha. La de una
+       variante la sustituye al elegirla: otra <img> que aparece encima en diagonal,
+       con un destello en el borde. Y la variante sin foto vuelve a esta (ver
+       src/scripts/product-hero.ts). -->
   <img
     class="product-hero__image"
+    data-hero-image
     src={image.src}
     alt={image.alt}
     width="520"
@@ -72,11 +78,93 @@ const { image } = Astro.props;
     object-fit: cover;
   }
 
+  /* --- El cambio de foto ----------------------------------------------------
+     Al elegir una variante, la foto nueva se posa encima de la que hay y aparece en
+     diagonal, de abajo a la izquierda hacia arriba a la derecha. Por delante del borde
+     viaja una franja estrecha de destello —gris por fuera y blanca en el centro— que
+     tapa la costura: la foto de antes sale bajo la franja y la nueva entra detras de
+     ella. No llena la caja; solo acompana al borde.
+
+     Lo mueve UNA animacion en el bloque, sobre --hero-reveal: la mascara de la foto
+     que entra y la franja leen la misma variable, asi que no pueden desacompasarse.
+     Al terminar, src/scripts/product-hero.ts retira la foto de debajo y las dos
+     clases, y la nueva se queda como la de siempre, sin salto: ocupa la misma caja
+     absoluta que en el flujo.
+
+     Los 500ms van de la mano de REVEAL_MS en el script, que es el respaldo por si
+     `animationend` no llega. Con movimiento reducido el bloque de styles/base.css
+     deja la animacion en nada y el cambio es directo.
+
+     Sin @property —navegadores anteriores a 2023-2024— la variable no se interpola:
+     salta a mitad de tiempo y la foto cambia de golpe. Es el mismo cambio, sin
+     transicion. */
+  @property --hero-reveal {
+    syntax: '<percentage>';
+    inherits: true;
+    initial-value: 0%;
+  }
+
+  /* Modifier: reveal — el bloque mientras entra una foto. La variable recorre la
+     diagonal y un poco mas, para que la franja termine de salir por la esquina. */
+  .product-hero--reveal {
+    animation: product-hero-reveal 500ms cubic-bezier(0.4, 0, 0.2, 1) both;
+  }
+
+  @keyframes product-hero-reveal {
+    from {
+      --hero-reveal: 0%;
+    }
+    to {
+      --hero-reveal: 118%;
+    }
+  }
+
+  /* Modifier: incoming — la foto que entra. Opaca hasta 10 puntos por detras del
+     frente y transparente a 2: ese tramo es la costura, y queda bajo el centro de la
+     franja. */
+  .product-hero__image--incoming {
+    position: absolute;
+    inset: 0;
+    -webkit-mask-image: linear-gradient(45deg, #000 calc(var(--hero-reveal) - 10%), transparent calc(var(--hero-reveal) - 2%));
+    mask-image: linear-gradient(45deg, #000 calc(var(--hero-reveal) - 10%), transparent calc(var(--hero-reveal) - 2%));
+  }
+
+  /* Element: el destello — la franja del frente, 16 puntos de diagonal: el gris del
+     sistema por los bordes y blanco en el centro, encima de la costura. Tenue a
+     proposito —20% el gris, 40% el blanco—: tiene que notarse el paso, no tapar las
+     fotos. Va por encima de las fotos y por debajo del control de volver (ver su
+     z-index), y no captura el puntero. */
+  .product-hero--reveal::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    z-index: 1;
+    pointer-events: none;
+    background: linear-gradient(
+      45deg,
+      transparent calc(var(--hero-reveal) - 16%),
+      color-mix(in srgb, var(--sf-border) 20%, transparent) calc(var(--hero-reveal) - 10%),
+      rgb(255 255 255 / 40%) calc(var(--hero-reveal) - 6%),
+      color-mix(in srgb, var(--sf-border) 20%, transparent) calc(var(--hero-reveal) - 2%),
+      transparent var(--hero-reveal)
+    );
+  }
+
+  /* Modifier: failed — la foto no llego y se esta reintentando. Se oculta para que
+     se vea el degradado del bloque y no el icono de imagen rota con el alt encima. */
+  .product-hero__image--failed {
+    visibility: hidden;
+  }
+
   /* Element: product-hero__back
      Anadido fuera de la spec: sin el, la vista de detalle no tiene salida hacia
-     el listado. Se puede borrar sin tocar nada mas. */
+     el listado. Se puede borrar sin tocar nada mas.
+
+     El z-index lo deja por encima del destello del cambio de foto, que es un ::after
+     del bloque y por eso se pintaria despues. */
   .product-hero__back {
     position: absolute;
+    z-index: 2;
     top: 16px;
     left: 20px;
     display: inline-flex;

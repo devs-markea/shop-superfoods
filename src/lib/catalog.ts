@@ -215,6 +215,14 @@ export interface Variant {
    */
   finalPrice: number | null;
   savings: number | null;
+  /**
+   * Foto propia de la variante, o null cuando no tiene —y entonces la ficha
+   * ensena la del platillo—. Opcional en el tipo porque llego con el cambio
+   * del 2026-10-01: una respuesta anterior no la trae y debe leerse como null.
+   * Solo la manda la ficha; el listado no la conoce. Quien la pinta es
+   * src/scripts/product-hero.ts, al elegir la variante.
+   */
+  image?: ProductImage | null;
 }
 
 /** Lo que cuesta de verdad la variante: el descontado si lo hay. */
@@ -320,6 +328,11 @@ export interface OptionChoiceView {
    */
   finalPrice: number | null;
   checked: boolean;
+  /**
+   * Solo en variantes con foto propia: la que pasa a la cabecera de la ficha al
+   * elegirla. null en las demas y en todas las personalizaciones.
+   */
+  image: { src: string; alt: string } | null;
 }
 
 /**
@@ -391,6 +404,9 @@ export function toOptionGroups(product: ProductDetail): OptionGroupView[] {
         // defaultVariantId es la primera variante, como el simulador. El
         // index === 0 cubre el caso de que llegue null.
         checked: product.defaultVariantId ? variant.id === product.defaultVariantId : index === 0,
+        // La misma pregunta que la foto del platillo: si llegara el relleno en
+        // lugar de null, cuenta como "sin foto" y no taparia la buena.
+        image: productImageView(variant),
       })),
     });
   }
@@ -414,6 +430,7 @@ export function toOptionGroups(product: ProductDetail): OptionGroupView[] {
         finalPrice: null,
         // Solo los grupos radio traen preseleccion; en los demas es null.
         checked: option.id === customization.defaultOptionId,
+        image: null,
       })),
     });
   }
