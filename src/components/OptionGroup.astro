@@ -148,7 +148,13 @@ const inputType = group.control === 'checkbox' ? 'checkbox' : 'radio';
                   data-choice
                   data-option-id={choice.id}
                   data-price={effectivePrice(choice)}
+                  data-image-src={choice.image?.src}
+                  data-image-alt={choice.image?.alt}
                 />
+
+                {/* La foto de la variante viaja en el propio radio —sin ella no
+                    se pinta ningun atributo— y la pone en la cabecera
+                    src/scripts/product-hero.ts al elegirla. */}
 
                 {/* La variante con descuento parte la etiqueta en tres: nombre,
                     precio de lista tachado y precio final. El resto —incluidas
