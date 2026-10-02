@@ -66,6 +66,15 @@ import {
 // control de volver vivia encima de la foto: lo releva <BackHeader>, que ademas
 // reserva su alto para que no se pose sobre el nombre del platillo. En desktop esa
 // cabecera no se pinta, que ahi el logo de la barra ya lleva al menu.
+//
+// Y LA FOTO DE CADA VARIANTE
+//
+// Opcional desde el 2026-10-01, y solo se ve aqui. La ficha se abre con la del
+// platillo; al elegir una variante con foto, la suya ocupa ese mismo sitio, y al
+// elegir una sin foto vuelve la del platillo. Todo eso pasa en el navegador
+// (src/scripts/product-hero.ts) y depende de la cabecera: un platillo sin foto no la
+// monta, y entonces las de sus variantes no se ensenan —no abren un hueco que la
+// ficha decidio no tener—.
 
 // On-demand por el mismo motivo que la portada: `available` depende del horario
 // de la categoria. Y ya no se puede prerenderizar de todas formas, porque
@@ -386,6 +395,9 @@ const closed = isClosed(schedule);
 
 <script>
   import '../../scripts/order-form';
+  // La foto de la variante elegida en la cabecera, con su aparicion y sus reintentos.
+  // Sin cabecera —el platillo sin foto— no hace nada.
+  import '../../scripts/product-hero';
   import '../../scripts/sheet';
   // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
   // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
