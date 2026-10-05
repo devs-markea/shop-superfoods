@@ -1,4 +1,4 @@
-# Shop Superfoods — que puede rastrear cada quien.
+# Mamá Yaya — que puede rastrear cada quien.
 #
 # El menu y las fichas de platillo son contenido publico y se rastrean sin
 # reservas: son justamente lo que la tienda quiere que se encuentre.
