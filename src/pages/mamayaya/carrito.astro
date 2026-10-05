@@ -154,7 +154,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 const closed = isClosed(schedule);
 ---
 
-<Layout title="Mi pedido — Shop Superfoods" description="Revisa tu pedido antes de pagar." noindex>
+<Layout title="Mi pedido" store={store} description="Revisa tu pedido antes de pagar." noindex>
   {/* Una cabecera por pantalla: la barra de 48 con el total en movil, y de md
       hacia arriba la barra de la tienda, la misma de la portada y de la ficha. */}
   <TopBar title="Mi pedido" total={total} mobileOnly />
@@ -509,7 +509,7 @@ const closed = isClosed(schedule);
     font-size: 12px;
     font-weight: 500;
     line-height: 16px;
-    color: var(--sf-gold);
+    color: var(--sf-accent);
   }
 
   .order-item__hint--muted {
@@ -544,7 +544,7 @@ const closed = isClosed(schedule);
     font-size: 12px;
     font-weight: 600;
     line-height: 16px;
-    color: var(--sf-gold);
+    color: var(--sf-accent);
     font-variant-numeric: tabular-nums;
     white-space: nowrap;
   }
@@ -650,11 +650,11 @@ const closed = isClosed(schedule);
 
   /* Modifier: restar */
   .stepper__button--minus {
-    border: 1.5px solid var(--sf-gold);
+    border: 1.5px solid var(--sf-accent);
     background-color: transparent;
   }
   .stepper__button--minus:hover:not(:disabled) {
-    background-color: var(--sf-gold-tint);
+    background-color: var(--sf-accent-tint);
   }
 
   /* El menos es un rectangulo de 10x1.5, no un icono de trazo: a ese grosor el
@@ -663,17 +663,17 @@ const closed = isClosed(schedule);
     display: block;
     width: 10px;
     height: 1.5px;
-    background-color: var(--sf-gold);
+    background-color: var(--sf-accent);
   }
 
   /* Modifier: sumar */
   .stepper__button--plus {
     border: 0;
-    background-color: var(--sf-gold);
+    background-color: var(--sf-accent);
     color: var(--sf-white);
   }
   .stepper__button--plus:hover:not(:disabled) {
-    background-color: var(--sf-gold-hover);
+    background-color: var(--sf-accent-hover);
   }
 
   /* Element: cantidad — Inter 600 14/20 */
@@ -703,7 +703,7 @@ const closed = isClosed(schedule);
     gap: 4px;
     padding: 4px 8px;
     border-radius: 100px;
-    background-color: var(--sf-gold);
+    background-color: var(--sf-accent);
     color: var(--sf-white);
     font-size: 12px;
     font-weight: 700;
@@ -749,7 +749,7 @@ const closed = isClosed(schedule);
     align-items: center;
     gap: 8px;
     cursor: pointer;
-    color: var(--sf-gold);
+    color: var(--sf-accent);
     font-size: 12px;
     font-weight: 600;
     line-height: 16px;

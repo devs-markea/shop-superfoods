@@ -286,7 +286,7 @@ const hasLocation = Boolean(address || mapsUrl);
 const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 ---
 
-<Layout title={`${view.title} — Shop Superfoods`} description={view.note} noindex>
+<Layout title={view.title} store={store} description={view.note} noindex>
   {/*
     Vuelve al menu y no al resumen de pago: el pedido ya existe, y volver atras
     invitaria a hacerlo otra vez. Reintentar el cobro no se hace ahi, sino con el

@@ -37,15 +37,18 @@
   --bs-border-color: var(--sf-border);
   --bs-border-radius: 12px;
 
-  /* Que color es "primary" en esta tienda.
+  /* Que color es "primary" en esta tienda: el acento del tema.
      Hoy no lo lee nadie: ninguna pantalla usa .bg-primary, .text-primary ni
      .border-primary. Se declaran igual porque son la DEFINICION del tema, no un
      ajuste: sin ellas, el dia que alguien escriba `bg-primary` en el marcado le
-     saldria el azul de fabrica de Bootstrap en lugar del dorado de la marca, y
+     saldria el azul de fabrica de Bootstrap en lugar del acento de la marca, y
      eso no se descubre leyendo el codigo. Las de forma —radios, sombras— no se
-     reponen: ahi el valor de fabrica se parece lo bastante. */
-  --bs-primary: var(--sf-gold);
-  --bs-primary-rgb: 213, 170, 83;
+     reponen: ahi el valor de fabrica se parece lo bastante.
+
+     El -rgb es el triplete del tema tal cual, que es justo la forma en que
+     Bootstrap lo lee: rgba(var(--bs-primary-rgb), opacidad). */
+  --bs-primary: var(--sf-accent);
+  --bs-primary-rgb: var(--sf-accent-rgb);
   --bs-secondary: var(--sf-muted);
   --bs-dark: var(--sf-ink);
   --bs-dark-rgb: 20, 24, 33;
@@ -53,10 +56,10 @@
   --bs-light-rgb: 248, 249, 251;
   --bs-body-bg-rgb: 248, 249, 251;
 
-  /* Idem: el aro de foco de la utilidad .focus-ring, dorado y no azul. */
+  /* Idem: el aro de foco de la utilidad .focus-ring, del acento y no azul. */
   --bs-focus-ring-width: 2px;
   --bs-focus-ring-opacity: 1;
-  --bs-focus-ring-color: var(--sf-gold);
+  --bs-focus-ring-color: var(--sf-accent);
 
   /* La fuente la sirve Astro (config `fonts`), que expone --sf-font-inter. */
   --bs-body-font-family:
@@ -168,9 +171,9 @@ h6,
   --bs-btn-focus-box-shadow: 0 0 0 2px rgba(var(--bs-btn-focus-shadow-rgb), 0.5);
 }
 
-/* El dorado es claro y Bootstrap elegiria texto oscuro por contraste; la spec
-   pide label blanco sobre dorado. El hover es el dorado de marca, no un shade
-   calculado.
+/* Bootstrap elegiria el color del label por contraste con el fondo, y con el
+   dorado le saldria oscuro; la spec pide label blanco sobre el acento, sea cual
+   sea el tema. El hover es el del tema, elegido a ojo, no un shade calculado.
 
    Aqui las variables si salen a cuenta: cada valor lo lee un selector distinto
    —:hover, :focus-visible, :disabled, .btn-check:checked + .btn,
@@ -178,19 +181,26 @@ h6,
    en lugar de trece lineas. */
 .btn-primary {
   --bs-btn-color: var(--sf-white);
-  --bs-btn-bg: var(--sf-gold);
-  --bs-btn-border-color: var(--sf-gold);
+  --bs-btn-bg: var(--sf-accent);
+  --bs-btn-border-color: var(--sf-accent);
   --bs-btn-hover-color: var(--sf-white);
-  --bs-btn-hover-bg: var(--sf-gold-hover);
-  --bs-btn-hover-border-color: var(--sf-gold-hover);
+  --bs-btn-hover-bg: var(--sf-accent-hover);
+  --bs-btn-hover-border-color: var(--sf-accent-hover);
   --bs-btn-active-color: var(--sf-white);
-  --bs-btn-active-bg: var(--sf-gold-hover);
-  --bs-btn-active-border-color: var(--sf-gold-hover);
+  --bs-btn-active-bg: var(--sf-accent-hover);
+  --bs-btn-active-border-color: var(--sf-accent-hover);
   --bs-btn-disabled-color: var(--sf-white);
-  --bs-btn-disabled-bg: var(--sf-gold);
-  --bs-btn-disabled-border-color: var(--sf-gold);
-  /* El dorado aclarado del aro de foco. Sin esto caeria al azul de fabrica. */
-  --bs-btn-focus-shadow-rgb: 219, 183, 109;
+  --bs-btn-disabled-bg: var(--sf-accent);
+  --bs-btn-disabled-border-color: var(--sf-accent);
+  /* El aro de foco, del acento. Sin esto caeria al azul de fabrica.
+
+     Bootstrap lo saca del fondo del boton mezclado un 15% con el blanco del
+     label, y lo pinta al 50% —para el dorado eran los numeros 219, 183, 109—.
+     Esa mezcla no sale de un triplete sin color-mix(), pero sobre blanco el
+     resultado es exactamente el acento al 42.5% (0.85 x 0.5), y sobre el gris
+     del fondo de la pagina se separa, como mucho, un punto de 255 en un canal.
+     Por eso se pisa la sombra entera y no --bs-btn-focus-shadow-rgb. */
+  --bs-btn-focus-box-shadow: 0 0 0 2px rgba(var(--sf-accent-rgb), 0.425);
 }
 
 /* ---------------------------------------------------------------------------
@@ -215,7 +225,7 @@ h6,
 .form-control:focus {
   color: var(--sf-ink);
   background-color: transparent;
-  border-color: var(--sf-gold);
+  border-color: var(--sf-accent);
   box-shadow: none;
 }
 
@@ -254,14 +264,14 @@ h6,
 }
 
 .form-check-input:checked {
-  background-color: var(--sf-gold);
-  border-color: var(--sf-gold);
+  background-color: var(--sf-accent);
+  border-color: var(--sf-accent);
 }
 
 .form-check-input:focus {
-  border-color: var(--sf-gold);
-  /* Aro dorado de 2, en lugar del azul de fabrica. */
-  box-shadow: 0 0 0 2px var(--sf-gold);
+  border-color: var(--sf-accent);
+  /* Aro de 2 del acento, en lugar del azul de fabrica. */
+  box-shadow: 0 0 0 2px var(--sf-accent);
 }
 
 /* ---------------------------------------------------------------------------
@@ -288,7 +298,7 @@ h6,
 }
 
 /* ---------------------------------------------------------------------------
- * Barra de progreso: pista 6 de alto, radius 3, relleno dorado.
+ * Barra de progreso: pista 6 de alto, radius 3, relleno del acento.
  * --------------------------------------------------------------------------- */
 .progress {
   height: 6px;
@@ -298,7 +308,7 @@ h6,
 }
 
 .progress-bar {
-  background-color: var(--sf-gold);
+  background-color: var(--sf-accent);
   transition: width 160ms ease;
 }
 
@@ -326,7 +336,7 @@ h6,
 .dropdown-item.active,
 .dropdown-item:active {
   color: var(--sf-ink);
-  background-color: var(--sf-gold-tint);
+  background-color: var(--sf-accent-tint);
 }
 
 /* La barra de movil no sale aqui: .navbar la pinta entera

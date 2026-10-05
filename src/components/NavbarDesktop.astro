@@ -236,12 +236,17 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
       max-width: 1140px;
       margin-inline: auto;
     }
-    /* Element: brand y logo — 28 de alto, el mismo que el carrito, que es el
-       elemento mas alto de la fila. Con el padding de 16 la barra mide 60. */
+    /* Element: brand y logo — el enlace mide 28 de alto, el mismo que el carrito,
+       que es el elemento mas alto de la fila. Con el padding de 16 la barra mide 60.
+
+       El logo mide 44: es un emblema cuadrado con el nombre dentro, y a 28 no se
+       leeria. El enlace lo centra en sus 28, asi que desborda 8 por arriba y 8 por
+       abajo sobre el padding y la barra sigue midiendo 60. */
     .navbar-desktop__brand {
       display: inline-flex;
       flex: 0 0 auto;
       align-items: center;
+      height: 28px;
       transition: opacity 160ms ease;
     }
     .navbar-desktop__brand:hover {
@@ -249,7 +254,7 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
     }
     .navbar-desktop__logo {
       width: auto;
-      height: 28px;
+      height: 44px;
     }
     /* Element: store — las metas de la tienda y el carrito */
     .navbar-desktop__store {
@@ -282,7 +287,7 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
       transition: color 160ms ease;
     }
     button.navbar-desktop__meta:hover {
-      color: var(--sf-gold);
+      color: var(--sf-accent);
     }
     /* El rotulo del pin es la direccion abreviada, que la API admite de hasta 60
        caracteres: mas de lo que da la barra. El tope corta antes de que empuje al
@@ -302,14 +307,14 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
       align-items: center;
       gap: 8px;
       padding: 8px 16px;
-      color: var(--sf-gold);
-      background-color: var(--sf-gold-tint);
+      color: var(--sf-accent);
+      background-color: var(--sf-accent-tint);
       border-radius: 20px;
       transition: background-color 160ms ease;
     }
     .navbar-desktop__cart:hover {
-      background-color: var(--sf-gold-edge);
-      color: var(--sf-gold);
+      background-color: var(--sf-accent-edge);
+      color: var(--sf-accent);
     }
     .navbar-desktop__cart-total {
       font-size: 14px;
@@ -340,7 +345,7 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
       font-weight: 700;
       line-height: 1;
       color: var(--sf-white);
-      background-color: var(--sf-gold);
+      background-color: var(--sf-accent);
       border-radius: 10px;
     }
   }

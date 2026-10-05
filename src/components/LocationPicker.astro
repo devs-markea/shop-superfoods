@@ -227,16 +227,16 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     justify-content: center;
     gap: 8px;
     padding-block: 12px;
-    border: 1px solid var(--sf-gold);
+    border: 1px solid var(--sf-accent);
     border-radius: 12px;
-    color: var(--sf-gold);
+    color: var(--sf-accent);
     font-size: 14px;
     font-weight: 600;
     line-height: 20px;
     transition: background-color 160ms ease;
   }
   .location__button:hover {
-    background-color: var(--sf-gold-tint);
+    background-color: var(--sf-accent-tint);
   }
 
   /* Element: ubicacion elegida. Aparece bajo el boton en cuanto hay una, con el
@@ -247,7 +247,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     justify-content: center;
     gap: 6px;
     margin: 0;
-    color: var(--sf-gold);
+    color: var(--sf-accent);
     font-size: 12px;
     font-weight: 500;
     line-height: 16px;
@@ -263,7 +263,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
   }
   .location__value:hover {
     color: var(--sf-ink);
-    text-decoration-color: var(--sf-gold);
+    text-decoration-color: var(--sf-accent);
   }
 
   /* Element: quitar la ubicacion */
@@ -387,7 +387,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     top: 50%;
     left: 50%;
     transform: translate(-50%, -100%);
-    color: var(--sf-gold);
+    color: var(--sf-accent);
     pointer-events: none;
     /* Encima de los controles del mapa, que Google pinta en su propia capa. */
     z-index: 2;
@@ -418,7 +418,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
     transition: color 160ms ease;
   }
   .map-picker__locate:hover {
-    color: var(--sf-gold);
+    color: var(--sf-accent);
   }
   .map-picker__locate:disabled {
     color: var(--sf-placeholder);
@@ -515,7 +515,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
 
   /* Como los campos de al lado, que se enmarcan en dorado al escribir en ellos. */
   .place-search:focus-within {
-    border-color: var(--sf-gold);
+    border-color: var(--sf-accent);
   }
 
   /* El widget, ya sin caja propia: la que se ve es la de arriba.
@@ -585,7 +585,7 @@ import { GOOGLE_MAPS_API_KEY } from 'astro:env/client';
   /* La sugerencia marcada —con el dedo o con las flechas—: el dorado al 10%, el
      mismo con el que se marca la opcion elegida en el selector de pais. */
   .place-search gmp-place-autocomplete::part(prediction-item-selected) {
-    background-color: var(--sf-gold-tint);
+    background-color: var(--sf-accent-tint);
   }
 
   /* Dentro de cada sugerencia: la calle en 600 y lo que la situa —colonia, ciudad—

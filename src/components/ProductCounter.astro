@@ -119,11 +119,11 @@ const { itemName, quantity = 1 } = Astro.props;
     }
     /* Modifier: restar */
     .product-counter__button--minus {
-      border: 1.5px solid var(--sf-gold);
+      border: 1.5px solid var(--sf-accent);
       background-color: transparent;
     }
     .product-counter__button--minus:hover:not(:disabled) {
-      background-color: var(--sf-gold-tint);
+      background-color: var(--sf-accent-tint);
     }
     /* Rectangulo de 12x2 y no un icono de trazo: a ese grosor la rejilla de 20x20
        con stroke 2 no da la medida de la spec. */
@@ -131,16 +131,16 @@ const { itemName, quantity = 1 } = Astro.props;
       display: block;
       width: 12px;
       height: 2px;
-      background-color: var(--sf-gold);
+      background-color: var(--sf-accent);
     }
     /* Modifier: sumar */
     .product-counter__button--plus {
       border: 0;
-      background-color: var(--sf-gold);
+      background-color: var(--sf-accent);
       color: var(--sf-white);
     }
     .product-counter__button--plus:hover:not(:disabled) {
-      background-color: var(--sf-gold-hover);
+      background-color: var(--sf-accent-hover);
     }
     /* El "+" de la spec mide 14 con trazo de 2. Los tamanos de .icon escalan el
        trazo en proporcion —a 14 de una rejilla de 20 se queda en 1.4—, asi que aqui

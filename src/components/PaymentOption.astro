@@ -114,7 +114,7 @@ const hasLogo = Astro.slots.has('media');
     transition: border-color 160ms ease, background-color 160ms ease;
   }
   .payment-option:hover {
-    border-color: var(--sf-gold);
+    border-color: var(--sf-accent);
   }
 
   /* Element: caja del icono */
@@ -127,7 +127,7 @@ const hasLogo = Astro.slots.has('media');
     height: 40px;
     border-radius: 8px;
     background-color: var(--sf-body-bg);
-    color: var(--sf-gold);
+    color: var(--sf-accent);
     transition: background-color 160ms ease;
   }
 
@@ -181,17 +181,17 @@ const hasLogo = Astro.slots.has('media');
 
   /* --- Estados ------------------------------------------------------------- */
   .btn-check:checked + .payment-option {
-    border-color: var(--sf-gold);
+    border-color: var(--sf-accent);
     /* La caja de una marca no se tine de dorado: el logo va con sus colores y el
        fondo dorado detras los pone a competir. Que el metodo esta elegido lo dice
        el borde, que es lo que se lee de la tarjeta entera. */
   }
   .btn-check:checked + .payment-option .payment-option__media:not(.payment-option__media--logo) {
-    background-color: var(--sf-gold-tint);
+    background-color: var(--sf-accent-tint);
   }
 
   .btn-check:focus-visible + .payment-option {
-    outline: 2px solid var(--sf-gold);
+    outline: 2px solid var(--sf-accent);
     outline-offset: 2px;
   }
 
@@ -260,7 +260,7 @@ const hasLogo = Astro.slots.has('media');
 
   /* Modifier: obligatorio */
   .tag--required {
-    background-color: var(--sf-gold-tint);
+    background-color: var(--sf-accent-tint);
     color: var(--sf-indigo);
   }
 

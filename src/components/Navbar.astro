@@ -192,12 +192,14 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
     opacity: 0.8;
   }
 
-  /* Element: navbar__logo — 16 de alto, el ancho lo da la proporcion del archivo.
-     Mas bajo que los 24 de la fila: el enlace que lo envuelve los conserva y lo
-     centra, asi que el area tactil y el alto de la barra no se mueven. */
+  /* Element: navbar__logo — 40 de alto, el ancho lo da la proporcion del archivo.
+     Mas alto que los 24 de la fila, a proposito: es un emblema cuadrado con el
+     nombre dentro, y a 24 no se leeria. El enlace que lo envuelve conserva los 24
+     y lo centra, asi que desborda 8 por arriba y 8 por abajo sobre el padding de
+     12 y el alto de la barra no se mueve. */
   .navbar__logo {
     width: auto;
-    height: 16px;
+    height: 40px;
   }
 
   /* --- Desktop -------------------------------------------------------------
