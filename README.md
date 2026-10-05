@@ -36,13 +36,14 @@ como runtime por defecto.
 src/
 ├── assets/         logo e iconos exportados del diseno
 ├── data/           products.ts — catalogo y grupos de opciones
+│   └── themes/     un JSON por tema de color (STORE_THEME); ver lib/theme.ts
 ├── components/     un componente por bloque BEM
 ├── layouts/        Layout.astro (head, SEO, fuente)
 ├── pages/          rutas
 ├── scripts/        JS de cliente, uno por comportamiento
-└── styles/
-    ├── _variables.scss   tokens -> variables de Bootstrap
-    ├── _tokens.scss      regenera las custom properties --sf-*
-    ├── components/       un archivo por bloque BEM
-    └── main.scss         entrada: orden de imports obligatorio
+└── styles/                   orden de carga en layouts/Layout.astro
+    ├── colors.css            colores --sf-* fijos y derivados del acento
+    ├── bootstrap-overrides.css   Bootstrap ajustado a la spec
+    ├── base.css              base propia
+    └── screens.css           armazon de las pantallas del pedido
 ```

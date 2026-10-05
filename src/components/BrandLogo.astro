@@ -1,6 +1,6 @@
 ---
 import { Image } from 'astro:assets';
-import logo from '../assets/logo-superfoods.webp';
+import logo from '../assets/logo-mama-yaya.png';
 
 interface Props {
   class?: string;
@@ -14,9 +14,11 @@ const { class: className } = Astro.props;
 // en el marcado y solo el breakpoint decide cual se ve, asi que pedir dos
 // tamanos distintos serviria dos archivos y el navegador se descargaria los
 // dos. Con una sola transformacion hay una sola URL —una peticion, y la segunda
-// ya esta en cache— y la altura final la pone el CSS de cada barra.
+// ya esta en cache— y la altura final la pone el CSS de cada barra. El pie
+// tambien lo usa, y es el que lo pinta mas grande —96 de alto—: el tamano que se
+// pide es ese, para que ahi no salga borroso y en las barras solo se reduzca.
 //
-// 162x28 es la proporcion del archivo (783x135). El original venia de 1080x1080
+// 97x96 es la proporcion del archivo (548x540). El original venia de 798x798
 // con el logo flotando en el centro: recortado al contenido, la altura de la
 // barra la decide el CSS y no el margen transparente de la exportacion.
 ---
@@ -24,9 +26,9 @@ const { class: className } = Astro.props;
 <Image
   class={className}
   src={logo}
-  width={162}
-  height={28}
+  width={97}
+  height={96}
   densities={[1, 2]}
-  alt="Markea Super Foods"
+  alt="Mamá Yaya"
   loading="eager"
 />

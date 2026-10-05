@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema",
+  "title": "Tema de color de la tienda",
+  "description": "El acento de la marca. El nombre del archivo es el del tema, en ingles: green.json se activa con STORE_THEME=green. Los colores fijos —el verde de WhatsApp, el de confirmacion, los grises— no van aqui: son los mismos en todos los temas y viven en src/styles/colors.css. Ver src/lib/theme.ts.",
+  "type": "object",
+  "required": ["accent", "accentHover", "accentBright"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": {
+      "type": "string"
+    },
+    "accent": {
+      "description": "El acento: botones, precios, totales, estados activos y aro de foco. Lleva texto blanco encima y se lee como texto sobre blanco: cuanto mas oscuro, mas legible en los dos sentidos. De aqui salen tambien su tinte (10%) y su borde (25%).",
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "accentHover": {
+      "description": "El acento al pasar el raton o al pulsar un boton. Se elige a ojo, algo mas oscuro que el acento.",
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    },
+    "accentBright": {
+      "description": "El extremo luminoso del degradado que ocupa el sitio de una foto que no hay: la del platillo y la del banner. El degradado va de este, arriba, al acento, abajo.",
+      "type": "string",
+      "pattern": "^#[0-9a-fA-F]{6}$"
+    }
+  }
+}

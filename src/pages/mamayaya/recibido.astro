@@ -266,7 +266,7 @@ const hasLocation = Boolean(address || mapsUrl);
 const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 ---
 
-<Layout title="Pedido recibido — Shop Superfoods" description={copy.description} noindex>
+<Layout title="Pedido recibido" store={store} description={copy.description} noindex>
   {/*
     Vuelve al menu y no a la pantalla de pago: el pedido ya esta hecho, y volver
     atras invitaria a confirmarlo otra vez.

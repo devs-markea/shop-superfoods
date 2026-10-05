@@ -193,24 +193,21 @@ const socials = store.socialLinks ?? [];
          columna de enlaces. */
       max-width: 420px;
     }
-    /* La caja del logo es la de la spec —160x36— y el logo va dentro a 160 de
-       ancho: el archivo tiene proporcion 5.8:1, asi que a 160 mide 27.6 de alto y
-       los 36 son el alto del marco, con el logo centrado. Las dos medidas de la
-       spec no pueden cumplirse a la vez sin deformarlo, y de las dos la que se ve
-       es el ancho. */
+    /* El logo a 96 de alto y el enlace sin alto propio: lo envuelve. La spec pedia
+       una caja de 160x36, que era la del logo anterior —horizontal, 5.8:1—. Este es
+       un emblema cuadrado con el nombre dentro, y a 36 de alto no se leeria. */
     .footer__brand-link {
       display: flex;
       align-items: center;
       align-self: flex-start;
-      height: 36px;
       transition: opacity 160ms ease;
     }
     .footer__brand-link:hover {
       opacity: 0.8;
     }
     .footer__logo {
-      width: 160px;
-      height: auto;
+      width: auto;
+      height: 96px;
     }
     /* 22 de interlineado: es un parrafo, el unico del sistema, y por eso no sale de
        la escala de --sf-line-height-*. */
@@ -239,7 +236,7 @@ const socials = store.socialLinks ?? [];
       line-height: 1;
       letter-spacing: 0.1em;
       text-transform: uppercase;
-      color: var(--sf-gold);
+      color: var(--sf-accent);
     }
     .footer__links {
       display: flex;
@@ -262,7 +259,7 @@ const socials = store.socialLinks ?? [];
       transition: color 160ms ease;
     }
     a.footer__link:hover {
-      color: var(--sf-gold);
+      color: var(--sf-accent);
     }
     /* Element: divider — la linea de 1 de la spec (height 0 + borde) */
     .footer__divider {
@@ -313,7 +310,7 @@ const socials = store.socialLinks ?? [];
       transition: color 160ms ease;
     }
     .footer__social-link:hover {
-      color: var(--sf-gold);
+      color: var(--sf-accent);
     }
   }
 </style>

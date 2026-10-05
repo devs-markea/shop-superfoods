@@ -43,7 +43,7 @@ const { value, label, size = 'md' } = Astro.props;
 
      Las specs dan tres alfas distintas para ese fondo (#D5AA531A, #D5AA5315,
      #D5AA5320): son el mismo dorado entre el 8 y el 12 por ciento. Se usa el
-     unico tinte del sistema, --sf-gold-tint.
+     unico tinte del sistema, --sf-accent-tint.
 
      El hover invierte el dorado en lugar de oscurecer el tinte: es el mismo par de
      colores que ya usa el boton principal.
@@ -63,12 +63,12 @@ const { value, label, size = 'md' } = Astro.props;
     width: 32px;
     height: 32px;
     border-radius: 8px;
-    background-color: var(--sf-copy-button-bg, var(--sf-gold-tint));
-    color: var(--sf-copy-button-color, var(--sf-gold));
+    background-color: var(--sf-copy-button-bg, var(--sf-accent-tint));
+    color: var(--sf-copy-button-color, var(--sf-accent));
     transition: background-color 160ms ease, color 160ms ease;
   }
   .copy-button:hover {
-    background-color: var(--sf-gold);
+    background-color: var(--sf-accent);
     color: var(--sf-white);
   }
 
@@ -86,7 +86,7 @@ const { value, label, size = 'md' } = Astro.props;
 
   /* Modifier: el valor acaba de copiarse. Lo pone y lo quita el script. */
   .copy-button--copied, .copy-button--copied:hover {
-    background-color: var(--sf-gold);
+    background-color: var(--sf-accent);
     color: var(--sf-white);
   }
   .copy-button--copied .copy-button__icon {
