@@ -1,7 +1,48 @@
 // @ts-check
+import { readdirSync, readFileSync } from 'node:fs';
 import { defineConfig, envField, fontProviders } from 'astro/config';
 
 import vercel from '@astrojs/vercel';
+
+// Los temas de color: un JSON por tema en src/data/themes/, y el nombre del archivo es el
+// del tema. Ver src/lib/theme.ts.
+//
+// Se leen aqui, al arrancar, por las dos cosas que solo se pueden hacer antes del build:
+// darle a STORE_THEME la lista de nombres que acepta, y parar el build si un tema trae un
+// color mal escrito. Las pantallas se renderizan bajo demanda, asi que sin esto el error
+// no saldria al construir sino en produccion, con la primera visita.
+//
+// Por eso un tema nuevo pide reiniciar el servidor de dev: la carpeta se lee una vez.
+const THEMES_DIR = new URL('./src/data/themes/', import.meta.url);
+
+const THEMES = readdirSync(THEMES_DIR)
+  .filter((file) => file.endsWith('.json'))
+  .map((file) => {
+    let theme;
+
+    try {
+      theme = JSON.parse(readFileSync(new URL(file, THEMES_DIR), 'utf8'));
+    } catch (error) {
+      throw new Error(`src/data/themes/${file} no es un JSON valido: ${error}`);
+    }
+
+    // Las mismas tres claves y el mismo formato que comprueba src/lib/theme.ts.
+    for (const key of ['accent', 'accentHover', 'accentBright']) {
+      if (!/^#[0-9a-f]{6}$/i.test(theme[key] ?? '')) {
+        throw new Error(
+          `src/data/themes/${file}: "${key}" tiene que ser un color #rrggbb y vale ${JSON.stringify(theme[key])}`,
+        );
+      }
+    }
+
+    return file.slice(0, -'.json'.length);
+  });
+
+// El de por defecto tiene que existir: es el que se pinta sin STORE_THEME y el que
+// recoge cualquier nombre desconocido. Es el DEFAULT_THEME de src/lib/theme.ts.
+if (!THEMES.includes('gold')) {
+  throw new Error('Falta src/data/themes/gold.json, el tema por defecto.');
+}
 
 // https://astro.build/config
 export default defineConfig({
@@ -49,6 +90,27 @@ export default defineConfig({
   env: {
     schema: {
       API_URL: envField.string({ context: 'server', access: 'public' }),
+
+      // El tema de color: de que color es el acento de la tienda. Es el nombre de un JSON de
+      // src/data/themes/ —green, pink, orange…—, y quien lo aplica es Layout.astro. Los
+      // nombres van en ingles, como el resto de identificadores del codigo.
+      //
+      // Sin poner es 'gold', el dorado: la tienda tal como se diseno.
+      //
+      // Una variable de entorno POR AHORA: cada despliegue es una tienda —ver SHOP_API_KEY—
+      // y el color es de la tienda. El dia que lo elija el codigo, se cambia la linea del
+      // Layout que lo lee y esta variable sobra.
+      //
+      // `values` son los archivos de la carpeta, leidos arriba: un nombre que no tenga su JSON
+      // hace fallar el build nombrando la variable, en lugar de publicar la tienda con el tema
+      // por defecto sin avisar.
+      STORE_THEME: envField.enum({
+        context: 'server',
+        access: 'public',
+        values: THEMES,
+        optional: true,
+        default: 'gold',
+      }),
 
       // Clave del CLIENTE autorizado de la API. Viaja en la cabecera `X-Shop-Key` de cada
       // llamada al backend y es lo que distingue a esta tienda de cualquiera que conozca la

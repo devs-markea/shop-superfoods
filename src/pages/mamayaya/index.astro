@@ -167,7 +167,7 @@ const closed = isClosed(schedule);
 const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 ---
 
-<Layout title="Shop Superfoods">
+<Layout store={store}>
   <Navbar
     store={store}
     schedule={schedule}

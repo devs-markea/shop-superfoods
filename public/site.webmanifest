@@ -1,8 +1,8 @@
 {
   "id": "/mamayaya",
-  "name": "Shop Superfoods",
-  "short_name": "Superfoods",
-  "description": "Shop Superfoods — pedido a domicilio o para recoger.",
+  "name": "Mamá Yaya",
+  "short_name": "Mamá Yaya",
+  "description": "Mamá Yaya — pedido a domicilio o para recoger.",
   "lang": "es",
   "dir": "ltr",
   "start_url": "/mamayaya",

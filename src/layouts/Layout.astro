@@ -6,7 +6,8 @@ import { Font } from 'astro:assets';
 // 1. Bootstrap ya compilado. Antes se importaba por partes desde su Sass, para
 //    no enviar los componentes sin usar; sin Sass eso ya no se puede hacer y se
 //    carga entero.
-// 2. Los colores de la tienda, que usan tanto los overrides como los bloques.
+// 2. Los colores de la tienda, que usan tanto los overrides como los bloques. El
+//    acento no esta ahi: lo pone el tema, en el `style` del <html> de abajo.
 // 3. Los overrides, que ajustan Bootstrap a la spec de la tienda.
 // 4. La base propia, que necesita ir despues de las utilidades de Bootstrap.
 // 5. El armazon de las pantallas del pedido: los dos unicos bloques que no
@@ -22,9 +23,19 @@ import '../styles/colors.css';
 import '../styles/bootstrap-overrides.css';
 import '../styles/base.css';
 import '../styles/screens.css';
+import { STORE_THEME } from 'astro:env/server';
+import type { StoreSettings } from '../lib/store-config.ts';
+import { getTheme, themeStyle } from '../lib/theme.ts';
 
 interface Props {
-  title: string;
+  /**
+   * La tienda, la misma que recibe el pie. De aqui sale el nombre que firma la
+   * pestana: `store.name`, que lo escribe el panel. La marca no se escribe en
+   * ninguna pagina.
+   */
+  store: StoreSettings;
+  /** Lo propio de la pagina —"Mi pedido", el platillo—. La portada no lleva. */
+  title?: string;
   description?: string;
   /**
    * Fuera de los buscadores.
@@ -40,15 +51,29 @@ interface Props {
 }
 
 const {
+  store,
   title,
-  description = 'Shop Superfoods — pedido a domicilio o para recoger.',
+  description = 'Mamá Yaya — pedido a domicilio o para recoger.',
   noindex = false,
 } = Astro.props;
 
+// La pagina y la tienda, en ese orden: en una pestana estrecha se corta por la
+// derecha, y lo que distingue una pestana de otra es la pagina. Sin nombre de la
+// tienda se queda la pagina sola, como hace el pie con su frase.
+const documentTitle = [title, store.name].filter(Boolean).join(' — ');
+
 const canonical = new URL(Astro.url.pathname, Astro.site);
+
+// El tema de color. Hoy lo elige STORE_THEME, en el .env; el dia que lo elija el
+// codigo, lo que cambia es esta linea. Ver src/lib/theme.ts.
+//
+// Va en el `style` de <html> y en ningun elemento por debajo: ahi es donde
+// colors.css calcula el acento, su tinte y su borde. `data-theme` no lo lee
+// ninguna regla; esta para que el inspector diga que tema se esta pintando.
+const theme = getTheme(STORE_THEME);
 ---
 
-<html lang="es">
+<html lang="es" data-theme={theme.id} style={themeStyle(theme)}>
   <head>
     <meta charset="utf-8" />
     <!-- viewport-fit=cover: la action-bar usa env(safe-area-inset-bottom) -->
@@ -61,7 +86,11 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     {
       /*
         Los iconos de la tienda. Los archivos viven en public/ y todos salen del
-        mismo trazo: la marca en dorado, el mismo #d5aa53 que --sf-gold.
+        mismo trazo: la marca en dorado, el #d5aa53 del tema por defecto.
+
+        NO SIGUEN AL TEMA: son imagenes, con el dorado dentro. Una tienda con
+        otro acento necesita su propio juego de iconos, y con el, otro color en
+        `msapplication-TileColor`, que va con ellos y no con --sf-accent.
 
         Son varias declaraciones porque detras hay consumidores distintos y
         ninguno lee el formato del vecino:
@@ -86,7 +115,9 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
         `msapplication-*` son las dos etiquetas de Microsoft que siguen vivas:
         el mosaico del menu de inicio de Windows. El dorado va aqui y no en
         `theme-color` a proposito: el mosaico es una superficie de la marca, y
-        la barra del navegador es la de la tienda, que es blanca.
+        la barra del navegador es la de la tienda, que es blanca. Va escrito y
+        no leido del tema porque tiene que coincidir con el fondo de
+        mstile-150x150.png, que es dorado.
       */
     }
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -98,7 +129,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
     <meta name="msapplication-TileColor" content="#d5aa53" />
     <meta name="msapplication-TileImage" content="/mstile-150x150.png" />
 
-    <title>{title}</title>
+    <title>{documentTitle}</title>
     <meta name="description" content={description} />
 
     {
@@ -127,7 +158,7 @@ const canonical = new URL(Astro.url.pathname, Astro.site);
           <link rel="canonical" href={canonical} />
 
           <meta property="og:type" content="website" />
-          <meta property="og:title" content={title} />
+          <meta property="og:title" content={documentTitle} />
           <meta property="og:description" content={description} />
           <meta property="og:url" content={canonical} />
         </Fragment>

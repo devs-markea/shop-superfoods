@@ -1,0 +1,6 @@
+{
+  "$schema": "../theme.schema.json",
+  "accent": "#ff7f30",
+  "accentHover": "#f46e1c",
+  "accentBright": "#ff9b21"
+}

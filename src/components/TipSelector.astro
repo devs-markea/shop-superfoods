@@ -182,19 +182,19 @@ const customValue = custom ? String(selected) : '';
     transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
   }
   .tip__option:hover {
-    border-color: var(--sf-gold);
+    border-color: var(--sf-accent);
     color: var(--sf-ink);
   }
 
   /* Estado: importe elegido */
   .btn-check:checked + .tip__option, .btn-check:checked + .tip__option:hover {
-    border-color: var(--sf-gold);
-    background-color: var(--sf-gold);
+    border-color: var(--sf-accent);
+    background-color: var(--sf-accent);
     color: var(--sf-white);
   }
 
   .btn-check:focus-visible + .tip__option {
-    outline: 2px solid var(--sf-gold);
+    outline: 2px solid var(--sf-accent);
     outline-offset: 2px;
   }
 
@@ -332,8 +332,8 @@ const customValue = custom ? String(selected) : '';
      borde y una sombra interior el indicador ocupa el mismo sitio, se ve igual de
      claro y no depende de que nadie recorte nada. */
   .tip__amount:focus-within {
-    border-color: var(--sf-gold);
-    box-shadow: inset 0 0 0 1px var(--sf-gold);
+    border-color: var(--sf-accent);
+    box-shadow: inset 0 0 0 1px var(--sf-accent);
   }
 
   .tip__amount-currency {

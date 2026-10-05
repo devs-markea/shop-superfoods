@@ -114,7 +114,8 @@ export function assetUrl(url: string): string {
  * "node" desde otra IP si pasaba, asi que la decision tambien pesa la reputacion de la IP de
  * salida de Vercel. Si el `202` vuelve —el log dice "sin JSON" y el comprador ve `SF-M202`—,
  * lo primero es probar a actualizar la version de Chrome de aqui abajo, y lo segundo, hablar
- * con SiteGround con la hora exacta en la mano.
+ * con SiteGround con la hora exacta y la IP del `ipc:`, que el mismo log copia de su pagina
+ * (ver unwrap).
  *
  * LA VERSION ENVEJECE, Y HAY QUE REVISARLA DE VEZ EN CUANDO. Es la estable de Chrome al
  * escribirla: 153, del 2026-09-08. Chrome saca una cada dos semanas y se actualiza solo, asi
@@ -393,20 +394,52 @@ export async function unwrap<T>(response: Response, path: string): Promise<T> {
   // reventaba con un SyntaxError que no era ApiError, y el log de Vercel hablaba de un token
   // `<` inesperado en lugar del 202 que lo explicaba todo. Desde que hay cache, ademas, esto
   // es lo que impide guardar una averia como si fuera el catalogo (ver src/lib/cache.ts).
-  const body = await response
-    .json()
-    .then((parsed) => parsed as { data: T })
-    .catch(() => null);
+  //
+  // SE LEE COMO TEXTO, Y NO CON `json()`, porque un cuerpo solo se puede leer una vez y, cuando
+  // no es JSON, lo que trae es la prueba de quien contesto. La pagina del reto de SiteGround
+  // lleva en su `<meta refresh>` la ruta `/.well-known/sgcaptcha/` y, tras `ipc:`, la IP retada
+  // y el momento en segundos UTC: justo lo que su soporte pide para encontrarlo en sus registros
+  // (2026-10-05). Con `json()` esa pagina se tiraba y el log decia `body: undefined`.
+  const text = await response.text().catch(() => '');
+  const body = parseJson<{ data: T }>(text);
 
   if (!body) {
     throw new ApiError(
-      `La API respondio ${response.status} sin JSON en ${path}.`,
+      `La API respondio ${response.status} sin JSON en ${path}. ${bodyExcerpt(text)}`,
       response.status,
       path,
     );
   }
 
   return body.data;
+}
+
+/** El cuerpo interpretado, o `null` si no es JSON. */
+function parseJson<T>(text: string): T | null {
+  try {
+    return JSON.parse(text) as T;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Cuanto de un cuerpo que no es JSON se copia al mensaje del error.
+ *
+ * La pagina del reto de SiteGround mide unos 180 caracteres y entra entera; el tope es para
+ * que una pagina de error grande no llene el log.
+ */
+const EXCERPT_CHARS = 500;
+
+/** El principio de un cuerpo que no es JSON, en una sola linea, para el log. */
+function bodyExcerpt(text: string): string {
+  const line = text.replace(/\s+/g, ' ').trim();
+
+  if (!line) return 'Cuerpo vacio.';
+
+  return line.length > EXCERPT_CHARS
+    ? `Cuerpo: ${line.slice(0, EXCERPT_CHARS)}...`
+    : `Cuerpo: ${line}`;
 }
 
 export async function apiGet<T>(path: string): Promise<T> {

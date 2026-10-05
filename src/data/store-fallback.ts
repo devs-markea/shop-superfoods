@@ -19,7 +19,7 @@
 import type { StoreSettings } from '../lib/store-config.ts';
 
 export const storeFallback: StoreSettings = {
-  name: 'SuperFoods',
+  name: 'Mamá Yaya',
 
   // Las redes del negocio, en el ORDEN en que se quieren pintar en el pie. Cada
   // una se escribe entera:
