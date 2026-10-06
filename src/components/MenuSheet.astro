@@ -1,0 +1,165 @@
+---
+import Icon from './Icon.astro';
+import MenuIndex from './MenuIndex.astro';
+import type { MenuSection } from '../lib/catalog.ts';
+
+interface Props {
+  /** Id con el que la abre el boton de las tabs (`data-sheet="..."`). */
+  id: string;
+  /** El encabezado de la tienda: el mismo de la columna lateral de desktop. */
+  heading?: string;
+  /** El turno en curso ya redactado (ver shiftLabel en src/lib/schedule.ts). */
+  shift?: string | null;
+  /** Las secciones de la portada, en el orden en que se pintan. */
+  sections: readonly MenuSection[];
+}
+
+const { id, heading, shift, sections } = Astro.props;
+
+// La hoja de categorias de MOVIL: el indice entero, con la tienda y su turno encima. La
+// abre el boton de la derecha de las tabs (components/CategoryNav.astro).
+//
+// Es la columna lateral de desktop en forma de hoja: el mismo encabezado, el mismo
+// turno y la misma lista (components/MenuIndex.astro), que src/scripts/menu-nav.ts mueve
+// a la vez que los otros dos indices. Pulsar una entrada cierra la hoja y baja a la
+// seccion.
+//
+// Por debajo es una hoja del sistema (components/Sheet.astro): un <dialog> nativo con
+// la clase .sheet, que pone la entrada desde abajo, el velo y el cierre con Escape o
+// pulsando fuera (src/scripts/sheet.ts). Lo propio de esta es el diseno y el tirador
+// de arriba, que la cierra arrastrandola hacia abajo (src/scripts/sheet-drag.ts).
+const titleId = `${id}-title`;
+---
+
+<dialog class="sheet menu-sheet" id={id} aria-labelledby={titleId}>
+  {/* El tirador. Toda la franja de 24 responde al dedo, no solo la barrita: es la
+      zona de agarre. Decorativo para quien no la ve: se cierra con la X o Escape. */}
+  <div class="menu-sheet__handle" aria-hidden="true" data-sheet-drag>
+    <span class="menu-sheet__grip"></span>
+  </div>
+
+  <div class="menu-sheet__header">
+    <div class="menu-sheet__top">
+      <h2 class="menu-sheet__title" id={titleId}>{heading || 'Categorias'}</h2>
+
+      <button class="menu-sheet__close btn-plain" type="button" aria-label="Cerrar" data-sheet-close>
+        <Icon name="close" class="menu-sheet__close-icon" />
+      </button>
+    </div>
+
+    {shift && <p class="menu-sheet__shift">{shift}</p>}
+  </div>
+
+  <nav
+    class="menu-sheet__nav"
+    aria-label="Categorias del menu"
+    data-menu-nav="menu-index__link--active"
+    data-menu-nav-scroll
+  >
+    <MenuIndex sections={sections} />
+  </nav>
+</dialog>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: menu-sheet  (sobre .sheet, ver components/Sheet.astro)
+     ---------------------------------------------------------------------------
+     Spec movil: 390x465 - radius 24 arriba - fondo #FFFFFF
+                 sombra 0 -8px 32px #1418211F
+       tirador     franja de 24; barrita 36x4, radius 100, #D8DCE3
+       cabecera    92 de alto - padding 0 24 12 - gap 8 - borde inferior 1 #EAECF0
+                   titulo Inter 600 20/28 #141821 + cierre 32 redondo #F8F9FB, X de 18
+                   turno Inter 500 12/16 #6C757D
+       indice      padding 8/20 - gap 8; entradas de 37 (components/MenuIndex.astro).
+                   Si no caben, scrollea el indice: la cabecera se queda.
+
+     De .sheet hereda la colocacion al fondo, la entrada y la salida, el velo y el
+     cierre; aqui se le cambia la caja. El relleno pasa a cada pieza, porque la
+     cabecera lleva su borde de lado a lado. El ancho, de lado a lado de la pantalla,
+     ya lo trae .sheet en movil.
+     --------------------------------------------------------------------------- */
+  .sheet.menu-sheet {
+    height: 465px;
+    max-height: 85dvh;
+    gap: 0;
+    padding: 0;
+    overflow: hidden;
+    border-radius: 24px 24px 0 0;
+    box-shadow: 0 -8px 32px 0 rgb(20 24 33 / 12%);
+  }
+
+  /* Element: handle — la franja de agarre. `touch-action: none` le quita al navegador
+     el gesto de scroll ahi dentro: el arrastre es de la hoja. */
+  .menu-sheet__handle {
+    display: flex;
+    flex: 0 0 24px;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    touch-action: none;
+  }
+  .menu-sheet__grip {
+    width: 36px;
+    height: 4px;
+    border-radius: 100px;
+    background-color: #d8dce3;
+  }
+
+  /* Element: header — la tienda y su turno */
+  .menu-sheet__header {
+    display: flex;
+    flex: 0 0 auto;
+    flex-direction: column;
+    gap: 8px;
+    min-height: 92px;
+    padding: 0 24px 12px;
+    border-bottom: 1px solid var(--sf-border);
+  }
+  .menu-sheet__top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    min-height: 56px;
+  }
+  .menu-sheet__title {
+    min-width: 0;
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 28px;
+    color: var(--sf-ink);
+    overflow-wrap: anywhere;
+  }
+  .menu-sheet__close {
+    display: inline-flex;
+    flex: 0 0 32px;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 100px;
+    background-color: var(--sf-body-bg);
+    color: var(--sf-ink);
+  }
+  .menu-sheet__close-icon {
+    width: 18px;
+    height: 18px;
+  }
+  .menu-sheet__shift {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--sf-muted);
+  }
+
+  /* Element: nav — el indice. Ocupa lo que queda de la hoja y scrollea solo el. */
+  .menu-sheet__nav {
+    flex: 1 1 auto;
+    min-height: 0;
+    padding: 8px 20px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+</style>

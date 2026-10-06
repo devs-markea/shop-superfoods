@@ -1,15 +1,13 @@
-// Block: footer — "Descubre" lleva a la portada con su categoria ya filtrada.
+// Block: footer — "Descubre" lleva a la portada, a la seccion de su categoria.
 //
-// Dos caminos, porque el pie se pinta en las nueve pantallas y en una de ellas el
-// filtro ya esta cargado:
+// Dos caminos, porque el pie se pinta en las nueve pantallas y en una de ellas las
+// secciones ya estan cargadas:
 //
-//   fuera de la portada  se deja el pase escrito y se deja navegar. Lo recoge el
-//                        script inline de la portada, antes del primer pintado.
-//   en la portada        no hay a donde ir: se marca el chip y se sube. Recargar
-//                        para filtrar lo que ya esta en la pagina seria un viaje
-//                        al servidor por nada, y con la rejilla mas corta el
-//                        navegador dejaria al comprador donde estaba —en el pie—
-//                        mirando un cambio que ocurrio arriba.
+//   fuera de la portada  se deja el pase escrito y se deja navegar. Lo recoge
+//                        src/scripts/menu-nav.ts al arrancar la portada.
+//   en la portada        no hay a donde ir: se pide a menu-nav.ts que baje a la
+//                        seccion de esa categoria. Recargar para llegar a lo que ya
+//                        esta en la pagina seria un viaje al servidor por nada.
 //
 // En el primer camino el evento no se toca: ni preventDefault ni navegacion a
 // mano. El enlace es un <a href="/mamayaya"> de verdad, asi que se puede abrir en otra
@@ -25,25 +23,24 @@
 // bundle, y el pie se queda sin comportamiento con un 404 que nada avisa. Si se
 // anade una decima pantalla con pie, el import va con ella.
 
-import { rememberCategory } from '../lib/discover.ts';
+import { DISCOVER_EVENT, rememberCategory } from '../lib/discover.ts';
 
-/** La portada, la unica pantalla que tiene chips de categoria. */
+/** La portada, la unica pantalla que tiene secciones de categoria. */
 const HOME = '/mamayaya';
 
 /**
- * El chip de la portada que corresponde a esta categoria.
+ * Si la portada tiene la seccion de esta categoria: la que lleva su id.
  *
- * Se compara `value` en lugar de componer un selector porque el nombre de la
- * categoria lo escribe el panel: puede traer comillas, acentos o espacios, y
- * ninguno de los tres tiene por que sobrevivir metido en un
- * `input[value="..."]`.
+ * Se compara el valor en lugar de componer un selector: el id es un numero hoy, pero
+ * nada obliga a que lo siga siendo, y metido en un `[data-category="..."]` cualquier
+ * comilla lo romperia.
  */
-function chipFor(category: string): HTMLInputElement | null {
-  for (const radio of document.querySelectorAll<HTMLInputElement>('input[name="category"]')) {
-    if (radio.value === category) return radio;
+function hasSection(category: string): boolean {
+  for (const section of document.querySelectorAll<HTMLElement>('[data-menu-section]')) {
+    if (section.dataset.category === category) return true;
   }
 
-  return null;
+  return false;
 }
 
 // Delegado en la lista y no un listener por enlace: son tres rotulos que el
@@ -62,24 +59,13 @@ links?.addEventListener('click', (event) => {
   if (!category) return;
 
   if (window.location.pathname === HOME) {
-    const chip = chipFor(category);
-
-    // La categoria ya no esta en la barra —renombrada o despublicada desde que se
-    // pinto este pie—: no se intercepta nada y el enlace recarga la portada, que
-    // es la que sabe lo que hay publicado ahora mismo.
-    if (!chip) return;
+    // La categoria ya no esta en la portada —despublicada desde que se pinto este
+    // pie—: no se intercepta nada y el enlace recarga la portada, que es la que
+    // sabe lo que hay publicado ahora mismo.
+    if (!hasSection(category)) return;
 
     event.preventDefault();
-    chip.checked = true;
-
-    // El trabajo lo hacen los de siempre: category-filter.ts oculta las celdas y
-    // category-nav.ts trae el chip a cuadro. Los dos escuchan `change`, y marcar
-    // un radio desde codigo no lo emite por su cuenta.
-    chip.dispatchEvent(new Event('change', { bubbles: true }));
-
-    // Arriba, como si se llegara de otra pantalla. Sin `behavior`: asi lo decide
-    // el CSS, y con ello el bloque de `prefers-reduced-motion` de styles/base.css.
-    window.scrollTo({ top: 0 });
+    document.dispatchEvent(new CustomEvent(DISCOVER_EVENT, { detail: category }));
     return;
   }
 

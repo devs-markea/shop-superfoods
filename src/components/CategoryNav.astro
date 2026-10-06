@@ -1,150 +1,224 @@
 ---
+import Icon from './Icon.astro';
+import type { MenuSection } from '../lib/catalog.ts';
+
 interface Props {
-  categories: readonly string[];
-  active?: string;
+  /** Las secciones de la portada, en el orden en que se pintan. */
+  sections: readonly MenuSection[];
+  /**
+   * El id de la hoja de categorias (components/MenuSheet.astro), que abre el boton de
+   * la derecha. Sin el, no hay boton.
+   */
+  sheet?: string;
 }
 
-const { categories, active = 'Todos' } = Astro.props;
+const { sections, sheet } = Astro.props;
 
-const slug = (value: string) => `cat-${value.toLowerCase().replace(/\s+/g, '-')}`;
-
-// Como el switch: radios con .btn-check en lugar de <button> + JS.
-// El arrastre con raton lo anade src/scripts/category-nav.ts (data-carousel).
+// El indice de MOVIL: una tab por categoria. Es la columna lateral de desktop
+// (components/MenuSidebar.astro) en otra forma, y funciona igual: cada tab salta a su
+// seccion y la marcada es la que se esta mirando. Las dos las mueve
+// src/scripts/menu-nav.ts.
+//
+// Sin tab de Destacados, a diferencia de la columna: la barra solo se ve dentro de
+// una categoria (ver mas abajo), asi que estando en los destacados no hay tabs que
+// marcar, y desde una categoria se vuelve a ellos subiendo.
+//
+// Enlaces y no radios: ya no filtra nada, recorre. El `href` es tambien lo que funciona
+// sin JavaScript.
+//
+// `data-menu-nav` lleva la clase de la tab marcada: el script la pone y la quita sin
+// saber de que indice se trata. La primera llega marcada del servidor, y el script
+// ajusta la marca a la seccion de verdad al arrancar.
+//
+// Va DENTRO de la barra de pedido (components/OrderBar.astro), colgada de su borde de
+// abajo: la barra va anclada en movil, y asi las dos son una sola pieza.
+//
+// SOLO SE VE EN LAS CATEGORIAS. Arriba del todo y mientras se mira los destacados esta
+// recogida detras de la barra de pedido, y sale deslizandose de debajo de ella en
+// cuanto se entra en una categoria. La clase que la recoge va en
+// `data-menu-nav-autohide`, y llega puesta: al abrir la pagina se esta arriba.
+//
+// A la derecha, el boton que abre la hoja con el indice entero: con muchas
+// categorias, las tabs solo ensenan unas pocas a la vez.
+const tabs = sections.filter((section) => section.kind !== 'featured');
 ---
 
-<div class="category-nav" role="group" aria-label="Categorias" data-carousel>
-  {
-    categories.map((category) => (
-      <>
-        <input
-          class="btn-check"
-          type="radio"
-          name="category"
-          id={slug(category)}
-          value={category}
-          checked={category === active}
-          autocomplete="off"
-        />
-        <label class="chip btn" for={slug(category)}>
-          {category}
-        </label>
-      </>
-    ))
-  }
-</div>
+{
+  tabs.length > 0 && (
+    <nav
+      class="category-tabs category-tabs--hidden"
+      aria-label="Categorias del menu"
+      data-menu-nav="category-tabs__tab--active"
+      data-menu-nav-autohide="category-tabs--hidden"
+    >
+      <div class="category-tabs__bar">
+        <ul class="category-tabs__track list-unstyled mb-0" data-menu-nav-scroll>
+          {tabs.map((section, index) => (
+            <li class="category-tabs__item">
+              <a
+                class:list={['category-tabs__tab', index === 0 && 'category-tabs__tab--active']}
+                href={`#${section.anchor}`}
+                aria-current={index === 0 ? 'true' : undefined}
+                data-menu-link={section.anchor}
+              >
+                {section.name}
+              </a>
+            </li>
+          ))}
+        </ul>
+
+        {sheet && (
+          <button
+            class="category-tabs__menu btn-plain"
+            type="button"
+            aria-label="Ver todas las categorias"
+            aria-haspopup="dialog"
+            data-sheet={sheet}
+          >
+            <Icon name="list" />
+          </button>
+        )}
+      </div>
+    </nav>
+  )
+}
 
 <style is:global>
   /* ---------------------------------------------------------------------------
-     Block: category-nav
+     Block: category-tabs
      ---------------------------------------------------------------------------
-     Carrusel horizontal de chips. Se mantiene propio: el carousel de Bootstrap
-     es de diapositivas, no de scroll libre. En touch usa el scroll nativo; en
-     desktop, src/scripts/category-nav.ts anade arrastre con el raton.
+     Spec movil: tab 36 de alto - padding 8/16 - raya inferior de 3
+       activa:    raya #E6427A (el acento) - Inter 600 14/20
+       inactiva:  raya #EAECF0 - Inter 600 14/20 #6C757D
+     boton de la lista, a la derecha: 40x40 - radius 12 - fondo #FFFFFF - borde 1
+       #EAECF0 - icono con trazo de 2 en el acento
 
-     Spec: height 40 - gap 8 - padding-bottom 4  (40 - 4 = 36 del chip)
-     El margin negativo + padding lateral hace que sangre hasta el borde de la
-     pantalla mientras el primer chip sigue alineado al gutter del layout.
+     Los 36 de la tab cuentan la raya por dentro, como el trazo del diseno: 8 + 20 + 5
+     de relleno y 3 de raya. Con el relleno de 8 abajo la tab mediria 39.
+
+     La barra mide 48: el boton y 4 de aire arriba y abajo. Las tabs van apoyadas
+     abajo, sobre la linea gris, y el boton centrado en la barra.
+
+     Dos cajas:
+
+       .category-tabs       el marco. Cuelga del borde de abajo de la barra de pedido
+                            —que va anclada— y fuera del flujo, asi que aparecer y
+                            desaparecer no mueve nada de la pagina: si ocupara su
+                            sitio, al aparecer empujaria el catalogo hacia abajo, y la
+                            seccion que la hizo aparecer podria volver a quedar por
+                            encima de la linea de lectura y esconderla otra vez.
+                            Recorta lo que se sale por arriba.
+       .category-tabs__bar  la barra, que se desliza dentro del marco. Recogida, esta
+                            subida su propio alto, fuera del marco y por tanto
+                            invisible; al aparecer baja, y se ve salir de debajo de la
+                            barra de pedido, como una extension suya.
+
+     Si las tabs no caben, la pista scrollea, y la marcada se trae a la vista sola.
+
+     La linea gris corre de lado a lado de la pantalla, no solo bajo las tabs: es
+     una sombra interior de la barra, y cada tab pinta su raya encima.
      --------------------------------------------------------------------------- */
-  .category-nav {
+  .category-tabs {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    overflow: hidden;
+    transition: visibility 0s linear 0s;
+  }
+
+  .category-tabs__bar {
     display: flex;
+    align-items: flex-end;
     gap: 8px;
-    height: 40px;
-    padding-bottom: 4px;
-    margin-inline: calc(20px * -1);
-    padding-inline: 20px;
+    padding-right: 20px;
+    background-color: var(--sf-body-bg);
+    box-shadow: inset 0 -3px 0 var(--sf-border);
+    transition: transform 240ms cubic-bezier(0.32, 0.72, 0, 1);
+  }
+
+  /* Modifier: recogida —arriba del todo y en los destacados—. La barra sube su alto y
+     el marco la recorta. `visibility` cambia al final de la subida, para que las tabs
+     recogidas no se alcancen con el teclado ni con el dedo. */
+  .category-tabs--hidden {
+    visibility: hidden;
+    transition: visibility 0s linear 200ms;
+  }
+  .category-tabs--hidden .category-tabs__bar {
+    transform: translateY(-100%);
+    transition: transform 200ms ease-in;
+  }
+
+  /* La pista empieza en el gutter de 20 y llega hasta el boton: lo que no cabe se
+     esconde bajo el. */
+  .category-tabs__track {
+    display: flex;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding-left: 20px;
     overflow-x: auto;
     overflow-y: hidden;
     overscroll-behavior-x: contain;
-    -webkit-overflow-scrolling: touch;
     scroll-behavior: smooth;
-    scroll-snap-type: x proximity;
     scroll-padding-inline: 20px;
     scrollbar-width: none; /* Firefox */
-    -ms-overflow-style: none; /* IE / Edge legacy */
-    cursor: grab;
   }
-  .category-nav::-webkit-scrollbar {
+  .category-tabs__track::-webkit-scrollbar {
     display: none; /* Chrome / Safari */
   }
 
-  /* Modifier: mientras se arrastra con el raton */
-  .category-nav--dragging {
-    cursor: grabbing;
-    scroll-behavior: auto;
-    scroll-snap-type: none;
-    user-select: none;
-  }
-
-  /* La sangria lateral va pegada al gutter de la pagina, que de md en adelante
-     pasa de 20 a 32. Es el mismo salto que dan .navbar, .product-list y el resto:
-     el primer chip tiene que seguir alineado con el contenido de al lado.
-
-     Compartiendo linea con el switch la sangria sobra, y ahi la barra de pedido
-     la pone a 0 junto con su scroll-padding (ver components/OrderBar.astro). */
-  @media (min-width: 768px) {
-    .category-nav {
-      margin-inline: calc(32px * -1);
-      padding-inline: 32px;
-      scroll-padding-inline: 32px;
-    }
-  }
-
-  /* No hay bloque de desktop: la pista es la misma en todas las pantallas.
-
-     Antes, de lg en adelante, los chips se repartian en varias lineas centradas
-     y el carrusel dejaba de scrollear. Eso rompia la fila de la barra de pedido
-     —que es de una sola linea, con el switch en el otro extremo, ver
-     components/OrderBar.astro—: en cuanto las categorias no cabian, la pista
-     crecia hacia abajo, desalineaba el switch y empujaba la rejilla. Una linea
-     que scrollea mide siempre lo mismo, y el gesto para recorrerla es el que ya
-     se conoce del movil: arrastrar —con el raton lo resuelve
-     scripts/category-nav.ts—. */
-  /* ---------------------------------------------------------------------------
-     Block: chip  (sobre .btn + .btn-check de Bootstrap)
-     ---------------------------------------------------------------------------
-     Filtro de categoria. Igual que el switch, pasa de <button> + JS a radios:
-     la seleccion unica la garantiza el name compartido, sin JavaScript.
-
-     Spec: height 36 - padding 8/16 - radius 100 - label Inter 500 14/20
-     Activo:   bg #D5AA53 - label #FFFFFF
-     Inactivo: bg #FFFFFF - border 1px #EAECF0 - label #6C757D
-     --------------------------------------------------------------------------- */
-  .chip {
-    display: inline-flex;
+  .category-tabs__item {
     flex: 0 0 auto;
-    align-items: center;
-    justify-content: center;
-    height: 36px;
-    padding: 8px 16px;
-    border: 1px solid var(--sf-border);
-    background-color: var(--sf-white);
+  }
+
+  /* Los rotulos los escribe el panel y no tienen tope: una tab nunca mide mas de lo
+     que la pista ensena de una vez —la pantalla menos el gutter de 20 de la
+     izquierda y, a la derecha, el boton con su hueco y su gutter (20 + 8 + 40 + 20)—,
+     y lo que no cabe se recorta. Sin el tope, una tab mas ancha que la pista no se
+     puede traer entera a la vista. */
+  .category-tabs__tab {
+    display: block;
+    max-width: calc(100vw - 20px - (20px + 8px + 40px + 20px));
+    overflow: hidden;
+    text-overflow: ellipsis;
+    padding: 8px 16px 5px;
+    border-bottom: 3px solid var(--sf-border);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
     color: var(--sf-muted);
+    text-decoration: none;
     white-space: nowrap;
-    user-select: none;
-    scroll-snap-align: start;
-    transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease;
+    transition: border-color 160ms ease, color 160ms ease;
   }
-  .chip.btn {
-    /* Un escalon por debajo del 600 de .btn: el chip es una etiqueta de filtro,
-       no un boton de accion.
-       Aqui dentro y no en .chip porque hace falta ganarle a .btn en especificidad. */
-    font-weight: 500;
-    border-radius: 100px;
-  }
-  .chip:hover {
-    border-color: var(--sf-accent);
+
+  /* Modifier: la seccion que se esta mirando */
+  .category-tabs__tab--active {
+    border-bottom-color: var(--sf-accent);
     color: var(--sf-ink);
   }
 
-  /* Estado: chip activo */
-  .btn-check:checked + .chip, .btn-check:checked + .chip:hover {
-    border-color: var(--sf-accent);
-    background-color: var(--sf-accent);
-    color: var(--sf-white);
+  /* Element: menu — el boton que abre la hoja de categorias. El trazo del icono es el
+     de 2 de todo el sistema, en el acento. */
+  .category-tabs__menu {
+    display: inline-flex;
+    flex: 0 0 40px;
+    align-self: center;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    margin-block: 4px;
+    border: 1px solid var(--sf-border);
+    border-radius: 12px;
+    background-color: var(--sf-white);
+    color: var(--sf-accent);
   }
 
-  .btn-check:focus-visible + .chip {
-    outline: 2px solid var(--sf-accent);
-    outline-offset: 2px;
+  /* En desktop el indice es la columna lateral. */
+  @media (min-width: 768px) {
+    .category-tabs {
+      display: none;
+    }
   }
 </style>

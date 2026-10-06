@@ -1,0 +1,485 @@
+---
+import Icon from './Icon.astro';
+import MenuCard from './MenuCard.astro';
+import ProductCard from './ProductCard.astro';
+import type { MenuSection } from '../lib/catalog.ts';
+import { normalizeSearch } from '../lib/search.ts';
+
+interface Props {
+  section: MenuSection;
+  /** La primera tarjeta no se carga en diferido: entra en el primer viewport. */
+  eager?: boolean;
+  /** Ver la prop del mismo nombre en <ProductCard>. */
+  storeClosed?: boolean;
+}
+
+const { section, eager = false, storeClosed = false } = Astro.props;
+
+// Una seccion de la portada: cabecera —nombre y bajada— y sus tarjetas. Dos formas:
+//
+//   featured  los destacados. Lista horizontal de <ProductCard> —la tarjeta de pie—
+//             que se recorre arrastrando o con las dos flechas de la cabecera
+//             (src/scripts/featured-carousel.ts).
+//   category  una categoria del panel, en rejilla de <MenuCard> —foto a la derecha—.
+//
+// Las dos pantallas pintan las mismas secciones, con su cabecera, y las recorren con su
+// propio indice: la columna lateral en desktop y las tabs en movil
+// (src/scripts/menu-nav.ts). Lo que cambia en movil es la medida: el titulo, los
+// huecos, una columna, y los destacados se recorren con el dedo, sin flechas.
+//
+// El id de la categoria va en la seccion (`data-category`): es a donde lleva el pase de
+// "Descubre" del pie.
+const featured = section.kind === 'featured';
+
+// Lo que encuentra el buscador de desktop en cada platillo: su nombre y su descripcion,
+// ya normalizados (ver src/lib/search.ts). Solo en las categorias: los destacados estan
+// tambien en la suya, y alli es donde se encuentran.
+//
+// El nombre de la categoria no entra. Hay categorias que son una lista —"Tortas, Tacos,
+// Sopas, Burritos y Molletes"— y con el, buscar "torta" devolvia la categoria entera.
+const searchText = (product: MenuSection['products'][number]) =>
+  normalizeSearch(`${product.name} ${product.description}`);
+
+// El contador de platillos junto al titulo: solo en las categorias, y solo se ve en
+// movil (en desktop la cifra ya esta en la columna lateral).
+const count = section.products.length;
+const countLabel = `${count} ${count === 1 ? 'producto' : 'productos'}`;
+
+const titleId = `${section.anchor}-titulo`;
+const itemsId = `${section.anchor}-platillos`;
+---
+
+<section
+  class:list={['menu-section', `menu-section--${section.kind}`]}
+  id={section.anchor}
+  aria-labelledby={titleId}
+  data-menu-section
+  data-menu-featured={featured ? '' : undefined}
+  data-category={section.categoryId ?? undefined}
+>
+  <header class="menu-section__head">
+    <div class="menu-section__heading">
+      <div class="menu-section__title-row">
+        <h2 class="menu-section__title" id={titleId}>{section.name}</h2>
+        {!featured && <span class="menu-section__count">{countLabel}</span>}
+      </div>
+      {section.description && <p class="menu-section__description">{section.description}</p>}
+    </div>
+
+    {/* Llegan apagadas: sin JavaScript no harian nada, y la lista se sigue
+        recorriendo con el scroll nativo. El script las enciende segun lo que quede
+        por ver a cada lado. */}
+    {
+      featured && (
+        <div class="menu-section__controls">
+          <button
+            class="menu-section__arrow btn-plain"
+            type="button"
+            aria-label="Destacados anteriores"
+            aria-controls={itemsId}
+            disabled
+            data-carousel-prev
+          >
+            <Icon name="arrow-sm-left" />
+          </button>
+          <button
+            class="menu-section__arrow btn-plain"
+            type="button"
+            aria-label="Destacados siguientes"
+            aria-controls={itemsId}
+            disabled
+            data-carousel-next
+          >
+            <Icon name="arrow-sm-right" />
+          </button>
+        </div>
+      )
+    }
+  </header>
+
+  {/* La lista. En los destacados va dentro de un contenedor propio: en movil es el
+      del carrusel —Swiper toma el contenedor, la lista hace de pista y cada platillo
+      de diapositiva—, y en desktop no pinta nada. mb-0: el Reboot pone margen
+      inferior a <ul>. */}
+  {
+    featured ? (
+      <div class="menu-section__carousel" data-featured-carousel>
+        <ul
+          class="menu-section__items menu-section__track list-unstyled mb-0"
+          id={itemsId}
+          data-featured-track
+        >
+          {section.products.map((product, index) => (
+            <li class="menu-section__item">
+              <ProductCard product={product} eager={eager && index === 0} storeClosed={storeClosed} />
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : (
+      <ul class="menu-section__items menu-section__grid list-unstyled mb-0" id={itemsId}>
+        {section.products.map((product, index) => (
+          <li class="menu-section__item" data-search={searchText(product)}>
+            <MenuCard product={product} eager={eager && index === 0} storeClosed={storeClosed} />
+          </li>
+        ))}
+      </ul>
+    )
+  }
+
+  {/* Los puntos del carrusel de movil: los pinta Swiper aqui dentro. Vacio no ocupa
+      sitio, y en desktop no se pinta. */}
+  {featured && <div class="menu-section__dots" data-featured-dots></div>}
+</section>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: menu-section
+     ---------------------------------------------------------------------------
+     Spec movil: titulo Inter 600 20/28 · bajada Inter 400 13 #6C757D · una
+     columna. Los destacados, en una lista que se recorre con el dedo y que sangra
+     hasta los bordes de la pantalla; sin flechas.
+
+     Spec desktop: cabecera (titulo Inter 700 24/100% · bajada Inter 400 13/100%
+     #6C757D) y, 24 debajo, las tarjetas. En destacados, las flechas a la derecha
+     de la cabecera: 34x34, redondas, acento con la flecha en blanco.
+
+     Las columnas de desktop no las decide la pantalla sino el ancho que le deja la
+     columna lateral: las secciones preguntan a su contenedor (`menu`, la columna
+     del catalogo en pages/mamayaya/index.astro) y no al viewport. Con el indice al
+     lado, en el tope de 1140 la columna mide 788 (1140 - 320 - 32).
+
+     Cada forma tiene su reparto, en la misma variable:
+
+       category  dos por fila desde 700 —cada tarjeta, 338 o mas: la foto se lleva
+                 el 40% y al texto tiene que quedarle sitio—. Por debajo, una.
+       featured  tres por vista desde 740 —tarjetas de pie de unos 230 o mas—, dos
+                 desde 540 y una por debajo. Lo que no cabe se ve al recorrerla.
+     --------------------------------------------------------------------------- */
+  .menu-section {
+    --menu-cols: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    /* Al saltar desde el indice la seccion se queda bajo lo que va anclado arriba: en
+       movil, la barra (48), la de pedido (80, ver components/OrderBar.astro) y la de
+       las tabs (48, ver components/CategoryNav.astro), mas aire. */
+    scroll-margin-top: calc(48px + 80px + 48px + 16px);
+  }
+  /* En los destacados las tabs no estan (ver components/CategoryNav.astro): solo las
+     dos barras. */
+  .menu-section--featured {
+    scroll-margin-top: calc(48px + 80px + 16px);
+  }
+
+  /* Element: head — rotulos a la izquierda; en desktop, flechas a la derecha */
+  .menu-section__head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+  .menu-section__heading {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+  }
+  /* Element: title-row — el titulo y, a su altura, el contador. En la linea base de
+     la primera linea del titulo: un nombre largo baja a una segunda linea y el
+     contador se queda arriba, con la primera. */
+  .menu-section__title-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .menu-section__title {
+    min-width: 0;
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    line-height: 28px;
+    color: var(--sf-ink);
+  }
+
+  /* Element: count — "3 productos". Spec movil: Inter 500 12/16 #6C757D. */
+  .menu-section__count {
+    flex: 0 0 auto;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--sf-muted);
+    white-space: nowrap;
+  }
+  /* La bajada la escribe el panel: hasta 500 caracteres, en texto plano y con sus
+     saltos de linea, que se respetan. El 100% de la spec es para una linea; con
+     mas, a 13 las lineas se tocarian, asi que baja a 18 —lo mismo que la
+     descripcion de la tarjeta, ver components/ProductCard.astro—.
+
+     Solo desktop: en movil la cabecera es el titulo y, en las categorias, su
+     contador. */
+  .menu-section__description {
+    display: none;
+    margin: 0;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 18px;
+    color: var(--sf-muted);
+    white-space: pre-line;
+  }
+
+  /* En movil la lista se recorre con el dedo: las flechas sobran. */
+  .menu-section__controls {
+    display: none;
+  }
+
+  /* Element: grid — las tarjetas de una categoria. 24 entre ellas, como hasta ahora
+     en las dos pantallas. */
+  .menu-section__grid {
+    display: grid;
+    grid-template-columns: repeat(var(--menu-cols), minmax(0, 1fr));
+    gap: 24px;
+  }
+
+  /* Movil: una raya de 1 entre platillo y platillo, del ancho de la tarjeta, en
+     medio del hueco de 24 —11,5 por encima y 11,5 por debajo—. Va en la celda y no
+     en la tarjeta para no tocar su caja, y solo entre celdas: ni antes de la
+     primera ni despues de la ultima. Los destacados no la llevan. */
+  @media (max-width: 767.98px) {
+    .menu-section__grid > .menu-section__item {
+      position: relative;
+    }
+    .menu-section__grid > .menu-section__item + .menu-section__item::before {
+      content: '';
+      position: absolute;
+      top: -12.5px;
+      right: 0;
+      left: 0;
+      height: 1px;
+      background-color: var(--sf-border);
+    }
+  }
+
+  /* Element: track — la lista horizontal de destacados.
+
+     Sangra hasta los bordes de la pantalla —el margen negativo se come el padding
+     de 20 de la lista— y el scroll-padding devuelve la primera tarjeta a su sitio.
+     Cada tarjeta mide los 230 de la spec: en un movil caben una y media, y la que
+     asoma dice que hay mas. El relleno de arriba y abajo es el sitio de la sombra,
+     que una caja que scrollea recortaria. */
+  .menu-section__track {
+    display: flex;
+    gap: 16px;
+    margin: -4px -20px -16px;
+    padding: 4px 20px 16px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    overscroll-behavior-x: contain;
+    scroll-behavior: smooth;
+    scroll-padding-inline: 20px;
+    scroll-snap-type: x mandatory;
+    scrollbar-width: none; /* Firefox */
+  }
+  .menu-section__track::-webkit-scrollbar {
+    display: none; /* Chrome / Safari */
+  }
+  .menu-section__track > .menu-section__item {
+    flex: 0 0 230px;
+    min-width: 0;
+    scroll-snap-align: start;
+  }
+
+  /* El carrusel de movil, con Swiper ya montado (src/scripts/featured-carousel.ts).
+     Lo de arriba es lo que se ve sin JavaScript: la misma pista con scroll nativo.
+
+     Swiper no mueve la pista con scroll sino con `transform`, asi que aqui la pista
+     deja de scrollear y de sangrar: sangra el contenedor —hasta los bordes de la
+     pantalla, recortando lo que se sale— y el aire de 20 a cada lado lo pone Swiper
+     (slidesOffsetBefore/After), igual que el hueco de 16 entre tarjetas
+     (spaceBetween). Su hoja de estilos no se carga: son estas pocas reglas, y con
+     ellas ninguna clase suya puede tocar el resto de la portada.
+
+     `touch-action: pan-y` deja al navegador el gesto vertical —bajar por la pagina—
+     y a Swiper el horizontal. */
+  .menu-section__carousel.swiper-initialized {
+    margin-inline: -20px;
+    overflow: hidden;
+    touch-action: pan-y;
+  }
+  .swiper-initialized > .menu-section__track {
+    position: relative;
+    gap: 0;
+    margin: 0;
+    padding: 0;
+    overflow: visible;
+    scroll-snap-type: none;
+    box-sizing: content-box;
+    transition-property: transform;
+  }
+
+  /* Element: dots — los puntos del carrusel de movil. Los pinta Swiper; sin el, o
+     con todas las tarjetas a la vista (`-lock`, una sola), no hay nada que pintar.
+
+     El activo es una pastilla del acento: sigue al tema. */
+  .menu-section__dots {
+    display: flex;
+    justify-content: center;
+  }
+  .menu-section__dots:empty,
+  .menu-section__dots.swiper-pagination-lock {
+    display: none;
+  }
+  .menu-section__dots .swiper-pagination-bullet {
+    width: 8px;
+    height: 8px;
+    margin: 0 6px;
+    border-radius: 50%;
+    /* Gris de un solo uso: el de los puntos apagados del carrusel de referencia. */
+    background-color: #a9aaaa;
+    opacity: 0.8;
+    cursor: pointer;
+    transition: all 0.4s cubic-bezier(0.77, 0, 0.175, 1);
+  }
+  .menu-section__dots .swiper-pagination-bullet-active {
+    width: 24px;
+    border-radius: 12px;
+    background-color: var(--sf-accent);
+    opacity: 1;
+  }
+
+  @container menu (min-width: 540px) {
+    .menu-section--featured {
+      --menu-cols: 2;
+    }
+  }
+  @container menu (min-width: 700px) {
+    .menu-section--category,
+    .product-list__sections[data-searching] {
+      --menu-cols: 2;
+    }
+  }
+  /* Por debajo de unos 230 de tarjeta, el nombre se queda en dos o tres letras junto
+     a la insignia. En el tope de 1140 salen de 246. */
+  @container menu (min-width: 740px) {
+    .menu-section--featured {
+      --menu-cols: 3;
+    }
+  }
+
+  /* --- Desktop ------------------------------------------------------------- */
+  @media (min-width: 768px) {
+    /* Bajo la cabecera de desktop (77, ver .menu-sidebar), que es la que va pegada. */
+    .menu-section {
+      gap: 24px;
+      scroll-margin-top: calc(77px + 24px);
+    }
+
+    .menu-section__head {
+      gap: 24px;
+    }
+    .menu-section__heading {
+      gap: 8px;
+    }
+    /* En desktop la cifra esta en la columna lateral, y la bajada si se ve. */
+    .menu-section__count {
+      display: none;
+    }
+    .menu-section__description {
+      display: block;
+    }
+    .menu-section__title {
+      font-size: 24px;
+      font-weight: 700;
+      /* 100% del tamano: es un titulo de una linea y el interlineado de la escala
+         (32 sobre 24) le sobra por arriba y por abajo. */
+      line-height: 1;
+    }
+
+    /* En desktop la lista se recorre con las flechas y el arrastre: sin puntos. */
+    .menu-section__dots {
+      display: none;
+    }
+
+    /* Element: controls y arrow — las flechas de los destacados */
+    .menu-section__controls {
+      display: flex;
+      flex: 0 0 auto;
+      gap: 8px;
+    }
+    .menu-section__arrow {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      background-color: var(--sf-accent);
+      color: var(--sf-white);
+      transition: background-color 160ms ease, opacity 160ms ease;
+    }
+    .menu-section__arrow:hover:not(:disabled) {
+      background-color: var(--sf-accent-hover);
+    }
+    /* En un extremo de la lista la flecha de ese lado no lleva a ningun sitio. */
+    .menu-section__arrow:disabled {
+      opacity: 0.4;
+    }
+
+    /* La pista ya no sangra: la columna del catalogo tiene su borde. Los 12 de cada
+       lado son el sitio de la sombra de la tarjeta al pasar el raton, y se
+       devuelven, asi que la primera tarjeta sigue alineada con la rejilla de abajo.
+       Cada tarjeta, lo que mediria en las columnas de la seccion. */
+    .menu-section__track {
+      gap: 24px;
+      margin: -4px -12px -16px;
+      padding: 4px 12px 16px;
+      scroll-padding-inline: 12px;
+      cursor: grab;
+    }
+    .menu-section__track > .menu-section__item {
+      flex-basis: calc((100% - (var(--menu-cols) - 1) * 24px) / var(--menu-cols));
+    }
+
+    /* Modifier: mientras se arrastra con el raton (src/lib/drag-scroll.ts) */
+    .menu-section__track--dragging {
+      cursor: grabbing;
+      scroll-behavior: auto;
+      scroll-snap-type: none;
+      user-select: none;
+    }
+  }
+
+  /* ---------------------------------------------------------------------------
+     Mientras se busca (solo desktop)
+     ---------------------------------------------------------------------------
+     Los resultados no se agrupan: son una sola lista, con la tarjeta de las
+     categorias y las mismas columnas que su rejilla. No se pintan aparte —seria
+     cada platillo dos veces en la pagina—, sino que las secciones se deshacen: el
+     contenedor de las secciones pasa a ser la rejilla, y las secciones y sus listas
+     se vuelven `display: contents`, asi que sus tarjetas caen directamente en ella.
+
+     Fuera quedan los destacados —sus platillos ya estan en su categoria—, las
+     cabeceras y los platillos que no coinciden. Lo marca
+     src/scripts/menu-search.ts: `data-searching` en el contenedor y
+     `data-search-miss` en cada platillo que sobra.
+     --------------------------------------------------------------------------- */
+  @media (min-width: 768px) {
+    /* Las columnas, de la regla de contenedor de arriba: dos desde 700, como la
+       rejilla de las categorias. Sin ella, una. */
+    .product-list__sections[data-searching] {
+      display: grid;
+      grid-template-columns: repeat(var(--menu-cols, 1), minmax(0, 1fr));
+      gap: 24px;
+    }
+    [data-searching] > .menu-section,
+    [data-searching] .menu-section__grid {
+      display: contents;
+    }
+    [data-searching] > .menu-section--featured,
+    [data-searching] .menu-section__head,
+    [data-searching] .menu-section__item[data-search-miss] {
+      display: none;
+    }
+  }
+</style>

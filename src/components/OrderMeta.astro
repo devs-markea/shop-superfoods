@@ -10,9 +10,11 @@ interface Props {
   pickup?: string;
   /** Si la cabecera monto la hoja de ubicacion. Sin ella no hay mapa que abrir. */
   hasLocation?: boolean;
+  /** La direccion abreviada de la tienda. Solo se lee: no abre nada, por ahora. */
+  shortAddress?: string;
 }
 
-const { estimate, shipping, pickup, hasLocation } = Astro.props;
+const { estimate, shipping, pickup, hasLocation, shortAddress } = Astro.props;
 
 // Las metas de la portada, dos por modo de entrega y en el mismo sitio: el
 // switch de arriba decide cual de los dos pares se ve. Los dos se sirven en el
@@ -33,6 +35,8 @@ interface Meta {
   value: string;
   /** Si lleva hoja, el valor es un boton que la abre en lugar de texto. */
   sheet?: string;
+  /** El valor puede ser mas largo que la fila: se recorta con puntos suspensivos. */
+  truncate?: boolean;
 }
 
 const items: Meta[] = [];
@@ -43,6 +47,22 @@ if (estimate) {
 
 if (shipping) {
   items.push({ mode: 'delivery', icon: 'truck', name: 'Costo envio', value: shipping });
+}
+
+// La direccion ABREVIADA, a continuacion del plazo y solo de lectura —por ahora no abre
+// la hoja de la ubicacion—. Es la misma que rotula el pin de la barra de desktop, y por
+// lo mismo: la completa no cabe en una fila, y recortarla por caracteres dejaria fuera
+// justo lo que ubica el local (ver `location` en src/lib/store-config.ts).
+//
+// Solo a domicilio: para recoger, el par ya lleva su "Ver mapa" con el mismo pin.
+if (shortAddress) {
+  items.push({
+    mode: 'delivery',
+    icon: 'map-pin',
+    name: 'Ubicacion',
+    value: shortAddress,
+    truncate: true,
+  });
 }
 
 if (pickup) {
@@ -67,7 +87,10 @@ if (hasLocation) {
   items.length > 0 && (
     <ul class="order-meta list-unstyled">
       {items.map((item) => (
-        <li class="order-meta__item" data-mode={item.mode}>
+        <li
+          class:list={['order-meta__item', item.truncate && 'order-meta__item--truncate']}
+          data-mode={item.mode}
+        >
           <Icon name={item.icon} size="sm" class="order-meta__icon" />
 
           {/* El rotulo y el valor van juntos porque en desktop se apilan: uno
@@ -86,7 +109,9 @@ if (hasLocation) {
                 {item.value}
               </button>
             ) : (
-              <span class="order-meta__value">{item.value}</span>
+              <span class="order-meta__value" title={item.truncate ? item.value : undefined}>
+                {item.value}
+              </span>
             )}
           </span>
         </li>
@@ -134,6 +159,29 @@ if (hasLocation) {
 
   .order-meta__icon {
     color: var(--sf-accent);
+  }
+
+  /* El rotulo y su valor. En flex para que el valor mida su propia linea —16— y no
+     la de la pagina: como texto suelto, la caja tomaba los 20 de interlineado del
+     <body> y la fila de metas crecia de 16 a 20, con el plazo 2 mas bajo que la
+     direccion de al lado. */
+  .order-meta__text {
+    display: flex;
+    align-items: center;
+  }
+
+  /* Modifier: un valor que puede no caber —la direccion, hasta 60 caracteres—. Cede
+     el ancho que falte y se recorta; el texto entero queda en el `title`. El
+     `min-width: 0` en cada nivel es lo que deja encoger a un hijo flex por debajo de
+     su texto. */
+  .order-meta__item--truncate,
+  .order-meta__item--truncate .order-meta__text {
+    min-width: 0;
+  }
+  .order-meta__item--truncate .order-meta__value {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .order-meta__value {

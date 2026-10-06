@@ -9,16 +9,9 @@
 // foto de la rejilla. Se atiende tambien `error`: una foto que no existe ya no va a
 // llegar, y dejarla latiendo prometeria una imagen para siempre.
 //
-// Sirve a las dos esperas con el mismo mecanismo, porque el estado es de cada foto
-// y no de la pantalla: la carga inicial, y la foto que empieza a descargarse
-// cuando un filtro devuelve su celda a la rejilla. Esa segunda no necesita nada
-// mas —su caja nunca perdio el esqueleto, porque su imagen nunca cargo—.
-//
-// Lo que este script NO hace es el esqueleto del cambio de categoria: ahi no hay
-// descarga que esperar y el relleno se pone y se quita por tiempo. Eso vive en
-// src/scripts/category-filter.ts, y los dos conviven sin pisarse —el suyo gana
-// mientras dura, y si al soltarlo la foto todavia no ha llegado, esta clase sigue
-// puesta y el relleno continua—.
+// El estado es de cada foto y no de la pantalla: una foto `lazy` que todavia no se
+// pidio —la de una tarjeta de mas abajo, o la de un destacado fuera de la pista—
+// sigue con su esqueleto hasta que llega, sin que nadie tenga que encenderlo.
 
 /** La clase que pinta el relleno. Ver styles/components/ProductCard.astro. */
 const SKELETON = 'skeleton';

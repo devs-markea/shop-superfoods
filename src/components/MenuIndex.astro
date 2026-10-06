@@ -1,0 +1,146 @@
+---
+import type { MenuSection } from '../lib/catalog.ts';
+
+interface Props {
+  /** Las secciones de la portada, en el orden en que se pintan. */
+  sections: readonly MenuSection[];
+}
+
+const { sections } = Astro.props;
+
+// La lista del indice de la portada: una entrada por seccion —Destacados, si los hay, y
+// una por categoria— con su nombre y cuantos platillos tiene. La pintan dos sitios, con
+// el mismo aspecto y la misma logica: la columna lateral de desktop
+// (components/MenuSidebar.astro) y la hoja de categorias de movil
+// (components/MenuSheet.astro).
+//
+// Es un indice, no un filtro: cada entrada salta a su seccion y la marcada es la que se
+// esta mirando. Las mueve src/scripts/menu-nav.ts, y por eso quien la pinta declara el
+// indice con `data-menu-nav="menu-index__link--active"`. Son enlaces y no radios: el
+// `href` es tambien lo que funciona sin JavaScript.
+//
+// La primera llega marcada del servidor, y el script ajusta la marca al arrancar.
+---
+
+<ul class="menu-index list-unstyled mb-0">
+  {
+    sections.map((section, index) => (
+      <li>
+        <a
+          class:list={['menu-index__link', index === 0 && 'menu-index__link--active']}
+          href={`#${section.anchor}`}
+          aria-current={index === 0 ? 'true' : undefined}
+          data-menu-link={section.anchor}
+        >
+          {/* El title devuelve lo que se come el recorte. */}
+          <span class="menu-index__label" title={section.name}>
+            {section.name}
+          </span>
+          <span class="menu-index__count">
+            {section.products.length}
+            <span class="visually-hidden">
+              {section.products.length === 1 ? 'platillo' : 'platillos'}
+            </span>
+          </span>
+        </a>
+      </li>
+    ))
+  }
+</ul>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: menu-index
+     ---------------------------------------------------------------------------
+     Spec: gap 8 entre entradas
+       entrada   37 de alto - padding 10/12 - radius 8 - space-between - fondo blanco
+       rotulo    Inter 500 14/100% #4A5568 · cifra Inter 400 12/100% #98A2B3
+       activa    fondo #FDEDF3, raya de 5 a la izquierda en el acento y rotulo en 700
+                 del acento
+
+     Sin media query: quien la pinta decide en que pantalla se ve.
+     --------------------------------------------------------------------------- */
+  .menu-index {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  /* Element: link — una entrada: 37 de alto, fijos. Con el interlineado de 100% del
+     rotulo la caja saldria de 34 —14 + 10 + 10—; los 37 son el alto de la linea de
+     Inter a 14 (17) mas el relleno, y el rotulo queda centrado en ellos. */
+  .menu-index__link {
+    position: relative;
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    height: 37px;
+    padding: 10px 12px;
+    overflow: hidden;
+    border-radius: 8px;
+    background-color: var(--sf-white);
+    color: var(--sf-slate);
+    text-decoration: none;
+    transition: color 160ms ease;
+  }
+  .menu-index__link:hover {
+    color: var(--sf-accent);
+  }
+
+  /* Los nombres los escribe el panel y no tienen tope: una linea, y lo que no cabe
+     se recorta con puntos suspensivos. */
+  .menu-index__label {
+    min-width: 0;
+    overflow: hidden;
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 1;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    /* El recorte corta por los cuatro lados y a 100% de interlineado se lleva la cola
+       de la "g" o la "y": se abre hueco con relleno y se devuelve con margen, como en
+       el titulo de la tarjeta (ver components/ProductCard.astro). */
+    padding-block: 0.2em;
+    margin-block: -0.2em;
+  }
+
+  .menu-index__count {
+    flex: 0 0 auto;
+    font-size: 12px;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--sf-subtle);
+  }
+
+  /* Modifier: la seccion que se esta mirando.
+
+     El fondo es el tinte del acento (al 10%) sobre blanco, que da el #FDEDF3 del
+     diseno con el rosa y sigue al tema con cualquier otro. El blanco va debajo, en la
+     misma regla, porque la columna de desktop no tiene fondo: sobre el gris de la
+     pagina el tinte saldria mas apagado que en el diseno.
+
+     La raya es una pieza propia, un ::before de 5 de ancho y todo el alto. Su lado
+     izquierdo es el de la entrada: lo recorta el `overflow: hidden` con el radio de
+     8, asi que se curva con ella. Su lado derecho es RECTO. No es una sombra
+     interior, que curvaria tambien ese lado, ni un borde, que empujaria el rotulo 5 a
+     la derecha. */
+  .menu-index__link--active,
+  .menu-index__link--active:hover {
+    background: linear-gradient(var(--sf-accent-tint), var(--sf-accent-tint)), var(--sf-white);
+    color: var(--sf-accent);
+  }
+  .menu-index__link--active::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 5px;
+    background-color: var(--sf-accent);
+  }
+  .menu-index__link--active .menu-index__label {
+    font-weight: 700;
+  }
+</style>

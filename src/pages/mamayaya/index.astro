@@ -2,15 +2,18 @@
 import Layout from '../../layouts/Layout.astro';
 import Navbar from '../../components/Navbar.astro';
 import OrderBar from '../../components/OrderBar.astro';
+import CategoryNav from '../../components/CategoryNav.astro';
+import MenuSheet from '../../components/MenuSheet.astro';
 import Hero from '../../components/Hero.astro';
-import ProductCard from '../../components/ProductCard.astro';
+import MenuSection from '../../components/MenuSection.astro';
+import MenuSidebar from '../../components/MenuSidebar.astro';
 import StoreClosedNotice from '../../components/StoreClosedNotice.astro';
 import RetryNotice from '../../components/RetryNotice.astro';
 import CartFab from '../../components/CartFab.astro';
 import Footer from '../../components/Footer.astro';
 import {
-  ALL_CATEGORIES,
   getCategories,
+  getMenuSections,
   getProducts,
   type ProductListItem,
 } from '../../lib/catalog.ts';
@@ -20,8 +23,7 @@ import { busyMessage } from '../../lib/throttle.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
 import { getCart } from '../../lib/cart.ts';
 import { peekCartToken } from '../../lib/cart-session.ts';
-import { DISCOVER_KEY } from '../../lib/discover.ts';
-import { isClosed } from '../../lib/schedule.ts';
+import { isClosed, shiftLabel } from '../../lib/schedule.ts';
 import { formatPrice } from '../../lib/price.ts';
 import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
 
@@ -122,15 +124,23 @@ try {
     : 'No pudimos cargar el menu en este momento.';
 }
 
-const categories = getCategories(products);
-
-// El pie rotula lo que hay de verdad en el catalogo, asi que recibe las
-// categorias sin el chip que no filtra nada: "Todos" es de la barra, no del menu.
-const published = categories.filter((category) => category !== ALL_CATEGORIES);
-
 // Las tres que arrancaron antes del catalogo. Ya estan en curso —o terminadas—, asi que
 // esperarlas aqui no suma tiempo al del catalogo: solo lo que les falte.
 const [store, schedule, cart] = await Promise.all([storePending, schedulePending, cartPending]);
+
+// LAS CATEGORIAS VAN POR ID. La lista y su orden son los del panel —`categories` de
+// GET /api/store— y los platillos se les cuelgan por `category.id`. Chips, columna
+// lateral, secciones y pie salen de la misma lista, asi que cada chip tiene su seccion y
+// cada entrada de la columna su destino. Ver getCategories en src/lib/catalog.ts.
+const categories = getCategories(products, store.categories);
+
+// La portada pinta el catalogo por secciones —destacados y una por categoria— y las
+// recorre con su indice: la columna lateral en desktop y las tabs en movil. Ver
+// components/MenuSection.astro.
+//
+// El titular y la bajada de los destacados los escribe el panel (`home.featured`); sin
+// ellos, la seccion se rotula con los de la tienda.
+const sections = getMenuSections(products, store.categories, store.home?.featured);
 
 // El rotulo de envio lo compone la tienda a partir del modo, porque es un rotulo y
 // los rotulos son suyos. Con `none` no se pinta: prometer un envio gratis que el
@@ -160,6 +170,15 @@ const hasLocation = Boolean(store.location?.address || store.location?.mapsUrl);
 // tantas veces como platillos haya.
 const closed = isClosed(schedule);
 
+// El encabezado de la columna lateral: la presentacion que el negocio escribio para
+// ella o, sin presentacion, el nombre de la tienda. Ver `home.panel` en
+// src/lib/store-config.ts.
+const sidebarHeading = store.home?.panel?.presentation || store.name;
+
+// El turno en curso, bajo el encabezado de la columna lateral. Sin horario no se
+// afirma nada y la linea no se pinta.
+const shift = schedule ? shiftLabel(schedule) : null;
+
 // El switch de la barra llega con lo ultimo elegido, aqui o en /mamayaya/datos: es la
 // misma eleccion, guardada en el borrador. Se pinta en el servidor para que las
 // metas correctas —plazo y envio, o recoleccion y mapa— esten ya en su sitio
@@ -179,54 +198,75 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
        franja blanca del pie flotando y el fondo gris asomando bajo ella. Crece el
        contenido, no el pie. -->
   <main class="storefront flex-grow-1">
-    {/* El subcontenedor: un .container-fluid de Bootstrap, las 12 columnas a
-        ancho completo, con el banner, la barra y la lista dentro. <main> es el
-        contenedor de fuera y solo pone el aire de arriba y abajo.
+    {/* El subcontenedor: un .container-fluid de Bootstrap, las 12 columnas a ancho
+        completo. En desktop lleva dos columnas: el indice del menu a la izquierda y,
+        a la derecha, el banner, la barra y el catalogo. <main> es el contenedor de
+        fuera y solo pone el aire de arriba y abajo.
 
-        La pila solo existe en desktop —en movil es `display: contents`, ver
-        los estilos de este archivo—, asi que envolver no cambia nada de lo que
-        ya habia: el aviso de tienda cerrada se queda fuera porque flota. */}
+        La pila y su columna solo existen en desktop —en movil son `display:
+        contents`, ver los estilos de este archivo, y el indice no se pinta—, asi que
+        envolver no cambia nada de lo que ya habia: el aviso de tienda cerrada se
+        queda fuera porque flota. */}
     <div class="storefront__stack container-fluid">
-      <Hero
-        title={banner?.title}
-        description={banner?.description}
-        image={banner?.image}
-      />
+      <MenuSidebar heading={sidebarHeading} shift={shift} sections={sections} />
 
-      <OrderBar
-        categories={categories}
-        estimate={store.delivery?.estimate}
-        shipping={shippingLabel}
-        pickup={store.pickup?.estimate}
-        hasLocation={hasLocation}
-        selected={deliveryType}
-      />
+      <div class="storefront__content">
+        <Hero
+          title={banner?.title}
+          description={banner?.description}
+          image={banner?.image}
+        />
 
-      <section class="product-list" aria-label="Productos">
-        <div class="product-list__items">
-          <h2 class="product-list__title">Nuestros Platillos</h2>
+        <OrderBar
+          estimate={store.delivery?.estimate}
+          shipping={shippingLabel}
+          pickup={store.pickup?.estimate}
+          hasLocation={hasLocation}
+          selected={deliveryType}
+          search={sections.length > 0}
+          shortAddress={store.location?.shortAddress}
+        >
+          {/* El indice de movil: cuelga de la barra de pedido, que va anclada arriba,
+              y sale de debajo de ella al entrar en una categoria. En desktop no se
+              pinta. */}
+          <CategoryNav sections={sections} sheet="sheet-menu" />
+        </OrderBar>
 
+        {/* La hoja que abre el boton de las tabs: el indice entero, con la tienda y
+            su turno. Es un <dialog>, asi que donde vaya en el marcado da igual: se
+            abre en la capa superior. */}
+        {sections.length > 0 && (
+          <MenuSheet id="sheet-menu" heading={sidebarHeading} shift={shift} sections={sections} />
+        )}
+
+        <section class="product-list" aria-label="Productos">
           {
-            products.length > 0 ? (
-              // mb-0 y no m-0: .row ya resetea el margen superior y pone los
-              // laterales en NEGATIVO —es asi como compensa el padding de 12
-              // de cada columna, para que la primera arranque en el borde del
-              // contenedor y la ultima acabe en el otro—. Un m-0 se los lleva
-              // por delante y mete la rejilla 12 por cada lado. Lo unico que
-              // hay que quitar es el margin-bottom que el Reboot pone a <ul>,
-              // que ese si sobrevive.
-              <ul
-                class="product-list__grid row row-cols-1 row-cols-md-2 row-cols-xl-3 list-unstyled mb-0"
-                data-product-list
-              >
-                {products.map((product, index) => (
-                  // data-category en la celda, no en la tarjeta: es la celda lo
-                  // que oculta el filtro.
-                  <li class="col" data-category={product.category}>
-                    <ProductCard product={product} eager={index === 0} storeClosed={closed} />
-                  </li>
-                ))}
-              </ul>
+            sections.length > 0 ? (
+              <>
+                {/* La cabecera de los resultados del buscador de desktop, que ocupan
+                    el sitio de las secciones mientras hay texto. La enciende y la
+                    rellena src/scripts/menu-search.ts. Usa los rotulos de la cabecera
+                    de una seccion. */}
+                <header class="menu-results" hidden data-search-results>
+                  <h2 class="menu-section__title">Resultados</h2>
+                  <p class="menu-section__description" data-search-summary></p>
+                </header>
+
+                {/* Lo mismo, para quien no ve la pantalla. Fuera de la cabecera y
+                    siempre presente: una region viva que aparece a la vez que su
+                    texto no se anuncia. */}
+                <p class="visually-hidden" aria-live="polite" data-search-status></p>
+
+                {/* data-product-list: lo que el buscador de desktop convierte en una
+                    sola lista. */}
+                <div class="product-list__sections" data-product-list>
+                  {sections.map((section, index) => (
+                    // La primera tarjeta de la primera seccion se carga sin diferir:
+                    // es la que entra en la primera pantalla, en las dos.
+                    <MenuSection section={section} eager={index === 0} storeClosed={closed} />
+                  ))}
+                </div>
+              </>
             ) : (
               // Dos avisos distintos en el mismo sitio: el catalogo vacio es un 200 con
               // la lista vacia —no hay nada que reintentar, la tienda contesto— y el
@@ -240,73 +280,9 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
               )
             )
           }
-        </div>
-      </section>
+        </section>
 
-      {/*
-        El pase de "Descubre": la categoria que dejo escrita el pie de otra
-        pantalla (ver src/lib/discover.ts).
-
-        INLINE Y BLOQUEANTE, y aqui abajo, no arriba. Es la unica forma de que el
-        filtro llegue antes del primer pintado: los <script> de mas abajo los
-        empaqueta Astro como modulos, que son diferidos y corren cuando el HTML ya
-        esta parseado entero —para entonces la rejilla completa puede estar en
-        pantalla y filtrarla se veria como un salto—. Detras del </ul> porque las
-        celdas y los chips tienen que estar ya parseados para poder tocarlos.
-
-        `define:vars` es lo que hace que la clave llegue de su modulo en lugar de
-        repetirla escrita a mano aqui. Ya implica `is:inline`, que se escribe
-        igualmente para que se lea que este bloque no se procesa: nada de
-        TypeScript ni de imports dentro, es JavaScript tal cual sale al navegador.
-      */}
-      <script is:inline define:vars={{ discoverKey: DISCOVER_KEY }}>
-        (() => {
-          let pending = null;
-
-          // Puede lanzar —modo privado, almacenamiento bloqueado—. Y se retira al
-          // leerlo, sirva o no: el pase es la continuacion de un click, no una
-          // preferencia. Si sobreviviera, la portada abriria filtrada manana.
-          try {
-            pending = window.sessionStorage.getItem(discoverKey);
-            if (pending) window.sessionStorage.removeItem(discoverKey);
-          } catch {
-            pending = null;
-          }
-
-          if (!pending) return;
-
-          // Se valida contra los chips de ESTA pagina, no contra el nombre que
-          // viajo: entre que se pinto aquel pie y el click, el panel pudo
-          // renombrar la categoria o despublicarla. Sin la comprobacion se
-          // ocultarian todas las celdas y la portada saldria vacia sin nada que lo
-          // explicara —el filtro no tiene estado "sin resultados" precisamente
-          // porque hasta ahora los chips solo podian venir del mismo catalogo que
-          // las tarjetas—.
-          let chip = null;
-
-          for (const radio of document.querySelectorAll('input[name="category"]')) {
-            if (radio.value === pending) {
-              chip = radio;
-              break;
-            }
-          }
-
-          if (!chip) return;
-
-          chip.checked = true;
-
-          // Ocultar aqui y no dejarselo a category-filter.ts: ese es un modulo y
-          // llega tarde. Hace exactamente esto mismo, asi que cuando arranque
-          // encontrara su trabajo hecho y no cambiara nada —lee el chip marcado y
-          // vuelve a aplicar lo aplicado—.
-          const list = document.querySelector('[data-product-list]');
-          if (!list) return;
-
-          for (const cell of list.querySelectorAll('[data-category]')) {
-            cell.hidden = cell.dataset.category !== pending;
-          }
-        })();
-      </script>
+      </div>
     </div>
 
     {/* La hoja del horario que abre su boton la monta la cabecera, que ya la
@@ -320,18 +296,24 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
     <CartFab count={cart?.itemsCount ?? 0} />
   </main>
 
-  <Footer store={store} categories={published} />
+  <Footer store={store} categories={categories} />
 </Layout>
 
 <script>
-  import '../../scripts/category-nav';
-  import '../../scripts/category-filter';
+  // Los dos indices —columna lateral y tabs—, que tambien cumplen el pase de
+  // "Descubre", y la lista horizontal de destacados.
+  import '../../scripts/menu-nav';
+  import '../../scripts/featured-carousel';
+  // El buscador de desktop: filtra los platillos de la pagina.
+  import '../../scripts/menu-search';
   // Retira el esqueleto de cada foto cuando llega. Solo esta pantalla lo necesita:
   // es la unica que pinta tarjetas de platillo.
   import '../../scripts/image-skeleton';
   import '../../scripts/delivery-mode';
   import '../../scripts/add-button';
   import '../../scripts/sheet';
+  // El tirador de la hoja de categorias: se cierra arrastrandola hacia abajo.
+  import '../../scripts/sheet-drag';
   import '../../scripts/footer-discover';
 </script>
 
@@ -339,28 +321,30 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
   /* ---------------------------------------------------------------------------
      Block: storefront
      ---------------------------------------------------------------------------
-     El armazon de la portada, y solo de la portada. Son dos piezas encajadas:
+     El armazon de la portada, y solo de la portada. Tres piezas encajadas:
 
-     .storefront        <main>, el contenedor de fuera: 48 arriba y 48 abajo.
-     .storefront__stack el subcontenedor, un .container-fluid de Bootstrap: las
-     12 columnas, 32 de sangria y tope en --sf-container-max,
-     y dentro el banner, la barra y la rejilla separados 32.
+     .storefront          <main>, el contenedor de fuera: 48 arriba y 48 abajo.
+     .storefront__stack   el subcontenedor, un .container-fluid de Bootstrap: 32
+                          de sangria, tope en 1140 de contenido y, dentro, dos
+                          columnas separadas 32.
+     .storefront__content la de la derecha: el banner, la barra y las secciones,
+                          separados 32. La de la izquierda es el indice del menu
+                          (components/MenuSidebar.astro).
 
      El de fuera solo pone el aire vertical; el de dentro, el ancho y el lateral.
      Repartido asi, mover la portada arriba o abajo no toca los margenes, y
      cambiar de ancho no toca el aire.
 
-     En movil el subcontenedor no existe: las piezas —barra de pedido y rejilla—
-     se apilan solas y cada una trae su propio gutter y su propio aire, como hasta
-     ahora. En desktop aparece y manda tambien de lado a lado: es EL contenedor de
-     los tres, asi que el unico margen lateral de la portada es el suyo. Antes cada
-     bloque ponia el suyo y paraba en su propio ancho, y bastaba que uno cambiara
-     para que los bordes dejaran de coincidir; ahora los tres arrancan y acaban en
-     la misma linea porque solo hay una que decide donde esta.
+     En movil ni la pila ni su columna existen: las piezas —barra de pedido y
+     lista— se apilan solas y cada una trae su propio gutter y su propio aire, como
+     hasta ahora. En desktop la pila es EL contenedor, asi que el unico margen
+     lateral de la portada es el suyo: el indice arranca en la misma linea que el
+     logo de la cabecera, y la ultima tarjeta acaba en la misma que el carrito.
 
-     Por eso el aire —vertical y lateral— se les quita ahi a los tres (ver
-     components/Hero.astro, components/OrderBar.astro y los estilos de este archivo): en desktop lo
-     pone la pila, en un solo sitio, y no la suma de los margenes de cada bloque.
+     Por eso el aire —vertical y lateral— se les quita ahi a los bloques (ver
+     components/Hero.astro, components/OrderBar.astro y los estilos de este
+     archivo): en desktop lo pone la pila, en un solo sitio, y no la suma de los
+     margenes de cada bloque.
      --------------------------------------------------------------------------- */
   /* Movil: el hueco del boton flotante del pedido. Flota sobre el catalogo (ver
      components/CartFab.astro), asi que al final de la lista se quedaria encima de
@@ -375,11 +359,12 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
     padding-bottom: calc(70px + 20px + env(safe-area-inset-bottom, 0px));
   }
 
-  /* display: contents: en movil el envoltorio no pinta ni ocupa nada —ni el ancho
-     ni el relleno del .container-fluid llegan a aplicarse—, asi que sus hijos
+  /* display: contents: en movil los envoltorios no pintan ni ocupan nada —ni el
+     ancho ni el relleno del .container-fluid llegan a aplicarse—, asi que sus hijos
      siguen siendo hijos de <main> a efectos de layout y la pantalla se ve
-     exactamente igual que si no estuviera. */
-  .storefront__stack {
+     exactamente igual que si no estuvieran. */
+  .storefront__stack,
+  .storefront__content {
     display: contents;
   }
 
@@ -396,76 +381,54 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
          que se le cambia es la medida del gutter, que en la portada es el de la
          tienda (32) y no el de la rejilla (24). Se pide en --bs-gutter-x, que es
          la variable por la que el contenedor pregunta, y se dobla porque el
-         reparte la mitad a cada lado.
-
-         No se filtra a las tarjetas: el .row de la lista es .product-list__grid,
-         que redeclara --bs-gutter-x en el propio .row. */
+         reparte la mitad a cada lado. */
       --bs-gutter-x: calc(32px * 2);
       /* Y el tope, que es lo unico que .container-fluid no trae: fluido hasta
          aqui, y de aqui en adelante centrado, dejando el resto de la pantalla a
          los lados. Sin el, la portada seguiria creciendo mientras la cabecera y el
-         pie paran en --sf-container-max, y los tres dejarian de coincidir en el
-         primer monitor ancho.
+         pie paran en 1140, y los tres dejarian de coincidir en el primer monitor
+         ancho.
 
          Se suma el gutter porque el tope del diseno es el del CONTENIDO y la caja
          mide con border-box: 1140 + 32 + 32 deja dentro los 1140 de la spec, los
          mismos que paran la cabecera y el pie dentro de su propia sangria. */
       max-width: calc(1140px + var(--bs-gutter-x));
       display: flex;
+      gap: 32px;
+    }
+    .storefront__content {
+      /* Las secciones preguntan por el ancho de esta columna para repartir sus
+         tarjetas (ver components/MenuSection.astro): con el indice al lado, el
+         viewport ya no dice cuanto sitio queda. */
+      container: menu / inline-size;
+      display: flex;
+      flex: 1 1 0;
       flex-direction: column;
       gap: 32px;
+      min-width: 0;
     }
   }
   /* ---------------------------------------------------------------------------
      Block: product-list
      ---------------------------------------------------------------------------
      Spec: gap 24 - padding 20
-     La rejilla la resuelve Bootstrap en el marcado (.row .row-cols-*), asi que
-     del bloque original solo queda el padding de la seccion y la medida del
-     hueco, que la pone .product-list__grid.
+     El reparto de las tarjetas es de cada seccion (components/MenuSection.astro):
+     aqui queda el padding de la lista y el hueco entre secciones.
      --------------------------------------------------------------------------- */
   .product-list {
     padding: 20px 20px;
   }
 
-  /* Element: grid — el .row de las tarjetas.
-     Los 24 del diseno. Antes los ponia la utilidad `g-6`, que salia de la escala
-     de espaciado propia que se le daba a Bootstrap desde Sass; sin esa escala,
-     Bootstrap no tiene ningun `g-6` que dar y la medida se pide aqui, que es
-     donde se puede leer de que token sale. */
-  .product-list__grid {
-    --bs-gutter-x: 24px;
-    --bs-gutter-y: 24px;
+  /* Element: sections — en movil, 32 entre secciones: mas que los 24 entre
+     tarjetas, para que se lea donde acaba cada grupo. */
+  .product-list__sections {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
   }
 
-  /* Ya no limita el ancho: en desktop lo hace el subcontenedor de la portada, que
-     para en --sf-container-max igual que la cabecera y el pie (ver
-     los estilos de este archivo). Ponerlo aqui tambien no cambiaria nada y seria
-     un segundo sitio donde tocar el dia que el tope se mueva.
-
-     El envoltorio sigue existiendo aunque ya no limite: envuelve al .row porque
-     .row usa margenes negativos para sus gutters, y en desktop es el que reparte
-     los 24 entre el titulo y la rejilla. */
-  .product-list__items {
-    width: 100%;
-  }
-
-  /* Element: title — "Nuestros Platillos", encima de la rejilla. Solo desktop: en
-     movil la barra de categorias, que va justo encima, ya dice que se esta
-     mirando, y el titulo se comeria la unica pantalla que tiene el catalogo. */
-  .product-list__title {
-    display: none;
-    margin: 0;
-    font-size: 24px;
-    font-weight: 700;
-    /* 100% del tamano: es un titulo de una linea y el interlineado de la escala
-       (32 sobre 24) le sobra por arriba y por abajo. */
-    line-height: 1;
-    color: var(--sf-ink);
-  }
-
-  /* Element: notice — ocupa el sitio de la rejilla cuando no hay nada que
-     pintar: catalogo vacio (200 con lista vacia) o API inalcanzable. */
+  /* Element: notice — ocupa el sitio de la lista cuando no hay nada que pintar:
+     catalogo vacio (200 con lista vacia) o API inalcanzable. */
   .product-list__notice {
     margin: 0;
     padding-block: 32px;
@@ -477,20 +440,35 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 
   /* --- Desktop ------------------------------------------------------------- */
   @media (min-width: 768px) {
-    /* Sin aire propio de ninguna clase: el que la separa de la barra lo pone la
-       pila de la portada (ver los estilos de este archivo), el de abajo el padding
-       de <main>, y el de los lados el gutter de la propia pila. */
+    /* Sin aire propio de ninguna clase: el que la separa de la barra lo pone su
+       columna (ver los estilos de este archivo), el de abajo el padding de <main>,
+       y el de los lados la pila. */
     .product-list {
-      padding: 0;
-    }
-    /* La lista pasa a ser dos piezas con 24 entre ellas: el titulo y la rejilla. */
-    .product-list__items {
       display: flex;
       flex-direction: column;
       gap: 24px;
+      padding: 0;
     }
-    .product-list__title {
-      display: block;
+    /* Cada seccion trae su cabecera: entre una y otra, el doble del hueco que hay
+       entre la cabecera y sus tarjetas, para que se lea donde acaba cada grupo. */
+    .product-list__sections {
+      gap: 48px;
+    }
+  }
+
+  /* ---------------------------------------------------------------------------
+     Block: menu-results
+     ---------------------------------------------------------------------------
+     La cabecera de los resultados del buscador: "Resultados" y, debajo, cuantos y
+     de que. Los rotulos son los de la cabecera de una seccion
+     (components/MenuSection.astro), y a 24 de la lista, como alli. Solo desktop:
+     el buscador no existe en movil.
+     --------------------------------------------------------------------------- */
+  @media (min-width: 768px) {
+    .menu-results {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
   }
 </style>
