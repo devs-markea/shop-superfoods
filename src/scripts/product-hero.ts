@@ -14,13 +14,11 @@
 // ella este script no hace nada: las fotos de las variantes no abren un hueco que la
 // ficha decidio no tener.
 //
-// EL CAMBIO: APARICION EN DIAGONAL CON DESTELLO
+// EL CAMBIO: DESVANECIMIENTO
 //
-// La foto nueva se posa encima de la que hay y aparece de abajo a la izquierda hacia
-// arriba a la derecha en medio segundo, con una franja de destello gris en el borde: la
-// de antes sale bajo la franja y la nueva entra detras. Hasta que la nueva esta
-// descargada no pasa nada —se sigue viendo la que habia—. Lo que se pinta esta en
-// components/ProductHero.astro.
+// La foto de antes se apaga y la nueva se enciende en su sitio, sin movimiento, en
+// 340ms. Hasta que la nueva esta descargada no pasa nada —se sigue viendo la que
+// habia—. Lo que se pinta esta en components/ProductHero.astro.
 //
 // LA REDESCARGA, SOLO SI FALLA
 //
@@ -34,16 +32,18 @@
 // La foto del platillo pasa por lo mismo si falla al abrir la ficha.
 
 /**
- * Lo que dura la aparicion. Va de la mano de .product-hero--reveal; aqui es solo el
+ * Lo que dura el cambio: los 100ms de espera y los 240 de entrada de
+ * .product-hero__image--incoming, que es la que termina ultima. Aqui es solo el
  * respaldo por si `animationend` no llega —una pestana en segundo plano, por ejemplo—.
  */
-const REVEAL_MS = 500;
+const REVEAL_MS = 340;
 
 /** Las esperas antes de cada reintento: tres, y en unos siete segundos se da por perdida. */
 const RETRY_DELAYS = [1000, 2000, 4000];
 
 const REVEAL = 'product-hero--reveal';
 const INCOMING = 'product-hero__image--incoming';
+const OUTGOING = 'product-hero__image--outgoing';
 const FAILED = 'product-hero__image--failed';
 
 /** Los radios del selector de variantes. Ver components/OptionGroup.astro. */
@@ -123,14 +123,16 @@ function initProductHero(hero: HTMLElement): void {
   // Cada eleccion saca su numero; la descarga que vuelve con uno viejo ya no entra.
   let ticket = 0;
 
-  // El cierre de la aparicion en curso, mientras la hay.
+  // El cierre del cambio en curso, mientras lo hay.
   let finishReveal: (() => void) | null = null;
 
   function reveal(image: HTMLImageElement, src: string, alt: string): void {
-    // Una aparicion a medias se da por terminada: la animacion es del bloque y esta
-    // vuelve a empezarla, asi que la foto que estaba entrando se quedaria a medio
-    // descubrir.
+    // Un cambio a medias se da por terminado: la que estaba entrando pasa a ser la que
+    // sale, y tiene que salir desde su sitio y no desde la mitad del camino.
     finishReveal?.();
+
+    // La que se esta viendo sale; la que no llego a cargar —oculta— sale igual.
+    for (const old of images()) old.classList.add(OUTGOING);
 
     image.className = `product-hero__image ${INCOMING}`;
     image.alt = alt;
@@ -139,17 +141,12 @@ function initProductHero(hero: HTMLElement): void {
     // Detras de la ultima foto y no al final del bloque: el control de volver va
     // despues en el marcado, y asi se sigue pintando encima.
     images().at(-1)?.after(image);
-
-    // Quitar y poner la clase con un reflujo en medio es lo que reinicia la animacion
-    // si la anterior acababa de cerrarse en este mismo instante.
-    hero.classList.remove(REVEAL);
-    void hero.offsetWidth;
     hero.classList.add(REVEAL);
 
     shown = src;
 
     const settle = () => {
-      // Ya la cerro una aparicion posterior, o el otro de los dos avisos.
+      // Ya lo cerro un cambio posterior, o el otro de los dos avisos.
       if (finishReveal !== settle) return;
       finishReveal = null;
 
@@ -162,7 +159,7 @@ function initProductHero(hero: HTMLElement): void {
     };
     finishReveal = settle;
 
-    hero.addEventListener('animationend', settle, { once: true });
+    image.addEventListener('animationend', settle, { once: true });
     window.setTimeout(settle, REVEAL_MS + 100);
   }
 

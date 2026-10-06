@@ -56,6 +56,10 @@
   --sf-slate: #4a5568;
   --sf-muted: #6c757d;
   --sf-placeholder: #9ca3af;
+  /* El gris mas claro de desktop: el texto de ayuda del buscador, su lupa y la
+     cifra de platillos de la columna lateral. Viene asi del diseno; no es
+     --sf-placeholder, que es el de los campos del pedido. */
+  --sf-subtle: #98a2b3;
   --sf-border: #eaecf0;
   --sf-body-bg: #f8f9fb;
   --sf-white: #ffffff;

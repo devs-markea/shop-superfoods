@@ -28,6 +28,7 @@ import {
   type StoreSchedule,
 } from './schedule.ts';
 import { storeFallback } from '../data/store-fallback.ts';
+import type { CategoryRef } from './catalog.ts';
 import type { DeliveryType, PaymentMethod } from './checkout.ts';
 import type { MessageTemplates } from './whatsapp.ts';
 
@@ -120,7 +121,8 @@ export interface StoreSettings {
    * Tres datos, y ninguno se deriva de otro:
    *
    *   address       la completa, escrita para leerse entera. Es la del modal, que
-   *                 tiene el ancho para mostrarla.
+   *                 tiene el ancho para mostrarla. Puede traer varios renglones
+   *                 (`\n`): quien la pinte necesita `white-space: pre-line`.
    *   shortAddress  la abreviada, para donde la completa no cabe: el rotulo del
    *                 pin en la barra de desktop.
    *   mapsUrl       a donde lleva el boton del modal.
@@ -146,18 +148,45 @@ export interface StoreSettings {
   tips?: { enabled: boolean; amounts: number[] };
   legal?: { termsUrl?: string };
   /**
-   * El banner de la portada, en tres piezas sueltas.
+   * La portada: el encabezado de la columna lateral, el banner y los textos de la
+   * seccion de destacados.
    *
-   * No es una imagen con el texto dentro: un texto quemado en el JPG no se lee
-   * en voz alta, se pixela y obliga a rehacer la foto para corregir una coma.
-   * Aqui el titular y la bajada son texto de verdad y la imagen es solo el
-   * fondo; componerlos —velo incluido— es cosa de la tienda.
+   * `panel.presentation` es el texto grande de arriba de la columna lateral de
+   * desktop (components/MenuSidebar.astro), hasta 80 caracteres. Cadena vacia
+   * cuando el negocio no escribio ninguno, y entonces se pinta `name`: deja poner
+   * ahi otra cosa sin cambiar el nombre de la tienda, que se sigue usando en todos
+   * los demas sitios.
    *
-   * Cada clave sirve sola: el titulo sin foto es una franja de texto y la foto
-   * sin titulo un fondo, y las dos son mejores que no pintar la portada. Sin
-   * ninguna, no hay banner que inventar: la tienda abre en el catalogo.
+   * El banner va en tres piezas sueltas. No es una imagen con el texto dentro: un
+   * texto quemado en el JPG no se lee en voz alta, se pixela y obliga a rehacer la
+   * foto para corregir una coma. Aqui el titular y la bajada son texto de verdad y
+   * la imagen es solo el fondo; componerlos —velo incluido— es cosa de la tienda.
+   *
+   * Cada clave del banner sirve sola: el titulo sin foto es una franja de texto y
+   * la foto sin titulo un fondo, y las dos son mejores que no pintar la portada.
+   * Sin ninguna, no hay banner que inventar: la tienda abre en el catalogo.
+   *
+   * `featured` son el titular (hasta 80) y la bajada (hasta 180) que encabezan la
+   * seccion de destacados. No deciden si hay seccion —eso lo decide que algun
+   * platillo llegue destacado en el catalogo—, sino con que texto se rotula. Cadena
+   * vacia cuando el negocio no escribio el suyo, y entonces se pinta el de la tienda:
+   * ver FEATURED_SECTION y getMenuSections en src/lib/catalog.ts.
    */
-  home?: { banner?: { title?: string; description?: string; image?: string } };
+  home?: {
+    panel?: { presentation?: string };
+    banner?: { title?: string; description?: string; image?: string };
+    featured?: { title?: string; description?: string };
+  };
+  /**
+   * Las categorias con algun platillo publicado, en el orden del panel (el arrastre del
+   * administrador). Es la lista de la portada: tabs, columna lateral y secciones salen de
+   * aqui, y los platillos se les cuelgan por `category.id` (ver getCategories y
+   * getMenuSections en src/lib/catalog.ts).
+   *
+   * Sin respaldo: es el menu del panel, y escrito aqui a mano se quedaria viejo. Vacia, la
+   * portada ordena como llega el catalogo, que es el mismo orden.
+   */
+  categories?: CategoryRef[];
 }
 
 // El horario tiene su propio modulo: la API publica hechos y redactar el estado o
@@ -170,8 +199,45 @@ export type { StoreSchedule };
  * Se compara contra vacio y no contra `undefined` porque un `""` guardado en el
  * panel es tan "sin configurar" como un campo que no viaja.
  */
-function pick(value: string | undefined, fallback: string | undefined): string {
+function pick(value: string | null | undefined, fallback: string | undefined): string {
   return value?.trim() || fallback?.trim() || '';
+}
+
+/**
+ * Lo que publica `/api/store` donde difiere de la configuracion resuelta.
+ *
+ * `location.address`, `home.panel.presentation` y los dos textos de `home.featured`
+ * viajan SIEMPRE desde el 2026-10-06: con su texto o en `null` si el negocio los dejo
+ * vacios. pick() lo trata igual que un hueco, asi que las pantallas siguen viendo una
+ * cadena.
+ */
+type RemoteStore = Omit<StoreSettings, 'location' | 'home'> & {
+  location?: Omit<NonNullable<StoreSettings['location']>, 'address'> & {
+    address?: string | null;
+  };
+  home?: Omit<NonNullable<StoreSettings['home']>, 'panel' | 'featured'> & {
+    panel?: { presentation?: string | null };
+    featured?: { title?: string | null; description?: string | null };
+  };
+};
+
+/**
+ * Las categorias de `GET /api/store`, solo las que traen id y nombre. El id se pasa a texto
+ * —el contrato lo publica asi, pero un numero compararia distinto con el valor de un chip—.
+ */
+function normalizeCategories(value: unknown): CategoryRef[] {
+  if (!Array.isArray(value)) return [];
+
+  return value.flatMap((entry) => {
+    const id = entry?.id;
+    const name = typeof entry?.name === 'string' ? entry.name.trim() : '';
+
+    if ((typeof id !== 'string' && typeof id !== 'number') || String(id) === '' || !name) {
+      return [];
+    }
+
+    return [{ id: String(id), name }];
+  });
 }
 
 /**
@@ -352,13 +418,13 @@ const CONFIG_STALE_MS = 24 * 60 * 60_000;
  * documentacion.
  */
 export async function getStoreConfig(): Promise<StoreSettings> {
-  let remote: StoreSettings = {};
+  let remote: RemoteStore = {};
 
   try {
-    remote = await cached<StoreSettings>({
+    remote = await cached<RemoteStore>({
       key: 'configuracion',
       tag: CACHE_TAGS.config,
-      load: () => apiGet<StoreSettings>('/api/store'),
+      load: () => apiGet<RemoteStore>('/api/store'),
       freshUntil: (_settings, fetchedAt) => fetchedAt + CONFIG_FRESH_MS,
       staleFor: CONFIG_STALE_MS,
     });
@@ -441,12 +507,22 @@ export async function getStoreConfig(): Promise<StoreSettings> {
     // portada pinta lo que quede —o nada—, que es justo lo que pide el
     // contrato: sin banner no se inventa uno.
     home: {
+      // Sin respaldo que valga: vacia, la columna pinta el nombre, que ya tiene el suyo.
+      panel: { presentation: pick(remote.home?.panel?.presentation, undefined) },
       banner: {
         title: pick(remote.home?.banner?.title, fallback.home?.banner?.title),
         description: pick(remote.home?.banner?.description, fallback.home?.banner?.description),
         image: pick(remote.home?.banner?.image, fallback.home?.banner?.image),
       },
+      // Sin respaldo aqui, como la presentacion: vacios, la seccion de destacados se
+      // rotula con los textos de la tienda, que viven con ella en src/lib/catalog.ts.
+      featured: {
+        title: pick(remote.home?.featured?.title, undefined),
+        description: pick(remote.home?.featured?.description, undefined),
+      },
     },
+
+    categories: normalizeCategories(remote.categories),
   };
 }
 

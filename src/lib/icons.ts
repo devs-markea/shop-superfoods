@@ -20,6 +20,10 @@ export type IconName =
   | 'plus'
   | 'chevron-left'
   | 'arrow-left'
+  | 'arrow-sm-left'
+  | 'arrow-sm-right'
+  | 'search'
+  | 'list'
   | 'trash'
   | 'phone'
   | 'credit-card'
@@ -53,6 +57,16 @@ export const ICON_PATHS: Record<IconName, string> = {
   plus: '<path d="M10 4.167v11.666M4.167 10h11.666"/>',
   'chevron-left': '<path d="M12.5 15.833 6.667 10 12.5 4.167"/>',
   'arrow-left': '<path d="M16.667 10H3.333M8.333 15l-5-5 5-5"/>',
+  // Las flechas cortas del carrusel de destacados (Icon/Outline/arrow-sm-* del diseno):
+  // 10 de largo contra los 13.3 de 'arrow-left', para caber en un circulo de 34.
+  'arrow-sm-left': '<path d="M15 10H5M9.167 14.167 5 10l4.167-4.167"/>',
+  'arrow-sm-right': '<path d="M5 10h10M10.833 5.833 15 10l-4.167 4.167"/>',
+  // La lupa del buscador de la portada (Icon/Outline/search del diseno).
+  search: '<path d="m17.5 17.5-5-5m1.667-4.167a5.833 5.833 0 1 1-11.667 0 5.833 5.833 0 0 1 11.667 0Z"/>',
+  // "Lista de categorias": el boton de las tabs de movil que abre la hoja con el
+  // indice entero. Tres renglones con su vineta; las vinetas son trazos de largo casi
+  // cero, que el remate redondo vuelve puntos, como el de 'info'.
+  list: '<path d="M7.5 5h9.167M7.5 10h9.167M7.5 15h9.167M3.333 5h.008M3.333 10h.008M3.333 15h.008"/>',
   trash:
     '<path d="M2.5 5.833h15M7.5 5.833V4.167a.833.833 0 0 1 .833-.834h3.334a.833.833 0 0 1 .833.834v1.666"/><path d="M15.833 5.833 15.14 16.24a1.667 1.667 0 0 1-1.663 1.427H6.523A1.667 1.667 0 0 1 4.86 16.24L4.167 5.833"/><path d="M8.333 9.167v5M11.667 9.167v5"/>',
   // Movil: representa la transferencia bancaria (banca desde el telefono).

@@ -3,7 +3,12 @@ import Sheet from './Sheet.astro';
 import Icon from './Icon.astro';
 
 interface Props {
-  /** Direccion escrita. Puede faltar: entonces solo se ofrece el boton. */
+  /**
+   * Direccion escrita. Puede faltar: entonces solo se ofrece el boton.
+   *
+   * Desde el 2026-10-06 es un mensaje de varios renglones —saludo, direccion con
+   * su referencia, invitacion a pedir— con sus `\n` tal cual se escribieron.
+   */
   address?: string;
   /** Enlace de Google Maps al local. Puede faltar: entonces no hay boton. */
   mapsUrl?: string;
@@ -59,13 +64,20 @@ const { address, mapsUrl } = Astro.props;
      Los dos elementos son independientes: con solo direccion la hoja se queda sin
      boton, y con solo enlace la direccion se sustituye por una pista.
      --------------------------------------------------------------------------- */
-  /* Element: direccion — Inter 500 14/20 */
+  /* Element: direccion — Inter 500 14/20
+
+     `pre-line` respeta los `\n` del panel —los renglones en blanco incluidos, que
+     el negocio pone a proposito para separar— y colapsa los espacios repetidos.
+     Sin el, el mensaje se lee como un solo parrafo corrido. NO se convierten en
+     `<br>` con `set:html`: es texto del negocio, y asi se volveria HTML que se
+     ejecuta. */
   .location-sheet__address {
     margin: 0;
     font-size: 14px;
     font-weight: 500;
     line-height: 20px;
     color: var(--sf-ink);
+    white-space: pre-line;
   }
 
   /* Element: pista cuando no hay direccion escrita */

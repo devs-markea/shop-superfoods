@@ -1,0 +1,168 @@
+---
+// ---------------------------------------------------------------------------
+// El boton de chat de Wati: la burbuja flotante que abre una conversacion de
+// WhatsApp con el negocio.
+//
+// No es un chat dentro de la pagina: el boton del recuadro es un enlace a
+// api.whatsapp.com, y la conversacion sigue en WhatsApp. Si contesta un bot o
+// una persona lo decide lo que este configurado en el panel de Wati.
+//
+// Es el snippet que da el panel de Wati, con cinco cambios sobre lo que trae:
+//
+//   phoneNumber  el del negocio, +52 1 998 756 6999, con la lada. El widget lo
+//                pega tal cual en api.whatsapp.com/send?phone=, y WhatsApp lo
+//                lee en E.164: sin el 52, los primeros digitos se toman por la
+//                lada de otro pais. El snippet traia un numero de 10 digitos.
+//   el color     el acento del tema, que llega del Layout: el mismo rosa —o el
+//                que toque— que los botones de la tienda. El widget lo usa en el
+//                boton, en la sombra de la burbuja y en la del recuadro.
+//   brandImg     el logo de la tienda —el de BrandLogo.astro— en lugar del de
+//                Wati, que es lo unico de la marca que el widget pinta.
+//                `brandName` no lo pinta esta version, pero se le da el de la
+//                tienda por si una futura lo hace.
+//   altText      '""' con las comillas dentro: el widget lo escribe sin
+//                comillas en el `alt` del icono. Asi sale `alt=""`, decorativo,
+//                en lugar de un lector de pantalla diciendo "undefined".
+//   messageText  en espanol, como el resto. `{{page_link}}` lo sustituye el
+//                widget por la URL de la pagina y `\n` por un salto.
+//
+// Lo monta Layout.astro, asi que esta en todas las pantallas: las dudas llegan
+// tanto mirando el menu como a mitad del pago. Se apaga con ENABLED.
+//
+// DONDE SE PONE. La esquina que pide Wati —derecha, a 20 del fondo— la ocupan
+// otras piezas que flotan abajo, y el widget va con un z-index de 16 millones:
+// se pondria encima de ellas. Por eso se coloca por encima de la que haya:
+//
+//   el carrito flotante   en el menu, solo en movil (components/CartFab.astro)
+//   la barra de accion    en el resto, con o sin nota (components/ActionBar.astro)
+//   el aviso de cerrado   en el menu y el pedido (components/StoreClosedNotice.astro)
+//
+// Los dos primeros miden siempre lo mismo y van en el CSS de abajo. El aviso no:
+// su alto depende del texto y del ancho, asi que lo mide el script. De md en
+// adelante no hay carrito flotante y la barra va en la columna centrada, asi que
+// sin aviso se queda donde lo pone Wati.
+//
+// Las hojas del horario y la ubicacion no cuentan: son <dialog> modales, y la
+// capa superior del navegador queda por encima de cualquier z-index.
+// ---------------------------------------------------------------------------
+import { getImage } from 'astro:assets';
+import logo from '../assets/logo-mama-yaya.png';
+import type { StoreSettings } from '../lib/store-config.ts';
+
+interface Props {
+  store: StoreSettings;
+  /** El `accent` del tema que pinta el Layout. */
+  accent: string;
+}
+
+const { store, accent } = Astro.props;
+
+// El interruptor del chat. Ocultarlo es poner `false` y no borrar nada: el resto
+// —numero, colores, logo y la colocacion— sigue revisado y listo, asi que
+// mostrarlo otra vez es devolver esta linea a `true`. Apagado no se pinta nada:
+// ni el script de Wati ni ninguna peticion a su servidor.
+const ENABLED = true;
+
+const WIDGET_URL = 'https://wati-integration-prod-service.clare.ai/v2/watiWidget.js?66582';
+
+// El circulo del recuadro mide 52; 104 es su 2x.
+const brandImg = await getImage({ src: logo, width: 104 });
+
+const options = {
+  enabled: true,
+  chatButtonSetting: {
+    backgroundColor: accent,
+    ctaText: 'Chatea con nosotros',
+    borderRadius: '25',
+    marginLeft: '0',
+    marginRight: '20',
+    marginBottom: '20',
+    ctaIconWATI: false,
+    position: 'right',
+  },
+  brandSetting: {
+    brandName: store.name ?? '',
+    brandSubTitle: '',
+    brandImg: brandImg.src,
+    altText: '""',
+    welcomeText: 'Hola, en que podemos ayudarlo?',
+    messageText: 'Hola,\ntengo una pregunta sobre {{page_link}}',
+    backgroundColor: accent,
+    ctaText: 'Chatea con nosotros',
+    borderRadius: '25',
+    autoShow: false,
+    phoneNumber: '5219987566999',
+  },
+};
+---
+
+{
+  ENABLED && (
+    <script is:inline define:vars={{ widgetUrl: WIDGET_URL, options }}>
+      // El aviso de tienda cerrada: el chat va 14 por encima de su borde de arriba.
+      // Se vuelve a medir si la tarjeta cambia de alto —el texto partido en otra
+      // linea— o si cambia la ventana, que la mueve. Lo escrito en el <body> gana a
+      // las reglas del CSS de abajo, y ahi no hay carrito que salvar: el aviso lo tapa.
+      const notice = document.querySelector('.store-closed__card');
+
+      if (notice) {
+        const lift = () => {
+          const above = window.innerHeight - notice.getBoundingClientRect().top;
+          document.body.style.setProperty('--wati-bottom', `${Math.ceil(above) + 14}px`);
+        };
+
+        lift();
+        new ResizeObserver(lift).observe(notice);
+        window.addEventListener('resize', lift);
+      }
+
+      const script = document.createElement('script');
+      script.src = widgetUrl;
+      script.async = true;
+      script.onload = () => {
+        CreateWhatsappChatWidget(options);
+      };
+      document.head.appendChild(script);
+    </script>
+  )
+}
+
+<style is:global>
+  /* El widget mete su CSS por clase, y casi todo con !important; estas reglas
+     ganan por llevar ademas el id. */
+
+  /* El circulo del logo. El widget le pone de fondo el color del boton, y el
+     logo es cafe sobre transparente: en rosa no se lee. El hueco lo mete dentro
+     del circulo, donde el redondeo ya no muerde las esquinas del dibujo. */
+  #whatsapp-chat-widget .wa-chat-box-brand {
+    padding: 8px;
+    object-fit: contain;
+    background-color: var(--sf-white);
+  }
+
+  /* La altura del chat. Sin valor es el 20 de Wati; el aviso de cerrado la
+     escribe desde el script. Las cuentas de movil:
+
+       104 = el carrito flotante (20 + 70) y 14 de aire. La barra de accion mide
+             84, asi que tambien queda libre.
+       132 = la barra con nota bajo el boton (84 + 12 + 16, la misma cuenta que
+             hace StoreClosedNotice.astro) y 20 de aire. */
+  @media (max-width: 767.98px) {
+    .page {
+      --wati-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .page:has(.action-bar__note) {
+      --wati-bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+    }
+  }
+
+  #whatsapp-chat-widget .wa-widget-send-button {
+    margin-bottom: var(--wati-bottom, 20px) !important;
+  }
+
+  #whatsapp-chat-widget .wa-chat-bubble,
+  #whatsapp-chat-widget .wa-chat-box {
+    bottom: var(--wati-bottom, 20px) !important;
+  }
+</style>
