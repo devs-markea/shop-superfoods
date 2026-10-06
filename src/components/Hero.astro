@@ -1,4 +1,6 @@
 ---
+import type { StoreStatus } from '../lib/schedule.ts';
+
 interface Props {
   /** Titular del banner, maximo 80. */
   title?: string;
@@ -9,9 +11,20 @@ interface Props {
    * con ninguna base, que cambia entre local, staging y produccion.
    */
   image?: string;
+  /** Si la tienda esta abierta ahora, para la etiqueta de encima del titular. */
+  status?: StoreStatus | null;
 }
 
-const { title, description, image } = Astro.props;
+const { title, description, image, status } = Astro.props;
+
+// La etiqueta del estado, encima del titular. Abierta en verde; cerrada en rojo, y con
+// dos frases distintas segun si hoy vuelve a abrir (ver storeStatus en
+// src/lib/schedule.ts). Sin horario no hay etiqueta: no se afirma nada.
+const STATUS_LABEL: Record<StoreStatus, string> = {
+  open: 'ABIERTO · ENTREGA DISPONIBLE',
+  'closed-now': 'CERRADO POR EL MOMENTO',
+  'closed-today': 'CERRADO POR HOY',
+};
 
 // Panel de bienvenida de la portada. SOLO DESKTOP: en movil no se pinta —lo
 // oculta los estilos de este archivo— porque ahi la primera pantalla es del catalogo y
@@ -38,8 +51,13 @@ const style = photo ? `--sf-hero-photo: url(${JSON.stringify(photo)})` : undefin
   (hasText || photo) && (
     <section class="hero" aria-label="Bienvenida">
       <div class="hero__panel" style={style}>
-        {hasText && (
+        {(hasText || status) && (
           <div class="hero__text">
+            {status && (
+              <span class:list={['hero__status', status !== 'open' && 'hero__status--closed']}>
+                {STATUS_LABEL[status]}
+              </span>
+            )}
             {title && <h1 class="hero__title">{title}</h1>}
             {description && <p class="hero__subtitle">{description}</p>}
           </div>
@@ -125,6 +143,30 @@ const style = photo ? `--sf-hero-photo: url(${JSON.stringify(photo)})` : undefin
       font-weight: 400;
       line-height: 24px;
       color: var(--sf-white);
+    }
+
+    /* Element: status — "ABIERTO · ENTREGA DISPONIBLE" sobre el titular.
+       Spec: 197x25 - padding 6/10 - radius 100 - fondo #228B5A
+       Inter 700 11/100% blanco. Arrimada a la izquierda: en la columna del texto no
+       se estira. */
+    .hero__status {
+      display: inline-flex;
+      align-self: flex-start;
+      align-items: center;
+      min-height: 25px;
+      padding: 6px 10px;
+      border-radius: 100px;
+      background-color: var(--sf-success-strong);
+      color: var(--sf-white);
+      font-size: 11px;
+      font-weight: 700;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    /* Modifier: cerrada. El rojo es de un solo uso, y por eso va aqui y no en
+       styles/colors.css: el de error de la paleta de grises del diseno. */
+    .hero__status--closed {
+      background-color: #d92d20;
     }
   }
 </style>

@@ -49,6 +49,13 @@ interface Props {
    * menu.
    */
   noindex?: boolean;
+  /**
+   * El platillo de la ficha, y solo ella lo pasa. Es para el chat: con el, el
+   * mensaje que se abre en WhatsApp pregunta por ese platillo (ver
+   * WatiChat.astro). No se saca de `title` porque la ficha tambien titula
+   * "Platillo no encontrado".
+   */
+  dish?: string;
 }
 
 const {
@@ -56,6 +63,7 @@ const {
   title,
   description = 'Mamá Yaya — pedido a domicilio o para recoger.',
   noindex = false,
+  dish,
 } = Astro.props;
 
 // La pagina y la tienda, en ese orden: en una pestana estrecha se corta por la
@@ -176,6 +184,6 @@ const theme = getTheme(STORE_THEME);
   </head>
   <body class="page">
     <slot />
-    <WatiChat store={store} accent={theme.accent} />
+    <WatiChat store={store} accent={theme.accent} dish={dish} order={noindex} />
   </body>
 </html>

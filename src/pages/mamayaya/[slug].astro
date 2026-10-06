@@ -247,7 +247,12 @@ const closed = isClosed(schedule);
   "": una cadena vacia pintaria una meta sin contenido, y lo que se quiere ahi es
   el respaldo del Layout.
 */}
-<Layout title={title} store={store} description={product?.description || undefined}>
+<Layout
+  title={title}
+  dish={product?.name}
+  store={store}
+  description={product?.description || undefined}
+>
   {/* Solo cuando no hay foto: en movil la cabecera de esta pantalla ES la foto,
       con su control de volver encima, y dos cabeceras seguidas serian una de mas.
       Sin foto no hay ninguna, y sin ella la ficha no tendria salida.

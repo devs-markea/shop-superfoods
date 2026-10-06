@@ -77,6 +77,10 @@
      —"esto te cuesta menos"— y por eso se conserva del panel, a diferencia del
      acento del precio final, que si es tipografia de cada tienda. */
   --sf-success-tint: rgb(58 166 120 / 12%);
+  /* El verde de las etiquetas solidas sobre foto, con texto blanco encima: "#1
+     favoritos" en los destacados y "ABIERTO" en el banner. Mas oscuro que
+     --sf-success para que el blanco se lea sobre el. */
+  --sf-success-strong: #228b5a;
 
   /* Verde de WhatsApp. Solo para el boton de enviar el pedido: el resto de
      acciones del sistema van en el acento. */

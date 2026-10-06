@@ -23,8 +23,8 @@
 //   altText      '""' con las comillas dentro: el widget lo escribe sin
 //                comillas en el `alt` del icono. Asi sale `alt=""`, decorativo,
 //                en lugar de un lector de pantalla diciendo "undefined".
-//   messageText  en espanol, como el resto. `{{page_link}}` lo sustituye el
-//                widget por la URL de la pagina y `\n` por un salto.
+//   messageText  escrito aqui, segun la pantalla, en lugar del "tengo una
+//                pregunta sobre {{page_link}}" de Wati: ver `message`.
 //
 // Lo monta Layout.astro, asi que esta en todas las pantallas: las dudas llegan
 // tanto mirando el menu como a mitad del pago. Se apaga con ENABLED.
@@ -53,9 +53,16 @@ interface Props {
   store: StoreSettings;
   /** El `accent` del tema que pinta el Layout. */
   accent: string;
+  /** El platillo, cuando la pantalla es su ficha. */
+  dish?: string;
+  /**
+   * Si la pantalla es una de las siete del pedido. Lo decide el Layout con su
+   * `noindex`, que piden justo esas siete.
+   */
+  order?: boolean;
 }
 
-const { store, accent } = Astro.props;
+const { store, accent, dish, order = false } = Astro.props;
 
 // El interruptor del chat. Ocultarlo es poner `false` y no borrar nada: el resto
 // —numero, colores, logo y la colocacion— sigue revisado y listo, asi que
@@ -67,6 +74,32 @@ const WIDGET_URL = 'https://wati-integration-prod-service.clare.ai/v2/watiWidget
 
 // El circulo del recuadro mide 52; 104 es su 2x.
 const brandImg = await getImage({ src: logo, width: 104 });
+
+// El mensaje con el que se abre el chat: lo que el cliente se encuentra ya
+// escrito en WhatsApp, y que completa con su duda. Tres decisiones:
+//
+// - Dice DE QUE va la duda con palabras y no con la URL de la pagina, que es lo
+//   que traia el snippet: el platillo en su ficha, el pedido en sus siete
+//   pantallas y el menu en la portada. Un enlace no le dice nada a quien lo
+//   manda, obliga a quien contesta a abrirlo, y WhatsApp le cuelga la vista
+//   previa de la propia tienda. "en línea" dice ademas por donde llega el chat.
+// - Acaba en dos puntos y un espacio: WhatsApp deja el cursor al final, y lo
+//   siguiente que se teclea es la pregunta.
+// - Lleva acentos aunque la tienda escriba sin ellos, por lo mismo que
+//   src/lib/whatsapp.ts: se lee en la conversacion, junto a los textos del ERP.
+//
+// Va codificado desde aqui porque el widget lo pega tal cual en el `href`: un
+// `&`, un `#` o unas comillas en el nombre de un platillo cortarian el mensaje o
+// el enlace. El `{{page_title}}` de Wati tiene ese problema, y por eso no se usa.
+const subject = dish ?? (order ? 'mi pedido en línea' : 'su menú en línea');
+
+// El saludo por nombre —"Hola, Mamá Yaya."—, quitado por ahora: se queda en
+// "Hola." Se apaga aqui y no se borra porque el nombre sigue llegando del panel,
+// asi que volver a saludar con el es cambiar esta linea.
+const GREET_BY_NAME = false;
+
+const greeting = GREET_BY_NAME && store.name ? `Hola, ${store.name}.` : 'Hola.';
+const message = `${greeting} Tengo una duda sobre ${subject}: `;
 
 const options = {
   enabled: true,
@@ -86,7 +119,7 @@ const options = {
     brandImg: brandImg.src,
     altText: '""',
     welcomeText: 'Hola, en que podemos ayudarlo?',
-    messageText: 'Hola,\ntengo una pregunta sobre {{page_link}}',
+    messageText: encodeURIComponent(message),
     backgroundColor: accent,
     ctaText: 'Chatea con nosotros',
     borderRadius: '25',
