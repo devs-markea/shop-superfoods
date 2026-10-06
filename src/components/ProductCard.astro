@@ -14,9 +14,14 @@ interface Props {
    * porque ya lo dice la tarjeta de tienda cerrada.
    */
   storeClosed?: boolean;
+  /**
+   * Su puesto entre los destacados, cuando lleva la etiqueta "#1 favoritos". Lo decide
+   * la seccion (ver components/MenuSection.astro); sin el, no hay etiqueta.
+   */
+  rank?: number;
 }
 
-const { product, eager = false, storeClosed = false } = Astro.props;
+const { product, eager = false, storeClosed = false, rank } = Astro.props;
 
 // La tarjeta de pie: la de los destacados de la portada. Las categorias van en
 // <MenuCard>, que cuenta lo mismo con otra estructura y con los mismos rotulos —sus
@@ -57,6 +62,10 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
           loading={eager ? 'eager' : 'lazy'}
           decoding="async"
         />
+
+        {/* La etiqueta del puesto, sobre la foto. Detras de la imagen en el marcado
+            para pintarse encima de ella. Sin foto no hay donde ponerla. */}
+        {rank && <span class="product-card__rank">{`#${rank} favoritos`}</span>}
       </div>
     )
   }
@@ -224,6 +233,7 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
      al retirarse queda este mismo color, asi que la foto que tarda late y la que ya
      esta se apoya en el gris de siempre. Ver los estilos de este archivo. */
   .product-card__media {
+    position: relative;
     flex: 0 0 auto;
     width: 100%;
     height: 154px;
@@ -236,6 +246,29 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
     width: 100%;
     height: 100%;
     object-fit: cover;
+  }
+
+  /* Element: rank — "#1 favoritos", arriba a la izquierda de la foto, a 8 de sus
+     bordes. Spec: 81x23 - padding 5/9 - radius 100 - fondo #228B5A
+     Inter 700 11/100% blanco; en movil, 12.
+
+     El verde es de un solo uso, y por eso va aqui y no en styles/colors.css. No sigue
+     al tema a proposito: es una distincion, como el verde del ahorro, no la marca. */
+  .product-card__rank {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    display: inline-flex;
+    align-items: center;
+    min-height: 23px;
+    padding: 5px 9px;
+    border-radius: 100px;
+    background-color: #228b5a;
+    color: var(--sf-white);
+    font-size: 12px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
   }
 
   /* Element: body — nombre, descripcion y, al fondo, el precio */
@@ -447,6 +480,9 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
       gap: 12px;
       min-height: 150px;
       padding: 20px;
+    }
+    .product-card__rank {
+      font-size: 11px;
     }
     /* 18 no esta en la escala de tokens: es el unico nombre de este tamano del
        diseno, y anadir un token para una regla lo unico que hace es dar un nombre
