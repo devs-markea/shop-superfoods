@@ -327,6 +327,10 @@ export function orderMessageValues(order: StoreOrder, context: MessageContext = 
     // La abreviada no es un formato de repuesto sino la misma ubicacion escrita
     // corta, asi que sirve igual: aqui el renglon vacio es el pedido que nadie
     // sabe donde recoger.
+    //
+    // Puede ser de varios renglones, como `{platillos}`: la direccion admite `\n`
+    // desde el 2026-10-06. cleanUp() no los toca y encodeURIComponent los manda
+    // como `%0A`, asi que llegan al chat como saltos.
     sucursal: location.address?.trim() || location.shortAddress?.trim() || '',
     mapa: location.mapsUrl ?? '',
 

@@ -1,11 +1,10 @@
 ---
 import DeliverySwitch from './DeliverySwitch.astro';
 import OrderMeta from './OrderMeta.astro';
-import CategoryNav from './CategoryNav.astro';
+import MenuSearch from './MenuSearch.astro';
 import type { DeliveryType } from '../lib/checkout.ts';
 
 interface Props {
-  categories: readonly string[];
   /** Estimado a domicilio configurado. */
   estimate?: string;
   /** Rotulo de envio ya resuelto por la pagina. */
@@ -21,43 +20,66 @@ interface Props {
    * la barra llega correcta sin esperar a ningun JavaScript.
    */
   selected?: DeliveryType;
+  /** Pinta el buscador de desktop. Sin platillos no hay en que buscar. */
+  search?: boolean;
+  /** La direccion abreviada, para las metas de movil. */
+  shortAddress?: string;
 }
 
-const { categories, estimate, shipping, pickup, hasLocation, selected } = Astro.props;
+const { estimate, shipping, pickup, hasLocation, selected, search, shortAddress } = Astro.props;
 ---
 
 <section class="order-bar" aria-label="Opciones de entrega">
   <div class="order-bar__inner">
+    {/* Primero en el marcado porque en desktop va a la izquierda. En movil no se pinta. */}
+    {search && <MenuSearch />}
     <DeliverySwitch selected={selected} />
     <OrderMeta
       estimate={estimate}
       shipping={shipping}
       pickup={pickup}
       hasLocation={hasLocation}
+      shortAddress={shortAddress}
     />
-    <CategoryNav categories={categories} />
   </div>
+
+  {/* Lo que cuelga de la barra en movil: las tabs de categorias
+      (components/CategoryNav.astro). Van dentro para moverse con ella. */}
+  <slot />
 </section>
 
 <style is:global>
   /* ---------------------------------------------------------------------------
      Block: order-bar
      ---------------------------------------------------------------------------
-     Agrupa los 3 contenedores: switch (44) + meta (16) + chips (40)
-     Spec mobile: height 132 - gap 12 - padding 0 20 8
-     44 + 12 + 16 + 12 + 40 + 8 = 132
+     Spec mobile: switch (44) + meta (16) - gap 12 - padding 0 20 8
+     44 + 12 + 16 + 8 = 80
+
+     Las categorias ya no van aqui: en movil son las tabs que la siguen
+     (components/CategoryNav.astro), fuera de la barra porque van pegadas arriba al
+     bajar y un `sticky` no sale de su contenedor; en desktop, la columna lateral
+     (components/MenuSidebar.astro).
 
      min-height en lugar de height para que nada se recorte si el usuario sube
      el tamano de fuente del sistema.
 
-     En desktop son 2 y en una sola linea: las metas no se pintan (ver
-     components/OrderMeta.astro) y el switch sube al nivel de las categorias.
+     ANCLADA EN MOVIL, bajo la barra de arriba (48): el switch y las metas se quedan a
+     la vista al bajar por el catalogo. Y de ella cuelgan las tabs de categorias, que
+     van dentro (el <slot>) para que la barra y las tabs sean una sola pieza: se
+     mueven juntas, tambien en el rebote del final de la pagina, donde una pieza fija
+     y otra anclada se separaban.
+
+     En desktop son el buscador y el switch: las metas no se pintan (ver
+     components/OrderMeta.astro).
      --------------------------------------------------------------------------- */
   /* Mismo fondo que la pagina, igual que la barra de movil: entre la cabecera y
      el catalogo no hay tres franjas de color sino una sola continua, y lo unico
      que se levanta sobre ella son las tarjetas. */
   .order-bar {
-    min-height: 132px;
+    position: sticky;
+    top: 48px;
+    z-index: 1010;
+    min-height: 80px;
     padding: 0 20px 8px;
     background-color: var(--sf-body-bg);
   }
@@ -72,8 +94,8 @@ const { categories, estimate, shipping, pickup, hasLocation, selected } = Astro.
   }
 
   /* --- Desktop -------------------------------------------------------------
-     La columna de tres filas se convierte en una: sin las metas quedan el switch y
-     las categorias, uno en cada extremo de la barra. */
+     La columna se convierte en una fila: sin las metas quedan el buscador, a la
+     izquierda y ocupando lo que sobre, y el switch, a 48. */
   @media (min-width: 768px) {
     /* Sin fondo, sin borde y sin aire propio: en desktop la barra deja de ser una
        franja de cabecera y pasa a ser un bloque mas de la portada, entre el panel
@@ -82,18 +104,19 @@ const { categories, estimate, shipping, pickup, hasLocation, selected } = Astro.
        Sin fondo, sin borde y sin aire propio —tampoco el lateral—: el margen de
        los lados lo pone la pila, igual que el hueco de arriba y abajo. */
     .order-bar {
+      position: static;
       min-height: 0;
       padding: 0;
       border-bottom: 0;
       background-color: transparent;
     }
     /* Y sin tope de ancho: la fila llega hasta donde llega la rejilla, que es lo
-       que alinea el switch con la primera tarjeta y el ultimo chip con la tercera. */
+       que alinea el buscador con la primera tarjeta y el switch con la ultima. */
     .order-bar__inner {
       flex-direction: row;
       align-items: center;
       justify-content: space-between;
-      gap: 16px;
+      gap: 48px;
       max-width: none;
     }
     /* La pista deja de ocupar el ancho de la pantalla y se mide por sus dos
@@ -101,8 +124,7 @@ const { categories, estimate, shipping, pickup, hasLocation, selected } = Astro.
        el bloque del switch porque es cosa de esta fila: en /mamayaya/datos la misma pista
        llena la columna de 350 del formulario, como cualquier otro campo.
 
-       Tampoco cede ancho: encogerla parte los rotulos de las dos opciones. Quien
-       cede es el carrusel, que para eso lleva scroll.
+       Tampoco cede ancho: encogerla parte los rotulos de las dos opciones.
 
        LOS 136 SON UN SUELO (min-width), NO UNA BASE (flex-basis)
        Con `flex: 0 0 136px` la medida solo existia dentro del reparto, y con la
@@ -122,10 +144,8 @@ const { categories, estimate, shipping, pickup, hasLocation, selected } = Astro.
        La pista no necesita suelo propio: sale de sus dos opciones, que ya lo
        tienen. La medida vive en un solo sitio.
 
-       `margin-inline: 0` no es cosmetico: los margenes automaticos se sirven ANTES
-       que justify-content, asi que el `auto` que centra el switch en movil se
-       comeria todo el espacio libre y no quedaria nada que repartir entre los dos
-       extremos. */
+       `margin-inline: 0` no es cosmetico: el `auto` que centra el switch en movil se
+       comeria aqui el espacio libre, y sin buscador lo dejaria centrado en la fila. */
     .order-bar__inner .switch {
       flex: 0 0 auto;
       width: auto;
@@ -135,22 +155,6 @@ const { categories, estimate, shipping, pickup, hasLocation, selected } = Astro.
     .order-bar__inner .switch__option {
       flex: 1 1 auto;
       min-width: 136px;
-    }
-    /* La sangria del carrusel es de cuando ocupaba la fila entera y tenia que
-       llegar hasta el borde de la pantalla; compartiendo linea, solo lo meteria
-       debajo del switch.
-
-       El min-width es lo que le permite encoger por debajo de sus chips —un item
-       flex no baja de su contenido sin el— y scrollear en su hueco en lugar de
-       empujar al switch fuera de la barra. */
-    .order-bar__inner .category-nav {
-      min-width: 0;
-      margin-inline: 0;
-      padding-inline: 0;
-      /* Y con la sangria, su scroll-padding: es el margen que el navegador deja
-         al acercar un chip —al pulsarlo, o al llegar marcado de "Descubre"—, y
-         sin padding que lo justifique dejaria el chip 32 metido hacia dentro. */
-      scroll-padding-inline: 0;
     }
   }
 </style>

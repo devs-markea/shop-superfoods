@@ -82,6 +82,66 @@ export interface Promotion {
   buyGet: PromotionBuyGet | null;
 }
 
+/**
+ * La categoria del listado tal como la publica la API: el grupo `{ id, name, description }`
+ * desde el 2026-10-05. Antes era el nombre suelto, y el contrato todavia lo admite; fuera de
+ * readCategory() nadie mira esta forma.
+ *
+ * `description` llego al grupo el 2026-10-06. Opcional aqui porque un grupo anterior —o uno
+ * guardado en la cache antes de esa fecha— no la trae.
+ */
+type ApiCategory = string | { id: string | number; name: string; description?: string };
+
+/**
+ * Una categoria del menu, por su id y con el nombre que se pinta. Es la forma que comparten
+ * la lista de `GET /api/store` (`categories`) y la categoria de cada platillo.
+ */
+export interface CategoryRef {
+  /**
+   * `menu_categories.id`, como texto. CON EL SE EMPAREJA TODO: la seccion con sus platillos,
+   * la entrada de la columna lateral con su seccion, el chip con lo que filtra y el pase de
+   * "Descubre" con su destino. No cambia si el administrador renombra la categoria, y dos
+   * categorias con el mismo nombre no se confunden.
+   */
+  id: string;
+  name: string;
+}
+
+/** La categoria de un platillo, ya leida. */
+export interface ProductCategory extends CategoryRef {
+  /**
+   * Texto plano, hasta 500 caracteres y con sus saltos de linea. Cadena vacia cuando la
+   * categoria no tiene: se pinta con un `if`.
+   */
+  description: string;
+}
+
+/**
+ * El id se pasa a texto: es como lo publica el contrato, y asi se compara igual con el
+ * valor de un chip o de un `data-` del marcado, que siempre son texto.
+ *
+ * LA FORMA VIEJA —el nombre suelto— no trae id. Hoy la API ya no la manda, pero la cache
+ * guarda la respuesta tal cual y sobrevive a los despliegues, asi que una copia anterior
+ * podria traerla: entonces el nombre hace de id, para que el platillo no se quede fuera del
+ * menu. Es el unico sitio donde el nombre empareja algo, y se puede borrar en cuanto el
+ * contrato retire esa forma.
+ */
+function readCategory(category: ApiCategory): ProductCategory {
+  return typeof category === 'string'
+    ? { id: category, name: category, description: '' }
+    : { id: String(category.id), name: category.name, description: category.description ?? '' };
+}
+
+/**
+ * El platillo esta entre los destacados del panel. `position` ORDENA, no indexa: un
+ * destacado que no se publica deja su hueco, asi que con 1, 2 y 3 en el panel pueden
+ * llegar 1 y 3.
+ */
+export interface Featured {
+  isFeatured: true;
+  position: number;
+}
+
 export interface ProductListItem {
   /** menus.id — la llave estable, la que viaja al carrito. Nunca cambia. */
   id: string;
@@ -93,8 +153,8 @@ export interface ProductListItem {
   name: string;
   /** Cadena vacia cuando el platillo no tiene descripcion. */
   description: string;
-  /** Nombre de la categoria. De aqui salen los chips de filtro. */
-  category: string;
+  /** Ya leida por getProducts(), llegue como llegue. Por su `id` se agrupa en secciones. */
+  category: ProductCategory;
   /** Precio "desde" (el minimo de sus variantes), en MXN. */
   basePrice: number;
   image: ProductImage;
@@ -108,10 +168,19 @@ export interface ProductListItem {
    * un precio por encima de otro mayor.
    */
   promotion: Promotion | null;
+  /** null = no es destacado. Destacar no lo hace comprable: `available` manda igual. */
+  featured: Featured | null;
 }
 
-/** Chip que no filtra nada. Lo pone la interfaz, no viene del catalogo. */
-export const ALL_CATEGORIES = 'Todos';
+/**
+ * Una tarjeta tal como llega de la API, antes de leer su categoria. `featured` es opcional
+ * por lo mismo que la descripcion de la categoria: una respuesta guardada antes del
+ * 2026-10-05 no lo trae.
+ */
+type ApiProductListItem = Omit<ProductListItem, 'category' | 'featured'> & {
+  category: ApiCategory;
+  featured?: Featured | null;
+};
 
 /**
  * Cuanto se sigue sirviendo el catalogo guardado si la API falla.
@@ -145,25 +214,197 @@ const CATALOG_FRESH_MS = 24 * 60 * 60_000;
  * aparte y esta al minuto.
  */
 export function getProducts(): Promise<ProductListItem[]> {
-  return cached<ProductListItem[]>({
-    key: 'catalogo',
-    tag: CACHE_TAGS.catalog,
-    load: () => apiGet<ProductListItem[]>('/api/products'),
-    freshUntil: (_items, fetchedAt) => fetchedAt + CATALOG_FRESH_MS,
-    staleFor: CATALOG_STALE_MS,
-  });
+  return (
+    cached<ApiProductListItem[]>({
+      key: 'catalogo',
+      tag: CACHE_TAGS.catalog,
+      load: () => apiGet<ApiProductListItem[]>('/api/products'),
+      freshUntil: (_items, fetchedAt) => fetchedAt + CATALOG_FRESH_MS,
+      staleFor: CATALOG_STALE_MS,
+    })
+      // La categoria se lee al salir de la cache y no dentro de `load`: lo guardado es la
+      // respuesta tal cual, y como la Runtime Cache sobrevive a los despliegues, puede traer
+      // cualquiera de las dos formas sin tener que subir su VERSION. Lo mismo `featured`.
+      .then((items) =>
+        items.map((item) => ({
+          ...item,
+          category: readCategory(item.category),
+          featured: item.featured ?? null,
+        })),
+      )
+  );
+}
+
+/** Los platillos de una categoria, con la categoria que se pinta. */
+interface CategoryGroup {
+  category: ProductCategory;
+  products: ProductListItem[];
 }
 
 /**
- * Categorias del propio payload, en el orden en que llegan (la API ya ordena
- * por posicion de categoria y de platillo).
+ * Los platillos agrupados por el id de su categoria, en el orden del panel.
  *
- * Derivarlas de la lista y no de una constante escrita a mano es requisito del
- * contrato: `category` es un nombre, sensible a renombres desde el panel. De
- * paso garantiza que ningun chip pueda dejar la rejilla vacia.
+ * La lista y el orden los da `listed` —`categories` de `GET /api/store`, en el orden del
+ * arrastre del administrador— y los platillos se le cuelgan por `category.id`. De ahi sale
+ * tambien el nombre: es el que el contrato manda pintar en el chip.
+ *
+ * Dos cosas que pueden pasar porque catalogo y configuracion se guardan por separado, y que
+ * se resuelven a favor del catalogo, que es lo que se vende:
+ *
+ *   una categoria de la lista sin platillos   no se pinta: seria una entrada del indice
+ *                                             que lleva a una seccion vacia
+ *   platillos de una categoria que no esta     se pintan igual, detras, en el orden del
+ *   en la lista                                catalogo y con el nombre que traen
+ *
+ * Sin lista —la API no la publico, o no se pudo leer— queda solo el segundo caso: el orden
+ * del catalogo, que la API ya da por posicion de categoria y de platillo.
  */
-export function getCategories(items: ProductListItem[]): string[] {
-  return [ALL_CATEGORIES, ...new Set(items.map((item) => item.category))];
+function groupByCategory(
+  items: ProductListItem[],
+  listed: readonly CategoryRef[],
+): CategoryGroup[] {
+  const groups = new Map<string, CategoryGroup>();
+
+  for (const item of items) {
+    const group = groups.get(item.category.id);
+
+    if (group) group.products.push(item);
+    else groups.set(item.category.id, { category: item.category, products: [item] });
+  }
+
+  const ordered: CategoryGroup[] = [];
+
+  for (const entry of listed) {
+    const group = groups.get(entry.id);
+    if (!group) continue;
+
+    ordered.push({ ...group, category: { ...group.category, name: entry.name } });
+    groups.delete(entry.id);
+  }
+
+  return [...ordered, ...groups.values()];
+}
+
+/**
+ * Las categorias con platillos, por id y en el orden del panel: los rotulos de "Descubre"
+ * del pie. Los indices de la portada no salen de aqui sino de getMenuSections(), que usa
+ * la misma agrupacion.
+ *
+ * `listed` es `store.categories`. Las pantallas que no la tienen a mano la omiten y se
+ * quedan con el orden del catalogo, que es el mismo.
+ */
+export function getCategories(
+  items: ProductListItem[],
+  listed: readonly CategoryRef[] = [],
+): CategoryRef[] {
+  return groupByCategory(items, listed).map(({ category }) => ({
+    id: category.id,
+    name: category.name,
+  }));
+}
+
+// ---------------------------------------------------------------------------
+// Secciones del menu
+//
+// La portada ya no filtra una rejilla: pinta el catalogo partido en secciones, una por
+// categoria, con los destacados delante. Su indice —la columna lateral en desktop
+// (components/MenuSidebar.astro) y las tabs en movil (components/CategoryNav.astro)—
+// las lista y marca en cual se esta.
+// ---------------------------------------------------------------------------
+
+/**
+ * Rotulo y bajada de la seccion de destacados cuando el negocio no escribio los suyos.
+ *
+ * No es una categoria del panel —un destacado sigue en la suya, y aparece en las dos—,
+ * asi que sus textos no llegan con el catalogo: los publica `home.featured` de
+ * `GET /api/store`, cada uno con su texto o vacio. Vacio no quita la linea de la portada:
+ * vuelve a la de aqui. Ver getMenuSections().
+ */
+export const FEATURED_SECTION = {
+  name: 'Destacados',
+  description: 'Los favoritos de nuestros clientes',
+} as const;
+
+/**
+ * Los textos de la seccion de destacados tal como los resuelve getStoreConfig():
+ * `home.featured`, con cadena vacia donde el negocio no escribio nada.
+ */
+export interface FeaturedHeading {
+  title?: string;
+  description?: string;
+}
+
+export interface MenuSection {
+  /**
+   * El `id` del elemento, al que salta la columna lateral. En las categorias sale del id
+   * de la categoria, saneado para un atributo `id`.
+   */
+  anchor: string;
+  /** `featured` se pinta como lista horizontal; `category`, como rejilla. */
+  kind: 'featured' | 'category';
+  /** El id de la categoria; null en los destacados, que no son una. */
+  categoryId: string | null;
+  name: string;
+  /** Cadena vacia cuando no hay bajada que pintar. */
+  description: string;
+  products: ProductListItem[];
+}
+
+/**
+ * Los destacados primero —si hay alguno— y despues una seccion por categoria, por id y en
+ * el orden del panel (ver groupByCategory). La bajada de cada seccion es la de su primera
+ * tarjeta: viaja repetida en todas.
+ *
+ * Los destacados se ordenan aqui porque `featured` no cambia el orden de la lista. El
+ * `sort` es estable, asi que dos posiciones iguales conservan el orden de la API.
+ *
+ * `listed` es `store.categories`, como en getCategories(): las dos dan la misma lista en el
+ * mismo orden, que es lo que hace que cada rotulo del pie tenga su seccion.
+ *
+ * `heading` es `store.home.featured`: el titular y la bajada de los destacados. El titular
+ * es el `name` de la seccion, asi que rotula tambien su entrada en los dos indices, igual
+ * que el nombre de una categoria. El `anchor` no sale de el —es fijo—, y por eso el indice
+ * sigue encontrando la seccion escriba lo que escriba el negocio.
+ */
+export function getMenuSections(
+  items: ProductListItem[],
+  listed: readonly CategoryRef[] = [],
+  heading: FeaturedHeading = {},
+): MenuSection[] {
+  const sections: MenuSection[] = [];
+
+  const featured = items
+    .filter((item) => item.featured)
+    .sort((a, b) => (a.featured?.position ?? 0) - (b.featured?.position ?? 0));
+
+  // Sin ningun destacado no hay seccion, ni entrada en la columna: no se anuncia una
+  // lista vacia.
+  if (featured.length > 0) {
+    sections.push({
+      anchor: 'menu-destacados',
+      kind: 'featured',
+      categoryId: null,
+      // `||` y no `??`: lo que el negocio dejo vacio llega como cadena vacia.
+      name: heading.title || FEATURED_SECTION.name,
+      description: heading.description || FEATURED_SECTION.description,
+      products: featured,
+    });
+  }
+
+  for (const { category, products } of groupByCategory(items, listed)) {
+    sections.push({
+      // Los ids son numeros hoy; el saneado es por si un dia no lo son, que un espacio
+      // en un `id` rompe el salto.
+      anchor: `menu-categoria-${category.id.replace(/[^\w-]/g, '-')}`,
+      kind: 'category',
+      categoryId: category.id,
+      name: category.name,
+      description: category.description,
+      products,
+    });
+  }
+
+  return sections;
 }
 
 /**

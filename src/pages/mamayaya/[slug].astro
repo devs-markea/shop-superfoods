@@ -19,7 +19,6 @@ import { getCart } from '../../lib/cart.ts';
 import { peekCartToken } from '../../lib/cart-session.ts';
 import { isClosed } from '../../lib/schedule.ts';
 import {
-  ALL_CATEGORIES,
   defaultVariant,
   getCategories,
   getProduct,
@@ -30,6 +29,7 @@ import {
   toOptionGroups,
   variantPrice,
   type ProductDetail,
+  type CategoryRef,
 } from '../../lib/catalog.ts';
 
 // Los tres controles —radio, checkbox y contador de cantidad— llegan con la
@@ -128,10 +128,10 @@ const cartPending = cartToken
 // "Menu completo" en lugar de tumbar la ficha —son tres rotulos de un pie, no el
 // contenido de la pantalla—.
 const categoriesPending = getProducts()
-  .then((items) => getCategories(items).filter((category) => category !== ALL_CATEGORIES))
+  .then((items) => getCategories(items))
   .catch((error) => {
     console.error('[detalle] fallo el catalogo del pie', error);
-    return [] as string[];
+    return [] as CategoryRef[];
   });
 
 let product: ProductDetail | null = null;

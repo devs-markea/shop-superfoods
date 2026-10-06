@@ -2,12 +2,13 @@
 import BrandLogo from './BrandLogo.astro';
 import BrandIcon from './BrandIcon.astro';
 import { storeYear } from '../lib/schedule.ts';
+import type { CategoryRef } from '../lib/catalog.ts';
 import type { StoreSettings } from '../lib/store-config.ts';
 
 interface Props {
   store: StoreSettings;
-  /** Las categorias publicadas, ya sin el chip "Todos" que pone la interfaz. */
-  categories: readonly string[];
+  /** Las categorias publicadas, por id. */
+  categories: readonly CategoryRef[];
 }
 
 const { store, categories } = Astro.props;
@@ -36,11 +37,11 @@ const copyright = name
 // categorias PUBLICADAS, que es lo que hay de verdad que descubrir, y hasta tres:
 // la columna es un resumen, no un indice.
 //
-// Los cuatro navegan a la portada, que es donde vive el filtro —los chips de la
-// barra, radios name="category"—. Los tres de categoria llevan ademas su nombre
-// en un `data-`, y de ahi lo toma src/scripts/footer-discover.ts para dejarlo
-// pasado a la portada por sessionStorage: asi la direccion sigue siendo `/mamayaya` a
-// secas en lugar de arrastrar un parametro. Ver src/lib/discover.ts.
+// Los cuatro navegan a la portada. Los tres de categoria llevan ademas su ID en un
+// `data-` —el nombre solo se lee—, y de ahi lo toma src/scripts/footer-discover.ts
+// para dejarlo pasado a la portada por sessionStorage, que al llegar baja a la
+// seccion de esa categoria: asi la direccion sigue siendo `/mamayaya` a secas en
+// lugar de arrastrar un parametro. Ver src/lib/discover.ts.
 //
 // El `href` no es decorativo: sin JavaScript el enlace sigue llevando al menu
 // completo, y con el boton central o un Ctrl+click se abre en otra pestana.
@@ -96,8 +97,8 @@ const socials = store.socialLinks ?? [];
           {
             discover.map((category) => (
               <li>
-                <a class="footer__link" href="/mamayaya" data-discover-category={category}>
-                  {category}
+                <a class="footer__link" href="/mamayaya" data-discover-category={category.id}>
+                  {category.name}
                 </a>
               </li>
             ))

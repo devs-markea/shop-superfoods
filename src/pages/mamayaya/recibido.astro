@@ -24,7 +24,7 @@ import {
 } from '../../lib/whatsapp.ts';
 import { formatPrice } from '../../lib/price.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
-import { ALL_CATEGORIES, getCategories, getProducts } from '../../lib/catalog.ts';
+import { getCategories, getProducts, type CategoryRef } from '../../lib/catalog.ts';
 import { TEST_MODE } from 'astro:env/server';
 
 // UNA PANTALLA, DOS FORMAS
@@ -84,10 +84,10 @@ const cartPending = getCart(token).catch((error) => {
 // El catalogo, solo para los tres rotulos de categoria del pie: si falla, el pie
 // se queda con "Menu completo" y la pantalla sigue en pie.
 const categoriesPending = getProducts()
-  .then((items) => getCategories(items).filter((category) => category !== ALL_CATEGORIES))
+  .then((items) => getCategories(items))
   .catch((error) => {
     console.error('[recibido] fallo el catalogo del pie', error);
-    return [] as string[];
+    return [] as CategoryRef[];
   });
 
 const [store, schedule, cart, categories] = await Promise.all([

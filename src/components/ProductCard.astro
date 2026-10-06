@@ -2,12 +2,8 @@
 import Icon from './Icon.astro';
 import PromoBadge from './PromoBadge.astro';
 import { formatPrice } from '../lib/price.ts';
-import {
-  productHref,
-  productImageView,
-  promotionView,
-  type ProductListItem,
-} from '../lib/catalog.ts';
+import { productHref, type ProductListItem } from '../lib/catalog.ts';
+import { productCardView } from '../lib/product-card.ts';
 
 interface Props {
   product: ProductListItem;
@@ -22,87 +18,30 @@ interface Props {
 
 const { product, eager = false, storeClosed = false } = Astro.props;
 
-// El contrato distingue por que no se puede comprar, asi que el aviso tambien.
-// Record<string, string> y no Record<UnavailableReason, string>: si el backend
-// anade un motivo nuevo, la tarjeta cae en el texto generico en lugar de
-// pintar "undefined".
-const UNAVAILABLE_LABEL: Record<string, string> = {
-  no_price: 'Sin precio',
-  out_of_schedule: 'Fuera de horario',
-};
-
-// EL HORARIO MANDA SOBRE `available`, EN LOS DOS SENTIDOS, y esto es lo que permite guardar
-// el catalogo un dia entero (ver CATALOG_FRESH_MS en src/lib/catalog.ts).
+// La tarjeta de pie: la de los destacados de la portada. Las categorias van en
+// <MenuCard>, que cuenta lo mismo con otra estructura y con los mismos rotulos —sus
+// estilos son los de este archivo—. Que se pinta lo deciden las dos en
+// src/lib/product-card.ts.
 //
-// `available` viene resuelto por el backend EN EL MOMENTO EN QUE SE LEYO el catalogo, asi que
-// en una copia guardada envejece: una lista pedida de madrugada trae todo "fuera de horario"
-// y, sin esto, la tienda abriria con el menu entero apagado. El horario no envejece —se pide
-// aparte y se resuelve al minuto—, asi que es el que decide:
-//
-//   tienda cerrada      nada es comprable, diga lo que diga el catalogo
-//   tienda abierta      un "fuera de horario" guardado se ignora
-//
-// Lo que NO se ignora es cualquier otro motivo: esos no dependen del reloj, y si el contrato
-// estrena uno —hoy `out_of_schedule` es el unico que se emite— la tarjeta lo respeta.
-//
-// Lo que se cede: una categoria con horario propio distinto al de la tienda puede verse
-// comprable fuera de SU horario hasta que se purgue el cache. La ficha, que se lee fresca,
-// dice la verdad, y el backend rechaza el alta con un 422.
-const staleSchedule = !product.available && product.unavailableReason === 'out_of_schedule';
-
-const orderable = (product.available || staleSchedule) && !storeClosed;
-
-// Lo unico que se calla con la tienda cerrada es la etiqueta del motivo: repetir
-// "Fuera de horario" en cada platillo convertiria el menu en una lista de
-// negativas, y eso ya lo dice una sola vez la tarjeta de tienda cerrada.
-const notice =
-  storeClosed || product.available || staleSchedule
-    ? null
-    : (UNAVAILABLE_LABEL[product.unavailableReason ?? ''] ?? 'No disponible');
-
-// Los cuatro elementos de la spec, en este orden: insignia, precio tachado,
-// precio final y etiqueta de ahorro. Los tres ultimos solo cuando la promocion
-// baja de verdad el precio de la variante de referencia —la mas barata, la
-// misma que sustenta el "desde" de la tarjeta—.
-const promo = promotionView(product);
-
-// El nombre se recorta a 24 caracteres. En una tarjeta de 128 con la foto de 80
-// el titulo dispone de una sola linea, y ahora la comparte con la insignia de la
-// promocion: sin recorte, un nombre largo la empujaria fuera. El nombre entero
-// sigue accesible en el `title` del enlace y en la ficha.
-const NAME_MAX = 24;
-
-const displayName =
-  product.name.length > NAME_MAX ? `${product.name.slice(0, NAME_MAX).trimEnd()}...` : product.name;
-
-// La foto, si la hay. Sin ella la tarjeta NO pinta la caja: en movil el cuerpo
-// arranca en el borde y se queda con los 80 de la miniatura y sus 12 de hueco, y
-// en desktop ocupa los 330 de alto de la tarjeta. El pie sigue al fondo —lo manda
-// su `margin-top: auto`—, asi que el precio de un platillo sin foto queda a la
-// misma altura que el de sus vecinos con foto. Ver src/lib/product-image.ts.
-const image = productImageView(product);
+// Sin foto la tarjeta NO pinta la caja: en movil el cuerpo arranca en el borde y se
+// queda con los 80 de la miniatura y sus 12 de hueco, y en desktop ocupa los 330 de
+// alto de la tarjeta. El pie sigue al fondo —lo manda su `margin-top: auto`—, asi
+// que el precio de un platillo sin foto queda a la misma altura que el de sus
+// vecinos con foto.
+const { orderable, notice, promo, displayName, image } = productCardView(product, storeClosed);
 ---
 
-<!-- data-card: por aqui la alcanza el filtro para ponerle y quitarle el estado de
-     carga (src/scripts/category-filter.ts). La celda de la rejilla lleva la
-     categoria, pero el estado es de la tarjeta, que es quien tiene partes que
-     volver barras. -->
 <article
-  class:list={['product-card', 'card', !orderable && 'product-card--unavailable']}
-  data-card
+  class:list={[
+    'product-card',
+    'card',
+    !image && 'product-card--no-media',
+    !orderable && 'product-card--unavailable',
+  ]}
 >
   {/* La caja de la foto arranca como esqueleto y lo suelta cuando la imagen llega
       (src/scripts/image-skeleton.ts). Es lo unico de la tarjeta que se hace
       esperar de verdad: el resto lo trae el HTML ya escrito.
-
-      Cubre las dos esperas reales con la misma clase, porque el estado es de cada
-      foto: la de la carga inicial, y la de la foto que solo empieza a descargarse
-      cuando un filtro devuelve su celda a la rejilla —una imagen `lazy` dentro de
-      una celda con `hidden` no se pide, porque no tiene caja que pueda acercarse al
-      viewport—.
-
-      El esqueleto del cambio de categoria es otra cosa y va aparte, en
-      .product-card--loading: ahi no se espera ninguna descarga.
 
       Sin foto no hay nada de esto: ni caja, ni esqueleto, ni hueco. La tarjeta se
       queda en cuerpo, que es su unico hijo y ocupa el ancho entero. */}
@@ -188,9 +127,10 @@ const image = productImageView(product);
         notice ? (
           <span class="tag tag--optional badge">{notice}</span>
         ) : !orderable ? null : (
-          // position-relative saca el boton por encima del stretched-link
+          // En movil va sobre la foto, en su esquina de abajo a la derecha; en
+          // desktop, al final del pie. Lo coloca el CSS: el marcado es uno.
           <button
-            class="product-card__add btn-plain position-relative"
+            class="product-card__add btn-plain"
             type="button"
             aria-label={`Agregar ${product.name} al carrito`}
             data-add
@@ -230,15 +170,7 @@ const image = productImageView(product);
      toda animacion en 0.01ms y una sola vuelta, asi que con movimiento reducido esto
      es exactamente el gris plano de antes.
      --------------------------------------------------------------------------- */
-  /* La pintura, en un mixin porque la piden dos sitios: esta clase —la caja de la
-     foto, que espera una descarga de verdad— y el estado de carga del filtro, que la
-     pone en cinco elementos de la tarjeta y no puede depender de que la clase siga
-     puesta (ver .product-card--loading en los estilos de este archivo). */
-  .skeleton,
-  .product-card--loading .product-card__media,
-  .product-card--loading .product-card__title,
-  .product-card--loading .product-card__description,
-  .product-card--loading .product-card__price {
+  .skeleton {
     background-color: var(--sf-border);
     background-image: linear-gradient(90deg, rgba(255, 255, 255, 0) 0%, rgba(255, 255, 255, 0.55) 50%, rgba(255, 255, 255, 0) 100%);
     background-repeat: no-repeat;
@@ -260,35 +192,41 @@ const image = productImageView(product);
   /* ---------------------------------------------------------------------------
      Block: product-card  (sobre .card de Bootstrap)
      ---------------------------------------------------------------------------
-     Bootstrap aporta fondo, radius y sombra via .card. Aqui queda la
-     disposicion horizontal de la spec, que .card no trae de serie.
+     La tarjeta de los destacados. Bootstrap aporta fondo y radius via .card; aqui
+     queda la disposicion, que .card no trae de serie.
 
-     Spec: height 128 - gap 12 - radius 16 - padding 16 - shadow 0 1px 2px #0000000D
-     128 - 32 (padding) = 96 de alto util:
-     titulo 20 + 4 + descripcion 40 (2 lineas) + 4 + footer 28 = 96
+     Spec movil: 230x302 - padding 12 - gap 12 - radius 16
+       foto 206x154, radius 12, con el "+" en su esquina de abajo a la derecha
+       nombre Inter 600 14/20 · descripcion Inter 400 14/20 · precio Inter 600 14/20
+
+     Desktop, en su bloque: la foto a todo lo ancho, sin relleno alrededor.
+
+     Los rotulos —nombre, descripcion, precios, boton— los comparte <MenuCard>, que
+     usa estas mismas clases. Lo que es solo de esta tarjeta va colgado de
+     .product-card.
      --------------------------------------------------------------------------- */
   .product-card {
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
     gap: 12px;
-    min-height: 128px;
+    min-height: 302px;
     height: 100%;
-    padding: 16px;
+    padding: 12px;
     transition: box-shadow 160ms ease, transform 160ms ease;
   }
   .product-card:hover {
     box-shadow: 0 4px 12px 0 rgb(0 0 0 / 8%);
   }
 
-  /* Element: media — imagen 80x80 anclada arriba
+  /* Element: media — la foto, arriba y a todo lo ancho del relleno: 206x154.
 
      El gris de aqui es el esqueleto en reposo: la caja llega con .skeleton puesta y
      al retirarse queda este mismo color, asi que la foto que tarda late y la que ya
      esta se apoya en el gris de siempre. Ver los estilos de este archivo. */
   .product-card__media {
-    flex: 0 0 80px;
-    width: 80px;
-    height: 80px;
+    flex: 0 0 auto;
+    width: 100%;
+    height: 154px;
     overflow: hidden;
     border-radius: 12px;
     background-color: var(--sf-border);
@@ -300,14 +238,13 @@ const image = productImageView(product);
     object-fit: cover;
   }
 
-  /* Element: body — resto del espacio, 96 de alto */
+  /* Element: body — nombre, descripcion y, al fondo, el precio */
   .product-card__body {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;
     gap: 4px;
     min-width: 0;
-    min-height: 96px;
   }
 
   /* Element: title — nombre y, al final, la insignia de la promocion. En fila:
@@ -422,7 +359,11 @@ const image = productImageView(product);
     color: var(--sf-accent);
   }
 
+  /* Posicionado y por encima del stretched-link, que cubre la tarjeta entera con su
+     ::after de z-index 1: sin esto el toque se lo llevaria el enlace. */
   .product-card__add {
+    position: relative;
+    z-index: 2;
     display: inline-flex;
     flex: 0 0 28px;
     align-items: center;
@@ -433,6 +374,16 @@ const image = productImageView(product);
     background-color: var(--sf-accent);
     color: var(--sf-white);
     transition: background-color 160ms ease, transform 160ms ease;
+  }
+
+  /* El "+" de esta tarjeta, en movil, sobre la esquina de abajo a la derecha de la
+     foto, a 8 de sus bordes: 12 de relleno + 154 de foto - 8 - 28 del boton. Se
+     cuelga de la tarjeta y no de la foto porque el marcado es el de desktop, donde
+     va en el pie. Sin foto no hay esquina: se queda en el pie. */
+  .product-card:not(.product-card--no-media) .product-card__add {
+    position: absolute;
+    top: calc(12px + 154px - 8px - 28px);
+    right: calc(12px + 8px);
   }
   .product-card__add:hover {
     background-color: var(--sf-accent-hover);
@@ -452,57 +403,6 @@ const image = productImageView(product);
   }
   .product-card--unavailable:hover {
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
-  }
-
-  /* La foto, aunque su imagen ya este cargada: hay que esconderla para que el
-     relleno se vea, porque la cubre entera. */
-  .product-card--loading .product-card__image {
-    visibility: hidden;
-  }
-  /* El titulo se pinta en el CONTENEDOR y sus hijos se esconden. En el enlace no
-     valdria `color: transparent`: lleva .text-reset, que es una utilidad de
-     Bootstrap y viene con !important, asi que la barra tiene que salir de la fila. */
-  .product-card--loading .product-card__title {
-    border-radius: 8px;
-  }
-  .product-card--loading .product-card__title > * {
-    visibility: hidden;
-  }
-  /* Aqui si: con el texto transparente la barra mide lo que mide la linea de verdad
-     —dos lineas en la descripcion, el ancho del importe en el precio— en lugar de
-     una barra inventada que al resolverse cambiaria de tamano. */
-  .product-card--loading .product-card__description,
-  .product-card--loading .product-card__price {
-    border-radius: 8px;
-    color: transparent;
-  }
-  /* Lo que no puede ser barra sin quedar en ridiculo: la insignia de promocion, el
-     "Desde", el precio tachado, la aclaracion del descuento, la etiqueta de no
-     disponible y el boton de agregar. */
-  .product-card--loading .product-card__from,
-  .product-card--loading .price-was,
-  .product-card--loading .product-card__deal,
-  .product-card--loading .tag,
-  .product-card--loading .product-card__add {
-    visibility: hidden;
-  }
-  /* El barrido corre mas rapido que el de la foto: el suyo puede repetirse el rato
-     que tarde una descarga, y este solo dispone de los 480ms del filtro (ver HOLD en
-     category-filter.ts). A 1.4s la banda apenas asomaria por el borde izquierdo y lo
-     que se veria seria un gris plano. A 700 cruza dos tercios de la caja, que es lo
-     que se lee como "esto se esta rehaciendo".
-
-     Sale corto a proposito: la banda se va a mitad de viaje, y una que termina y
-     vuelve a empezar diria que la espera sigue.
-
-     VA AL FINAL DEL BLOQUE, y no junto a cada relleno: `animation` es un atajo y
-     repone la duracion por defecto, asi que un include posterior se llevaria por
-     delante esta linea. Con la misma especificidad decide el orden. */
-  .product-card--loading .product-card__media,
-  .product-card--loading .product-card__title,
-  .product-card--loading .product-card__description,
-  .product-card--loading .product-card__price {
-    animation-duration: 700ms;
   }
 
   /* Modifier de feedback al agregar (lo aplica src/scripts/add-button.ts) */
@@ -530,7 +430,6 @@ const image = productImageView(product);
      180 + 150 = 330 */
   @media (min-width: 768px) {
     .product-card {
-      flex-direction: column;
       gap: 0;
       min-height: 330px;
       /* El relleno pasa al cuerpo: la foto llega hasta los bordes. */
@@ -571,11 +470,32 @@ const image = productImageView(product);
     .product-card__from {
       display: inline;
     }
+    /* 34x34 en desktop. La clase la comparte el "+" de <MenuCard>, asi que cambia
+       en las dos tarjetas. */
     .product-card__add {
-      flex-basis: 32px;
-      width: 32px;
-      height: 32px;
-      border-radius: 16px;
+      flex-basis: 34px;
+      width: 34px;
+      height: 34px;
+      border-radius: 17px;
+    }
+    /* Vuelve al pie, al final de la fila del precio. */
+    .product-card:not(.product-card--no-media) .product-card__add {
+      position: relative;
+      top: auto;
+      right: auto;
+    }
+  }
+
+  /* Los precios bajan de linea cuando no caben. En la tarjeta estrecha —los
+     destacados van tres por vista, unos 246 de ancho (ver
+     components/MenuSection.astro), y la de las categorias deja el ancho a la foto—
+     "Desde", el precio y el tachado no caben en una linea junto al "+", y el
+     tachado se le metia debajo. Asi baja a una segunda linea, bajo el precio que
+     justifica; en una tarjeta ancha no cambia nada. */
+  @media (min-width: 768px) {
+    .product-card__prices {
+      flex-wrap: wrap;
+      row-gap: 4px;
     }
   }
 

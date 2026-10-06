@@ -88,12 +88,14 @@ const { address, mapsUrl } = Astro.props;
     gap: 6px;
   }
 
-  /* Element: la direccion — Inter 600 14/20 #141821 */
+  /* Element: la direccion — Inter 600 14/20 #141821. `pre-line` por lo mismo que
+     .location-sheet__address: la direccion llega con sus `\n`. */
   .pickup-location__value {
     font-size: 14px;
     font-weight: 600;
     line-height: 20px;
     color: var(--sf-ink);
+    white-space: pre-line;
   }
 
   /* Element: pista cuando la tienda no tiene direccion configurada */

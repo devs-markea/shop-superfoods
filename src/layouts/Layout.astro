@@ -26,6 +26,7 @@ import '../styles/screens.css';
 import { STORE_THEME } from 'astro:env/server';
 import type { StoreSettings } from '../lib/store-config.ts';
 import { getTheme, themeStyle } from '../lib/theme.ts';
+import WatiChat from '../components/WatiChat.astro';
 
 interface Props {
   /**
@@ -86,11 +87,13 @@ const theme = getTheme(STORE_THEME);
     {
       /*
         Los iconos de la tienda. Los archivos viven en public/ y todos salen del
-        mismo trazo: la marca en dorado, el #d5aa53 del tema por defecto.
+        mismo trazo: el logo entero de src/assets/logo-mama-yaya.png, con su
+        texto. A 16 y 32px el texto no se lee, y es a proposito: la marca va
+        completa en todas partes. Todos van sin fondo, sobre transparente,
+        tambien a proposito.
 
-        NO SIGUEN AL TEMA: son imagenes, con el dorado dentro. Una tienda con
-        otro acento necesita su propio juego de iconos, y con el, otro color en
-        `msapplication-TileColor`, que va con ellos y no con --sf-accent.
+        NO SIGUEN AL TEMA: son imagenes, con los colores del logo dentro. Otra
+        marca necesita su propio juego de iconos.
 
         Son varias declaraciones porque detras hay consumidores distintos y
         ninguno lee el formato del vecino:
@@ -100,24 +103,27 @@ const theme = getTheme(STORE_THEME);
           describe su contenido: esta para que Chrome, que si pinta el SVG, no
           se descargue los dos.
         - El SVG es el que se ve en un navegador de hoy: una peticion y nitido a
-          cualquier zoom y a cualquier densidad.
+          cualquier zoom y a cualquier densidad. Es el unico que sabe del modo
+          oscuro: pasa el cafe a crema, porque cafe sobre una pestana oscura no
+          se ve. Es un calco del PNG del logo, no el vector de la marca; si
+          llega el original, se cambia por el.
         - Los PNG de 32 y 16 se solapan con el .ico. No cuestan una peticion de
           mas —el navegador elige UNO— y estan porque vienen con el juego de
           iconos; el dia que se decida que sobran, se borran estas dos lineas y
           sus dos archivos y no hay nada mas que tocar.
         - El apple-touch-icon de 180 es el de la pantalla de inicio de iOS, y no
-          puede salir del manifest porque Safari no lo lee de ahi.
+          puede salir del manifest porque Safari no lo lee de ahi. iOS no deja
+          un icono sin fondo: lo transparente lo pinta de negro. Si se quiere
+          otro color detras, tiene que ir dentro de la imagen.
         - El manifest lleva los de Android, el nombre y el color del arranque.
           Ver public/site.webmanifest: su `start_url` es /mamayaya y no la raiz,
           que solo es el 302 de astro.config.mjs —abrir una app instalada por
           una redireccion es una pantalla en blanco de mas cada vez—.
 
-        `msapplication-*` son las dos etiquetas de Microsoft que siguen vivas:
-        el mosaico del menu de inicio de Windows. El dorado va aqui y no en
-        `theme-color` a proposito: el mosaico es una superficie de la marca, y
-        la barra del navegador es la de la tienda, que es blanca. Va escrito y
-        no leido del tema porque tiene que coincidir con el fondo de
-        mstile-150x150.png, que es dorado.
+        `msapplication-TileImage` es la etiqueta de Microsoft que sigue viva: el
+        mosaico del menu de inicio de Windows. No lleva `msapplication-TileColor`
+        a proposito: los iconos van sin fondo, y sin esa etiqueta el color de
+        detras del mosaico lo elige Windows.
       */
     }
     <link rel="icon" href="/favicon.ico" sizes="any" />
@@ -126,7 +132,6 @@ const theme = getTheme(STORE_THEME);
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    <meta name="msapplication-TileColor" content="#d5aa53" />
     <meta name="msapplication-TileImage" content="/mstile-150x150.png" />
 
     <title>{documentTitle}</title>
@@ -171,5 +176,6 @@ const theme = getTheme(STORE_THEME);
   </head>
   <body class="page">
     <slot />
+    <WatiChat store={store} accent={theme.accent} />
   </body>
 </html>

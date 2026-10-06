@@ -413,6 +413,54 @@ export function scheduleLabel(schedule: StoreSchedule, now = new Date()): string
   return `Cerrado · Abre ${nextOpeningDay(schedule, now)} a las ${opensAt.time}`;
 }
 
+/** "23:00" en 12 horas: "11:00 p.m.". Tal cual si no es una hora. */
+function to12h(time: string): string {
+  const minutes = parseTime(time);
+  if (minutes === null) return time;
+
+  const hour = Math.floor(minutes / 60);
+  const minute = String(minutes % 60).padStart(2, '0');
+
+  return `${hour % 12 || 12}:${minute} ${hour < 12 ? 'a.m.' : 'p.m.'}`;
+}
+
+/**
+ * El turno en curso, en 12 horas: la cabecera de la columna lateral de la portada. `null`
+ * cuando no se sabe: entonces no se afirma nada.
+ *
+ *   12:00 p.m. - 11:00 p.m.
+ *   Abierto las 24 horas
+ *   Cerrado · Abre manana a las 9:00 a.m.
+ *
+ * El tramo sale de los RANGOS, resueltos en este instante, igual que resolveSchedule(): el
+ * servidor solo publica el cierre. Con turnos solapados se pinta el que cierra mas tarde,
+ * que es el mismo que da `closesAt`. Si los rangos no se pueden leer —la forma vieja de
+ * la API— queda el cierre, que es lo unico que se sabe.
+ */
+export function shiftLabel(schedule: StoreSchedule, now = new Date()): string | null {
+  if (schedule.isOpen === null) return null;
+
+  if (!schedule.isOpen) {
+    const { opensAt } = schedule;
+    if (!opensAt) return 'Cerrado';
+
+    return `Cerrado · Abre ${nextOpeningDay(schedule, now)} a las ${to12h(opensAt.time)}`;
+  }
+
+  const minute = storeMinuteOfWeek(now);
+  const covering = (weekRanges(schedule.days) ?? []).filter((range) => covers(range, minute));
+
+  if (covering.some((range) => range.closesAt === null)) return 'Abierto las 24 horas';
+
+  if (covering.length > 0) {
+    const shift = covering.reduce((latest, range) => (range.end > latest.end ? range : latest));
+
+    return `${to12h(shift.startTime)} - ${to12h(shift.closesAt ?? '')}`;
+  }
+
+  return schedule.closesAt ? `Abierto hasta las ${to12h(schedule.closesAt)}` : null;
+}
+
 /**
  * Los turnos de un dia, listos para pintar. Cadena vacia si esta cerrado: quien
  * llama decide como rotularlo.

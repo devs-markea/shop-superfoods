@@ -277,9 +277,10 @@ h6,
 /* ---------------------------------------------------------------------------
  * Tarjetas: spec radius 16, sin borde.
  *
- * La unica que hay es la de platillo. El relleno y la sombra los pone su bloque
- * .product-card; de .card solo hereda la caja. Por eso no se tocan las medidas
- * de .card-body ni las del resto de piezas: no existe ninguna en el proyecto.
+ * Las unicas que hay son las de platillo. El relleno y la sombra los ponen sus
+ * bloques, .product-card y .menu-card; de .card solo heredan la caja. Por eso no
+ * se tocan las medidas de .card-body ni las del resto de piezas: no existe
+ * ninguna en el proyecto.
  * --------------------------------------------------------------------------- */
 .card {
   background-color: var(--sf-white);

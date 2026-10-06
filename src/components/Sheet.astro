@@ -85,9 +85,13 @@ const { id, title, wide = false, persistent = false } = Astro.props;
      entre el estado cerrado —la salida— y `[open]` —la entrada—, cada una con su
      comentario.
      --------------------------------------------------------------------------- */
+  /* En movil, de lado a lado de la pantalla, mida lo que mida: con un tope de 390, en
+     un movil mas ancho la hoja dejaba un hueco a cada lado. `none` y no 100%, porque
+     el <dialog> modal trae del navegador su propio tope, mas estrecho que la pantalla.
+     El de 390 vuelve en desktop, donde la hoja es una ventana centrada. */
   .sheet {
     width: 100%;
-    max-width: 390px;
+    max-width: none;
     max-height: 85dvh;
     padding: 20px;
     border: 0;
@@ -212,6 +216,7 @@ const { id, title, wide = false, persistent = false } = Astro.props;
      ya— y con un dedo de subida que le quita la rigidez. */
   @media (min-width: 768px) {
     .sheet {
+      max-width: 390px;
       border-radius: 20px;
       margin: auto;
 
