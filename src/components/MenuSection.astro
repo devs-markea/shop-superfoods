@@ -31,14 +31,16 @@ const { section, eager = false, storeClosed = false } = Astro.props;
 // "Descubre" del pie.
 const featured = section.kind === 'featured';
 
-// Lo que encuentra el buscador de desktop en cada platillo: su nombre y su descripcion,
-// ya normalizados (ver src/lib/search.ts). Solo en las categorias: los destacados estan
-// tambien en la suya, y alli es donde se encuentran.
+// Lo que encuentra el buscador de desktop en cada platillo: su nombre, su descripcion y
+// el nombre de su categoria, ya normalizados (ver src/lib/search.ts). Solo en las
+// categorias: los destacados estan tambien en la suya, y alli es donde se encuentran.
 //
-// El nombre de la categoria no entra. Hay categorias que son una lista —"Tortas, Tacos,
-// Sopas, Burritos y Molletes"— y con el, buscar "torta" devolvia la categoria entera.
+// Con la categoria dentro, escribir "bebidas" devuelve todas las bebidas aunque ninguna
+// lleve esa palabra. La contrapartida: una categoria cuyo nombre es una lista —"Tortas,
+// Tacos, Sopas, Burritos y Molletes"— sale entera con cualquiera de sus palabras. Se
+// eligio asi a sabiendas: con nombres cortos, que es lo normal, es lo que se espera.
 const searchText = (product: MenuSection['products'][number]) =>
-  normalizeSearch(`${product.name} ${product.description}`);
+  normalizeSearch(`${product.name} ${product.description} ${section.name}`);
 
 // El contador de platillos junto al titulo: solo en las categorias, y solo se ve en
 // movil (en desktop la cifra ya esta en la columna lateral).
