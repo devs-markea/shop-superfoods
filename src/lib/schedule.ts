@@ -413,6 +413,28 @@ export function scheduleLabel(schedule: StoreSchedule, now = new Date()): string
   return `Cerrado · Abre ${nextOpeningDay(schedule, now)} a las ${opensAt.time}`;
 }
 
+/**
+ * El estado de la tienda en tres casos, para la etiqueta del banner de la portada:
+ *
+ *   open          abierta ahora
+ *   closed-now    cerrada, pero vuelve a abrir HOY: antes del primer turno o entre dos
+ *   closed-today  cerrada y hoy ya no abre: el dia no tiene turnos, o ya paso el ultimo
+ *
+ * `null` cuando no se sabe (sin horario): entonces no se afirma nada.
+ *
+ * "Hoy" lo decide la proxima apertura, en la zona de la tienda (ver nextOpeningDay), y
+ * no si el dia tiene turnos: pasado el ultimo turno del dia, "por el momento" haria
+ * esperar una apertura que ya no llega hasta manana.
+ */
+export type StoreStatus = 'open' | 'closed-now' | 'closed-today';
+
+export function storeStatus(schedule: StoreSchedule, now = new Date()): StoreStatus | null {
+  if (schedule.isOpen === null) return null;
+  if (schedule.isOpen) return 'open';
+
+  return nextOpeningDay(schedule, now) === 'hoy' ? 'closed-now' : 'closed-today';
+}
+
 /** "23:00" en 12 horas: "11:00 p.m.". Tal cual si no es una hora. */
 function to12h(time: string): string {
   const minutes = parseTime(time);
