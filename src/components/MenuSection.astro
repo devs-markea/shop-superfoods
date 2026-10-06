@@ -45,6 +45,10 @@ const searchText = (product: MenuSection['products'][number]) =>
 const count = section.products.length;
 const countLabel = `${count} ${count === 1 ? 'producto' : 'productos'}`;
 
+// Los primeros destacados llevan su puesto sobre la foto: "#1 favoritos", "#2 favoritos".
+// Van en el orden del panel (`featured.position`), asi que el puesto es el indice.
+const RANKED = 2;
+
 const titleId = `${section.anchor}-titulo`;
 const itemsId = `${section.anchor}-platillos`;
 ---
@@ -111,7 +115,12 @@ const itemsId = `${section.anchor}-platillos`;
         >
           {section.products.map((product, index) => (
             <li class="menu-section__item">
-              <ProductCard product={product} eager={eager && index === 0} storeClosed={storeClosed} />
+              <ProductCard
+                product={product}
+                eager={eager && index === 0}
+                storeClosed={storeClosed}
+                rank={index < RANKED ? index + 1 : undefined}
+              />
             </li>
           ))}
         </ul>
