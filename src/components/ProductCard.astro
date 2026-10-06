@@ -252,8 +252,8 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
      bordes. Spec: 81x23 - padding 5/9 - radius 100 - fondo #228B5A
      Inter 700 11/100% blanco; en movil, 12.
 
-     El verde es de un solo uso, y por eso va aqui y no en styles/colors.css. No sigue
-     al tema a proposito: es una distincion, como el verde del ahorro, no la marca. */
+     El verde no sigue al tema a proposito: es una distincion, como el verde del
+     ahorro, no la marca. */
   .product-card__rank {
     position: absolute;
     top: 8px;
@@ -263,7 +263,7 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
     min-height: 23px;
     padding: 5px 9px;
     border-radius: 100px;
-    background-color: #228b5a;
+    background-color: var(--sf-success-strong);
     color: var(--sf-white);
     font-size: 12px;
     font-weight: 700;

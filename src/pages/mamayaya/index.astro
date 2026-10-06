@@ -23,7 +23,7 @@ import { busyMessage } from '../../lib/throttle.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
 import { getCart } from '../../lib/cart.ts';
 import { peekCartToken } from '../../lib/cart-session.ts';
-import { isClosed, shiftLabel } from '../../lib/schedule.ts';
+import { isClosed, shiftLabel, storeStatus } from '../../lib/schedule.ts';
 import { formatPrice } from '../../lib/price.ts';
 import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
 
@@ -179,6 +179,9 @@ const sidebarHeading = store.home?.panel?.presentation || store.name;
 // afirma nada y la linea no se pinta.
 const shift = schedule ? shiftLabel(schedule) : null;
 
+// La etiqueta del banner: abierta, o cerrada por el momento o por hoy.
+const status = schedule ? storeStatus(schedule) : null;
+
 // El switch de la barra llega con lo ultimo elegido, aqui o en /mamayaya/datos: es la
 // misma eleccion, guardada en el borrador. Se pinta en el servidor para que las
 // metas correctas —plazo y envio, o recoleccion y mapa— esten ya en su sitio
@@ -215,6 +218,7 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
           title={banner?.title}
           description={banner?.description}
           image={banner?.image}
+          status={status}
         />
 
         <OrderBar
