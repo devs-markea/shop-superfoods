@@ -26,7 +26,7 @@ import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
 import { getCategories, getProducts, type CategoryRef } from '../../lib/catalog.ts';
 import { resolveShipping } from '../../lib/shipping.ts';
-import { isClosed } from '../../lib/schedule.ts';
+import { isClosed, shiftLabel } from '../../lib/schedule.ts';
 import { formatPrice } from '../../lib/price.ts';
 
 // DOS PANTALLAS, UN MARCADO
@@ -143,6 +143,7 @@ const shipping = resolveShipping({
 // las dedujera la barra de desktop por su cuenta, podria ofrecer un boton para una
 // hoja que esta pantalla no monto. Es lo mismo que hacen <Navbar> en la portada y
 // la ficha en la suya.
+const message = store.location?.message;
 const address = store.location?.address;
 const mapsUrl = store.location?.mapsUrl;
 const hasLocation = Boolean(address || mapsUrl);
@@ -160,9 +161,12 @@ const closed = isClosed(schedule);
   <TopBar title="Mi pedido" total={total} mobileOnly />
 
   <NavbarDesktop
-    shortAddress={store.location?.shortAddress}
     hasLocation={hasLocation}
     hasSchedule={hasSchedule}
+    shift={schedule ? shiftLabel(schedule) : null}
+    estimate={store.delivery?.estimate}
+    pickup={store.pickup?.estimate}
+    selected={draft.deliveryType}
     cartTotal={total}
     cartCount={cart?.itemsCount ?? 0}
   />
@@ -317,7 +321,7 @@ const closed = isClosed(schedule);
       horario la abre ademas el boton de la tarjeta de tienda cerrada, que es
       quien la pedia antes de que esta pantalla tuviera barra. */}
   {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
-  {hasLocation && <LocationSheet address={address} mapsUrl={mapsUrl} />}
+  {hasLocation && <LocationSheet message={message} address={address} mapsUrl={mapsUrl} />}
 
   <Footer store={store} categories={categories} />
 </Layout>

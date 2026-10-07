@@ -3,17 +3,25 @@ import Icon, { type IconName } from './Icon.astro';
 import BrandLogo from './BrandLogo.astro';
 import { formatPrice } from '../lib/price.ts';
 import { cartChipLabel } from '../lib/cart-view.ts';
+import type { DeliveryType } from '../lib/checkout.ts';
 
 interface Props {
-  /**
-   * La direccion ABREVIADA. Es la que cabe en una barra, y la unica que se rotula
-   * aqui: la completa es del modal. Sin ella el pin rotula la accion, no el dato.
-   */
-  shortAddress?: string;
   /** Si la cabecera monto la hoja de ubicacion. Sin ella no hay nada que abrir. */
   hasLocation?: boolean;
   /** Si la cabecera monto la hoja del horario. Idem. */
   hasSchedule?: boolean;
+  /** El turno en curso ya redactado (ver shiftLabel en src/lib/schedule.ts). */
+  shift?: string | null;
+  /** Estimado a domicilio. Sin el, no se promete un tiempo. */
+  estimate?: string;
+  /** Estimado para recoger. Es otra promesa: no se sustituye por la de arriba. */
+  pickup?: string;
+  /**
+   * Modo de entrega ya elegido, que la pagina saca del borrador —o del pedido,
+   * donde ya lo hay—. Decide cual de los dos plazos se lee en las pantallas sin
+   * switch; donde lo hay, manda el (ver los estilos de este archivo).
+   */
+  selected?: DeliveryType;
   /** Total del carrito de la sesion. */
   cartTotal: number;
   /** Unidades en el carrito. En 0 el chip va sin etiqueta. */
@@ -21,9 +29,12 @@ interface Props {
 }
 
 const {
-  shortAddress,
   hasLocation,
   hasSchedule,
+  shift,
+  estimate,
+  pickup,
+  selected = 'delivery',
   cartTotal,
   cartCount,
 } = Astro.props;
@@ -38,69 +49,103 @@ const {
 // que pantalla estabas sin llevar a ninguna parte. Se retiraron: el reparto vuelve
 // a ser logo a un lado y tienda al otro.
 
-// Las metas de la tienda: pin y reloj, cada uno con su rotulo.
+// Las metas de la tienda que abren algo: pin y reloj, cada uno con su rotulo.
 //
 // Abren las MISMAS hojas que los iconos de la barra de movil —las monta <Navbar>
 // una sola vez para las dos—, asi que aqui no hay JavaScript nuevo: basta el
 // `data-sheet` que ya escucha src/scripts/sheet.ts.
 //
-// Con hoja el rotulo es un boton; sin hoja se queda en texto, porque un boton que
-// no abre nada es peor que un dato quieto. Los dos casos solo se dan en el pin: se
-// puede tener direccion abreviada y ninguna hoja que abrir.
-//
-// El plazo de envio no se rotula aqui: es de las metas de la barra de pedido, en
-// movil (ver components/OrderMeta.astro).
+// Los dos solo existen con su hoja: sin nada que abrir, un boton que no funciona
+// es peor que no ofrecerlo.
 interface Meta {
   icon: IconName;
   /** Lo que se lee. */
   label: string;
-  /** La hoja que abre. `null` deja el rotulo en texto. */
-  sheet: string | null;
+  /** La hoja que abre. */
+  sheet: string;
   /**
-   * Que es, cuando el rotulo no lo dice. Va en el nombre accesible del boton,
+   * Que abre, cuando el rotulo no lo dice. Va en el nombre accesible del boton,
    * detras del rotulo; sin el, el nombre es el rotulo.
    */
   name?: string;
-  /** Cinturon: la abreviada admite hasta 60 caracteres y la barra no da tantos. */
-  truncate: boolean;
+  /** El rotulo es un dato de largo variable: cede el ancho que falte y se recorta. */
+  truncate?: boolean;
 }
 
 const metas: Meta[] = [];
 
-// El pin rotula la direccion ABREVIADA y nunca la completa. No es que no quepa:
-// es que no es la misma cosa. Recortar la larga por caracteres deja fuera justo lo
-// que ubica el local —la colonia, la referencia— y lo que sobrevive no dice a
-// donde ir; cual es el trozo que identifica la tienda lo decide el negocio, y por
-// eso viaja aparte. Sin abreviada no hay direccion en la barra: se rotula la
-// accion —el mismo "Ver mapa" de las metas de la barra de pedido— y no un recorte
-// de la otra.
+// El pin rotula lo que abre —"Ubicación", fijo— y no la direccion. Llevaba la
+// abreviada y se retiro de la barra: aqui la direccion se lee en la hoja, que
+// muestra la completa. La abreviada sigue en las metas de la barra de pedido, en
+// movil (ver components/OrderMeta.astro).
 //
-// Los dos datos son independientes, asi que se dan las cuatro combinaciones y cada
-// una tiene su forma:
-//
-//   abreviada + hoja   boton con la direccion
-//   solo abreviada     texto con la direccion: no hay hoja que abrir
-//   solo hoja          boton "Ver mapa"
-//   ninguna            no se pinta pin
-if (shortAddress || hasLocation) {
+// Sin direccion ni enlace no hay hoja, y entonces tampoco pin, tenga o no
+// abreviada la tienda.
+if (hasLocation) {
   metas.push({
     icon: 'map-pin',
-    label: shortAddress || 'Ver mapa',
-    sheet: hasLocation ? 'sheet-location' : null,
-    name: 'Ubicacion de la tienda',
+    label: 'Ubicación',
+    sheet: 'sheet-location',
+  });
+}
+
+// El reloj rotula el turno en curso —"12:00 p.m. - 11:00 p.m.", o cuando vuelve a
+// abrir—, que es lo que iba bajo el encabezado de la columna lateral de la portada
+// y se mudo aqui: en la barra se lee en todas las pantallas, y al lado del boton
+// que abre la semana entera.
+//
+// El turno no dice que abre el boton, asi que eso va en su nombre accesible. Sin
+// turno que rotular —abierta, pero la API no publica ni el tramo ni el cierre—
+// queda "Horarios", que si lo dice.
+//
+// Sin turnos no hay hoja, y entonces tampoco reloj.
+if (hasSchedule) {
+  metas.push({
+    icon: 'clock',
+    label: shift || 'Horarios',
+    sheet: 'sheet-schedule',
+    name: shift ? 'Horarios' : undefined,
     truncate: true,
   });
 }
 
-// El reloj rotula lo que abre —"Horarios", fijo— y no el plazo de envio. Sin
-// turnos no hay hoja, y entonces tampoco reloj: "Horarios" en texto quieto no es
-// un dato, es un boton que no funciona.
-if (hasSchedule) {
-  metas.push({
-    icon: 'clock',
-    label: 'Horarios',
-    sheet: 'sheet-schedule',
-    truncate: false,
+// El plazo, al lado del horario: cuanto tarda el pedido, segun como se reciba. Son
+// dos promesas distintas y cada una lleva su icono —la moto, la de domicilio; el
+// local, la de recoger—, porque el dato solo ("25-35 min") no dice de cual habla.
+//
+// Las dos se sirven en el marcado y se lee una: la del modo de entrega elegido. Es
+// el mismo relevo de las metas de la barra de pedido en movil, y lo hace CSS (ver
+// los estilos de este archivo y components/OrderMeta.astro).
+//
+// Cada una es opcional por su cuenta, como alli: sin estimado configurado no se
+// promete un tiempo, y ese modo se queda sin plazo en la barra.
+//
+// No abren nada: son texto, no botones.
+interface Estimate {
+  mode: DeliveryType;
+  icon: IconName;
+  /** Que promete el valor. No se pinta —lo dice el icono—: es para quien no lo ve. */
+  name: string;
+  value: string;
+}
+
+const estimates: Estimate[] = [];
+
+if (estimate) {
+  estimates.push({
+    mode: 'delivery',
+    icon: 'moto',
+    name: 'Tiempo estimado de entrega',
+    value: estimate,
+  });
+}
+
+if (pickup) {
+  estimates.push({
+    mode: 'pickup',
+    icon: 'store',
+    name: 'Tiempo estimado de recolección',
+    value: pickup,
   });
 }
 
@@ -121,46 +166,54 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
       <BrandLogo class="navbar-desktop__logo" />
     </a>
 
-    <div class="navbar-desktop__store">
+    {/* `data-delivery`: el modo con el que llega la pagina. Decide el plazo que se
+        lee donde no hay switch que lo diga. */}
+    <div class="navbar-desktop__store" data-delivery={selected}>
       {
-        metas.map((meta) => {
-          // Boton cuando hay hoja, texto cuando no: es la misma pieza con dos
-          // envoltorios, asi que se elige la etiqueta y el contenido se escribe
-          // una vez.
-          const Wrapper = meta.sheet ? 'button' : 'span';
-
+        metas.map((meta) => (
           // El nombre accesible lleva el rotulo DELANTE, no en su lugar: quien
-          // navega por voz pide el boton por lo que ve (la direccion), y lo que
-          // hace al pulsarlo no se lee en el rotulo. "Horarios" si lo dice: el
-          // reloj va sin `name` y su nombre es el texto.
-          const opener = meta.sheet
-            ? {
-                type: 'button' as const,
-                'aria-label': meta.name ? `${meta.label}. ${meta.name}` : undefined,
-                'aria-haspopup': 'dialog' as const,
-                'data-sheet': meta.sheet,
-              }
-            : {};
+          // navega por voz pide el boton por lo que ve (el turno), y lo que hace
+          // al pulsarlo no se lee en el rotulo. "Ubicación" si lo dice: el pin va
+          // sin `name` y su nombre es el texto.
+          <button
+            class:list={[
+              'navbar-desktop__meta',
+              meta.truncate && 'navbar-desktop__meta--truncate',
+              'btn-plain',
+            ]}
+            type="button"
+            aria-label={
+              // El turno puede acabar en "p.m.": ese punto ya cierra la frase.
+              meta.name
+                ? `${meta.label}${meta.label.endsWith('.') ? '' : '.'} ${meta.name}`
+                : undefined
+            }
+            aria-haspopup="dialog"
+            data-sheet={meta.sheet}
+          >
+            <Icon name={meta.icon} />
 
-          return (
-            <Wrapper
-              class:list={['navbar-desktop__meta', meta.sheet && 'btn-plain']}
-              {...opener}
+            <span
+              class="navbar-desktop__meta-value"
+              title={meta.truncate ? meta.label : undefined}
             >
-              <Icon name={meta.icon} />
+              {meta.label}
+            </span>
+          </button>
+        ))
+      }
 
-              <span
-                class:list={[
-                  'navbar-desktop__meta-value',
-                  meta.truncate && 'navbar-desktop__meta-value--truncate',
-                ]}
-                title={meta.truncate ? meta.label : undefined}
-              >
-                {meta.label}
-              </span>
-            </Wrapper>
-          );
-        })
+      {
+        estimates.map((item) => (
+          <span class="navbar-desktop__meta" data-mode={item.mode}>
+            <Icon name={item.icon} />
+
+            <span class="navbar-desktop__meta-value">
+              <span class="visually-hidden">{item.name}: </span>
+              {item.value}
+            </span>
+          </span>
+        ))
       }
 
       <a class="navbar-desktop__cart" href="/mamayaya/carrito" aria-label={cartLabel} data-cart-chip>
@@ -267,18 +320,19 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
        boton se lo lleve tambien. */
     .navbar-desktop__meta {
       display: inline-flex;
+      flex: 0 0 auto;
       align-items: center;
       gap: 8px;
-      min-width: 0;
       font-size: 14px;
       font-weight: 400;
       line-height: 1;
       color: var(--sf-slate);
+      white-space: nowrap;
     }
-    /* El pin y el reloj abren las mismas hojas que en movil, asi que cuando hay hoja
-       el rotulo es un <button>. Se distingue por la etiqueta y no por un
-       modificador: la diferencia ya la lleva el marcado, y una clase mas solo podria
-       contradecirlo.
+    /* El pin y el reloj abren las mismas hojas que en movil, asi que son <button>;
+       el plazo no abre nada y se queda en texto. Se distingue por la etiqueta y no
+       por un modificador: la diferencia ya la lleva el marcado, y una clase mas solo
+       podria contradecirlo.
 
        No se atenua con opacity como los iconos de la barra de movil: ahi el boton es
        solo un icono y aqui lleva texto, que en gris al 70% se lee peor. */
@@ -288,16 +342,52 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
     button.navbar-desktop__meta:hover {
       color: var(--sf-accent);
     }
-    /* El rotulo del pin es la direccion abreviada, que la API admite de hasta 60
-       caracteres: mas de lo que da la barra. El tope corta antes de que empuje al
-       carrito, y el `overflow: hidden` es tambien lo que deja al span encogerse por
-       debajo de su texto —en un flex item la altura minima automatica pasa a 0—, asi
-       que en una pantalla de md se acorta sola. El texto entero queda en el title. */
-    .navbar-desktop__meta-value--truncate {
-      max-width: 320px;
+    /* Modifier: el rotulo es un dato de largo variable —el turno, que cerrada dice
+       tambien cuando abre: "Cerrado · Abre el miercoles a las 9:00 a.m."—. Es la
+       unica meta que cede ancho: se recorta antes de empujar al carrito, y el texto
+       entero queda en el `title`. El `min-width: 0` es lo que deja encoger a un hijo
+       flex por debajo de su texto.
+
+       El interlineado sube a 20, el alto del icono: con el 1 del resto, el
+       `overflow: hidden` le cortaria el rabo a la "p" de "p.m.". La fila no crece. */
+    .navbar-desktop__meta--truncate {
+      flex: 0 1 auto;
+      min-width: 0;
+    }
+    .navbar-desktop__meta--truncate .navbar-desktop__meta-value {
       overflow: hidden;
+      line-height: 20px;
       text-overflow: ellipsis;
-      white-space: nowrap;
+    }
+
+    /* --- Relevo por modo de entrega -------------------------------------------
+       El plazo son dos metas en el mismo sitio —la de domicilio y la de recoger— y
+       se lee una. Las dos estan en el marcado, como en la barra de pedido de movil
+       (ver components/OrderMeta.astro) y por lo mismo: el relevo no espera a ningun
+       JavaScript.
+
+       Sin switch en la pantalla manda el modo con el que llega la pagina, que el
+       servidor deja escrito en el grupo. */
+    .navbar-desktop__meta[data-mode] {
+      display: none;
+    }
+    .navbar-desktop__store[data-delivery=delivery] [data-mode=delivery],
+    .navbar-desktop__store[data-delivery=pickup] [data-mode=pickup] {
+      display: inline-flex;
+    }
+    /* Con switch —la portada y /mamayaya/datos— manda el radio marcado, que es el
+       estado de verdad: se mueve al elegir y cuando src/lib/delivery-switch.ts
+       repone el borrador, y el plazo lo sigue sin que nadie se lo copie.
+
+       Se lee desde .page, el <body>: la barra y el switch no comparten otro
+       ancestro. Sin :has() se queda el modo del servidor, que al cargar es el mismo. */
+    .page:has([name=delivery][value=domicilio]:checked) .navbar-desktop__meta[data-mode=pickup],
+    .page:has([name=delivery][value=recoger]:checked) .navbar-desktop__meta[data-mode=delivery] {
+      display: none;
+    }
+    .page:has([name=delivery][value=domicilio]:checked) .navbar-desktop__meta[data-mode=delivery],
+    .page:has([name=delivery][value=recoger]:checked) .navbar-desktop__meta[data-mode=pickup] {
+      display: inline-flex;
     }
     /* Element: cart — chip dorado con importe, icono y cantidad */
     .navbar-desktop__cart {

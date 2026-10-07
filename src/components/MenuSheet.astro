@@ -19,9 +19,10 @@ const { id, heading, shift, sections } = Astro.props;
 // La hoja de categorias de MOVIL: el indice entero, con la tienda y su turno encima. La
 // abre el boton de la derecha de las tabs (components/CategoryNav.astro).
 //
-// Es la columna lateral de desktop en forma de hoja: el mismo encabezado, el mismo
-// turno y la misma lista (components/MenuIndex.astro), que src/scripts/menu-nav.ts mueve
-// a la vez que los otros dos indices. Pulsar una entrada cierra la hoja y baja a la
+// Es la columna lateral de desktop en forma de hoja: el mismo encabezado y la misma
+// lista (components/MenuIndex.astro), que src/scripts/menu-nav.ts mueve a la vez que
+// los otros dos indices. El turno es solo de aqui: en desktop lo rotula el reloj de la
+// barra (components/NavbarDesktop.astro). Pulsar una entrada cierra la hoja y baja a la
 // seccion.
 //
 // Por debajo es una hoja del sistema (components/Sheet.astro): un <dialog> nativo con

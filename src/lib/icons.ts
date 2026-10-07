@@ -16,6 +16,8 @@ export type IconName =
   | 'map-pin'
   | 'share'
   | 'truck'
+  | 'moto'
+  | 'store'
   | 'shopping-cart'
   | 'plus'
   | 'chevron-left'
@@ -49,6 +51,18 @@ export const ICON_PATHS: Record<IconName, string> = {
     '<path d="M10 1.666V12.5M6.667 5 10 1.666 13.333 5M3.334 10v6.667c0 .442.176.866.488 1.179.312.312.736.488 1.178.488h9.999c.442 0 .866-.176 1.178-.488.313-.313.489-.737.489-1.179V10"/>',
   truck:
     '<path d="M11.667 15V5a.833.833 0 0 0-.834-.833H1.667A.833.833 0 0 0 .833 5v9.167c0 .46.373.833.834.833h1.666"/><path d="M12.5 15H7.5"/><path d="M15.833 15H17.5a.833.833 0 0 0 .833-.833v-3.042a.833.833 0 0 0-.183-.517l-2.9-3.625a.833.833 0 0 0-.65-.316h-2.933"/><circle cx="14.167" cy="15" r="1.667"/><circle cx="5.833" cy="15" r="1.667"/>',
+  // Los dos plazos de la barra de desktop, uno por modo de entrega: la moto es el
+  // de domicilio y el local, el de recoger (components/NavbarDesktop.astro). No
+  // llegaron del diseno: estan dibujados aqui, en la rejilla de 20 y con pocas
+  // piezas, porque a trazo 2 no cabe mas detalle sin que se empaste.
+  //
+  // La moto es de reparto, vista de lado y mirando a la derecha: asiento, piso y
+  // manillar. La horquilla acaba en el aro de la rueda y no en el eje, para que la
+  // rueda se siga leyendo como un aro.
+  moto: '<circle cx="4.167" cy="14.167" r="2.5"/><circle cx="15.833" cy="14.167" r="2.5"/><path d="M2.5 8.333h5l2.083 5.834h3.75"/><path d="M11.25 4.167h2.5l1.515 7.5"/>',
+  // El local: techo, toldo de tres ondas, muros y puerta.
+  store:
+    '<path d="M2.5 7.5 4.167 3.333h11.666L17.5 7.5"/><path d="M2.5 7.5a2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0 2.5 2.5 0 0 0 5 0"/><path d="M3.75 10.417v5.416c0 .46.373.834.833.834h10.834c.46 0 .833-.373.833-.834v-5.416"/><path d="M8.333 16.667v-3.334h3.334v3.334"/>',
   // Carrito de la barra de desktop, tal como llego del diseno
   // (elementos-shared/shopping-cart.svg): rejilla de 28 y trazo 2, no la de 20
   // del resto. Ver ICON_VIEWBOX, justo debajo.

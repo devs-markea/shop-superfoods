@@ -8,19 +8,21 @@ interface Props {
    * ella, el nombre de la tienda. Lo decide la pagina.
    */
   heading?: string;
-  /** El turno en curso ya redactado (ver shiftLabel en src/lib/schedule.ts). */
-  shift?: string | null;
   /** Las secciones de la portada, en el orden en que se pintan. */
   sections: MenuSection[];
 }
 
-const { heading, shift, sections } = Astro.props;
+const { heading, sections } = Astro.props;
 
 // La columna lateral de la portada. SOLO DESKTOP: en movil el indice son las tabs
 // (components/CategoryNav.astro) y la hoja de categorias (components/MenuSheet.astro).
 //
-// Arriba la tienda y su turno; debajo, el indice de secciones, que es la lista de
+// Arriba la tienda; debajo, el indice de secciones, que es la lista de
 // components/MenuIndex.astro —la misma de la hoja de movil—.
+//
+// El turno en curso iba bajo el encabezado y se mudo al reloj de la barra
+// (components/NavbarDesktop.astro): alli se lee en todas las pantallas, y no solo
+// en la portada. La hoja de movil lo conserva.
 //
 // `data-menu-nav` lleva la clase de la entrada marcada: src/scripts/menu-nav.ts la
 // pone y la quita sin saber de que indice se trata.
@@ -28,14 +30,7 @@ const { heading, shift, sections } = Astro.props;
 
 <aside class="menu-sidebar" aria-label="Menu" data-menu-nav="menu-index__link--active">
   <div class="menu-sidebar__inner" data-menu-nav-scroll>
-    {
-      (heading || shift) && (
-        <div class="menu-sidebar__store">
-          {heading && <p class="menu-sidebar__name">{heading}</p>}
-          {shift && <p class="menu-sidebar__shift">{shift}</p>}
-        </div>
-      )
-    }
+    {heading && <p class="menu-sidebar__name">{heading}</p>}
 
     {
       sections.length > 0 && (
@@ -55,15 +50,17 @@ const { heading, shift, sections } = Astro.props;
   /* ---------------------------------------------------------------------------
      Block: menu-sidebar
      ---------------------------------------------------------------------------
-     La columna de la izquierda de la portada de desktop: la tienda, su turno y el
-     indice de secciones. Va dentro del contenedor de la portada, al lado del
-     catalogo, y sin fondo: se apoya en el de la pagina.
+     La columna de la izquierda de la portada de desktop: la tienda y el indice de
+     secciones. Va dentro del contenedor de la portada, al lado del catalogo, y sin
+     fondo: se apoya en el de la pagina.
 
      Spec: ancho 320 - borde derecho 1 #EAECF0
-           tienda   260 de ancho, a 32/32 - gap 14
-                    nombre Inter 700 24/30 - turno Inter 400 14/100%
-           linea    260, 1px #EAECF0, a 168 (24 bajo la tienda)
-           indice   260 de ancho, a 192 (24 bajo la linea): components/MenuIndex.astro
+           tienda   260 de ancho, a 32/32 - nombre Inter 700 24/30
+           linea    260, 1px #EAECF0, 24 bajo la tienda
+           indice   260 de ancho, 24 bajo la linea: components/MenuIndex.astro
+
+     La spec ponia el turno bajo el nombre (gap 14, Inter 400 14/100%): se mudo al
+     reloj de la barra de desktop, y con el se fueron su linea y su hueco.
 
      Dos cajas: el panel —con su borde, del alto de toda la portada— y dentro, su
      contenido, pegado bajo la cabecera mientras se baja por el catalogo:
@@ -105,12 +102,7 @@ const { heading, shift, sections } = Astro.props;
       width: 260px;
     }
 
-    /* Element: store — nombre y turno */
-    .menu-sidebar__store {
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
+    /* Element: name — la tienda */
     .menu-sidebar__name {
       margin: 0;
       font-size: 24px;
@@ -118,13 +110,6 @@ const { heading, shift, sections } = Astro.props;
       line-height: 30px;
       color: var(--sf-ink);
       overflow-wrap: anywhere;
-    }
-    .menu-sidebar__shift {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 400;
-      line-height: 1;
-      color: var(--sf-slate);
     }
 
     /* Element: rule — el <hr> del Reboot trae margen, color heredado y opacidad .25 */

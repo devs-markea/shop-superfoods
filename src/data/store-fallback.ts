@@ -83,9 +83,9 @@ export const storeFallback: StoreSettings = {
     // falta respaldo, va la direccion real de la tienda.
     //
     // Los tres sirven por separado: con direccion el modal se abre sin boton, con
-    // enlace el boton lleva a Maps sin direccion que leer, y la abreviada rotula
-    // el pin de la barra aunque no haya ninguna de las otras dos. Sin direccion ni
-    // enlace, el modal no existe y el icono no lo ofrece.
+    // enlace el boton lleva a Maps sin direccion que leer, y la abreviada se lee
+    // en las metas de movil aunque no haya ninguna de las otras dos. Sin direccion
+    // ni enlace, el modal no existe y el icono no lo ofrece.
     address: '',
     // La ABREVIADA, maximo 60. No es la de arriba recortada: es el trozo que el
     // negocio elige para decir donde esta, y se escribe a mano igual que ella.

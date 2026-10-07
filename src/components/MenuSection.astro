@@ -47,9 +47,10 @@ const searchText = (product: MenuSection['products'][number]) =>
 const count = section.products.length;
 const countLabel = `${count} ${count === 1 ? 'producto' : 'productos'}`;
 
-// Los primeros destacados llevan su puesto sobre la foto: "#1 favoritos", "#2 favoritos".
-// Van en el orden del panel (`featured.position`), asi que el puesto es el indice.
-const RANKED = 2;
+// Los cinco primeros destacados llevan su puesto sobre la foto: "#1 favoritos" a
+// "#5 favoritos". Van en el orden del panel (`featured.position`), asi que el puesto es
+// el indice.
+const RANKED = 5;
 
 const titleId = `${section.anchor}-titulo`;
 const itemsId = `${section.anchor}-platillos`;

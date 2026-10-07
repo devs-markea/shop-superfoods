@@ -118,14 +118,19 @@ export interface StoreSettings {
    */
   bankTransfer?: BankTransfer;
   /**
-   * Tres datos, y ninguno se deriva de otro:
+   * Tres datos, y ninguno se deriva de otro, mas el mensaje del modal:
    *
-   *   address       la completa, escrita para leerse entera. Es la del modal, que
-   *                 tiene el ancho para mostrarla. Puede traer varios renglones
-   *                 (`\n`): quien la pinte necesita `white-space: pre-line`.
-   *   shortAddress  la abreviada, para donde la completa no cabe: el rotulo del
-   *                 pin en la barra de desktop.
+   *   address       la completa, escrita para leerse entera: UNA linea de texto
+   *                 llano desde el 2026-10-07. Es el `{sucursal}` de WhatsApp, y
+   *                 lo que lee el modal cuando no hay mensaje.
+   *   shortAddress  la abreviada, para donde la completa no cabe: las metas de
+   *                 la barra de pedido, en movil.
    *   mapsUrl       a donde lleva el boton del modal.
+   *   message       el mensaje personalizado del modal —saludo, referencia,
+   *                 invitacion a pedir—. Es HTML: solo `<strong>` y `<br>`, con
+   *                 el texto escapado, y se pinta con `set:html`. Solo para el
+   *                 modal: donde no cabe HTML (un `title`, WhatsApp) va `address`.
+   *                 Cadena vacia cuando el negocio no escribio ninguno.
    *
    * `shortAddress` NO es `address` recortada y no se sustituye por ella. Truncar
    * por caracteres no abrevia una direccion: lo que se queda fuera del corte es
@@ -133,7 +138,7 @@ export interface StoreSettings {
    * ("Av. Coba 45, Cen…") no dice a donde ir. Cual es el trozo que identifica el
    * local es una decision del negocio, y por eso se captura aparte.
    */
-  location?: { address?: string; shortAddress?: string; mapsUrl?: string };
+  location?: { address?: string; shortAddress?: string; mapsUrl?: string; message?: string };
   delivery?: {
     freeShipping?: { mode: FreeShippingMode; threshold: number | null };
     estimate?: string;
@@ -206,14 +211,17 @@ function pick(value: string | null | undefined, fallback: string | undefined): s
 /**
  * Lo que publica `/api/store` donde difiere de la configuracion resuelta.
  *
- * `location.address`, `home.panel.presentation` y los dos textos de `home.featured`
- * viajan SIEMPRE desde el 2026-10-06: con su texto o en `null` si el negocio los dejo
- * vacios. pick() lo trata igual que un hueco, asi que las pantallas siguen viendo una
- * cadena.
+ * `location.message`, `home.panel.presentation` y los dos textos de `home.featured`
+ * viajan SIEMPRE: con su texto o en `null` si el negocio los dejo vacios. pick() lo
+ * trata igual que un hueco, asi que las pantallas siguen viendo una cadena.
+ *
+ * `location.address` viajo asi solo del 2026-10-06 al 2026-10-07, mientras hizo de
+ * mensaje del modal. Desde que el mensaje tiene su clave, vuelve a viajar solo con
+ * valor, como `shortAddress` y `mapsUrl`.
  */
 type RemoteStore = Omit<StoreSettings, 'location' | 'home'> & {
-  location?: Omit<NonNullable<StoreSettings['location']>, 'address'> & {
-    address?: string | null;
+  location?: Omit<NonNullable<StoreSettings['location']>, 'message'> & {
+    message?: string | null;
   };
   home?: Omit<NonNullable<StoreSettings['home']>, 'panel' | 'featured'> & {
     panel?: { presentation?: string | null };
@@ -479,6 +487,10 @@ export async function getStoreConfig(): Promise<StoreSettings> {
       address: pick(remote.location?.address, fallback.location?.address),
       shortAddress: pick(remote.location?.shortAddress, fallback.location?.shortAddress),
       mapsUrl: pick(remote.location?.mapsUrl, fallback.location?.mapsUrl),
+      // Sin respaldo, como la presentacion del panel: vacio, el modal lee la
+      // direccion. Y es HTML que se inyecta tal cual, asi que solo vale el que
+      // reescribio el backend: uno escrito aqui a mano no pasaria por el.
+      message: pick(remote.location?.message, undefined),
     },
 
     delivery: {
