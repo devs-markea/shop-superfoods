@@ -166,7 +166,7 @@ const hasLocation = Boolean(store.location?.address || store.location?.mapsUrl);
 
 // Con la tienda cerrada la portada se queda en menu: se puede mirar todo, pero no
 // se agrega nada. Lo dice la tarjeta flotante una vez, y las tarjetas de platillo
-// se callan —sin boton y sin etiqueta— en lugar de repetir "Fuera de horario"
+// se callan —el "+" apagado y sin etiqueta— en lugar de repetir "Fuera de horario"
 // tantas veces como platillos haya.
 const closed = isClosed(schedule);
 
@@ -314,7 +314,6 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
   // es la unica que pinta tarjetas de platillo.
   import '../../scripts/image-skeleton';
   import '../../scripts/delivery-mode';
-  import '../../scripts/add-button';
   import '../../scripts/sheet';
   // El tirador de la hoja de categorias: se cierra arrastrandola hacia abajo.
   import '../../scripts/sheet-drag';

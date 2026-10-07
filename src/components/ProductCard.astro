@@ -11,7 +11,7 @@ interface Props {
   eager?: boolean;
   /**
    * La tienda esta cerrada: nada es comprable, y la etiqueta del motivo se calla
-   * porque ya lo dice la tarjeta de tienda cerrada.
+   * porque ya lo dice la tarjeta de tienda cerrada. El "+" se queda, apagado.
    */
   storeClosed?: boolean;
   /**
@@ -72,7 +72,7 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
 
   <div class="product-card__body">
     <h3 class="product-card__title">
-      <!-- stretched-link: toda la tarjeta es clicable, sin anidar el boton.
+      <!-- stretched-link: toda la tarjeta es clicable, el "+" incluido.
            Los no disponibles tambien enlazan: el detalle existe.
            El title lleva el nombre entero: es lo que recupera lo que corta el
            recorte. -->
@@ -130,23 +130,27 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
         }
       </div>
 
-      {/* Con la tienda cerrada el pie se queda solo con el precio: sin boton, que no
-          llevaria a ninguna parte, y sin etiqueta, que repetiria lo ya dicho. */}
+      {/* El "+" o, si el platillo no se puede pedir por un motivo propio, ese motivo
+          en su lugar. Con la tienda cerrada el "+" se queda, apagado: la tarjeta
+          sigue llevando a la ficha, y la etiqueta se calla porque repetiria lo ya
+          dicho. */}
       {
         notice ? (
           <span class="tag tag--optional badge">{notice}</span>
-        ) : !orderable ? null : (
+        ) : (
+          // El "+" no es un boton: es un dibujo dentro del area del enlace, que cubre
+          // la tarjeta entera, asi que pulsarlo lleva a la ficha igual que pulsar
+          // cualquier otro punto. Oculto a los lectores de pantalla: el enlace ya
+          // lleva el nombre del platillo.
+          //
           // En movil va sobre la foto, en su esquina de abajo a la derecha; en
           // desktop, al final del pie. Lo coloca el CSS: el marcado es uno.
-          <button
-            class="product-card__add btn-plain"
-            type="button"
-            aria-label={`Agregar ${product.name} al carrito`}
-            data-add
-            data-product-id={product.id}
+          <span
+            class:list={['product-card__add', !orderable && 'product-card__add--disabled']}
+            aria-hidden="true"
           >
             <Icon name="plus" size="sm" />
-          </button>
+          </span>
         )
       }
     </div>
@@ -210,7 +214,7 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
 
      Desktop, en su bloque: la foto a todo lo ancho, sin relleno alrededor.
 
-     Los rotulos —nombre, descripcion, precios, boton— los comparte <MenuCard>, que
+     Los rotulos —nombre, descripcion, precios, "+"— los comparte <MenuCard>, que
      usa estas mismas clases. Lo que es solo de esta tarjeta va colgado de
      .product-card.
      --------------------------------------------------------------------------- */
@@ -392,11 +396,11 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
     color: var(--sf-accent);
   }
 
-  /* Posicionado y por encima del stretched-link, que cubre la tarjeta entera con su
-     ::after de z-index 1: sin esto el toque se lo llevaria el enlace. */
+  /* Element: add — el "+". Un dibujo, no un boton: queda debajo del stretched-link,
+     que cubre la tarjeta entera con su ::after de z-index 1, asi que el toque se lo
+     lleva el enlace y pulsarlo es pulsar la tarjeta. Por eso no tiene estados
+     propios: debajo del enlace, ni el raton ni el dedo llegan a el. */
   .product-card__add {
-    position: relative;
-    z-index: 2;
     display: inline-flex;
     flex: 0 0 28px;
     align-items: center;
@@ -406,7 +410,6 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
     border-radius: 14px;
     background-color: var(--sf-accent);
     color: var(--sf-white);
-    transition: background-color 160ms ease, transform 160ms ease;
   }
 
   /* El "+" de esta tarjeta, en movil, sobre la esquina de abajo a la derecha de la
@@ -418,42 +421,57 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
     top: calc(12px + 154px - 8px - 28px);
     right: calc(12px + 8px);
   }
-  .product-card__add:hover {
-    background-color: var(--sf-accent-hover);
-  }
-  .product-card__add:active {
-    transform: scale(0.92);
+
+  /* Modifier: apagado — la tienda esta cerrada y el platillo no se puede pedir
+     ahora. El acento rebajado al 40%, como las flechas de los destacados en un
+     extremo de la lista (.menu-section__arrow:disabled, en
+     components/MenuSection.astro).
+
+     Alli es `opacity`, que vale porque la flecha va sobre el fondo liso de la
+     pagina. El "+" va a veces sobre la foto, y traslucido la dejaria ver a traves:
+     el rosa saldria manchado y el signo, blanco al 40%, no se leeria. Por eso aqui
+     el 40% va pintado sobre blanco, en dos capas: da el mismo color que la
+     opacidad sobre la tarjeta, pero opaco, y el signo se queda en blanco entero.
+     La clase la comparte el "+" de <MenuCard>. */
+  .product-card__add--disabled {
+    background-color: var(--sf-white);
+    background-image: linear-gradient(
+      rgba(var(--sf-accent-rgb), 0.4),
+      rgba(var(--sf-accent-rgb), 0.4)
+    );
   }
 
-  /* Modifier: publicado pero no comprable ahora (available: false del catalogo).
-     Sigue visible y clicable —el detalle existe— pero atenuado y sin boton: en
-     su lugar la tarjeta pinta un .tag con el motivo. */
+  /* Modifier: no comprable ahora. Sigue visible y clicable —el detalle existe—
+     pero atenuado. Dos motivos, y en el pie se distinguen:
+
+       uno propio (available: false del catalogo)   en lugar del "+", un .tag con
+                                                    el motivo
+       la tienda esta cerrada                       el "+" se queda, apagado */
   .product-card--unavailable .product-card__media,
   .product-card--unavailable .product-card__title,
   .product-card--unavailable .product-card__description,
   .product-card--unavailable .product-card__pricing {
     opacity: 0.55;
   }
+  /* El area de clic, por encima de las piezas atenuadas.
+
+     `opacity` crea un contexto de apilamiento en cada pieza. El del titulo encierra
+     el ::after del stretched-link —el area de clic de la tarjeta entera—, que fuera
+     de el ya no compite con su z-index 1: las piezas atenuadas que van DESPUES en
+     el marcado se pintaban encima y se quedaban con el clic, y la tarjeta solo
+     respondia en el nombre y en los huecos.
+
+     z-index 1 sube el contexto del titulo, y con el el enlace, por encima de sus
+     hermanas. SIN `position`: le vale por ser un item flex, y con
+     `position: relative` el ::after lo tomaria por caja y el enlace se encogeria
+     al titulo. <MenuCard> lleva la misma regla en su modificador. */
+  .product-card--unavailable .product-card__title {
+    z-index: 1;
+  }
   .product-card--unavailable:hover {
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);
   }
 
-  /* Modifier de feedback al agregar (lo aplica src/scripts/add-button.ts) */
-  .product-card__add--added {
-    animation: sf-pop 320ms ease;
-  }
-
-  @keyframes sf-pop {
-    0% {
-      transform: scale(1);
-    }
-    45% {
-      transform: scale(1.18);
-    }
-    100% {
-      transform: scale(1);
-    }
-  }
   /* --- Desktop -------------------------------------------------------------
      La tarjeta se pone de pie: la foto arriba, a todo lo ancho, y la ficha debajo.
      El ancho lo reparte la rejilla (3 columnas con 24 de gutter), asi que aqui no
@@ -516,9 +534,7 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
     }
     /* Vuelve al pie, al final de la fila del precio. */
     .product-card:not(.product-card--no-media) .product-card__add {
-      position: relative;
-      top: auto;
-      right: auto;
+      position: static;
     }
   }
 

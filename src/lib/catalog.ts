@@ -158,7 +158,7 @@ export interface ProductListItem {
   /** Precio "desde" (el minimo de sus variantes), en MXN. */
   basePrice: number;
   image: ProductImage;
-  /** false = visible pero no comprable ahora: tarjeta atenuada, sin boton. */
+  /** false = visible pero no comprable ahora: tarjeta atenuada, sin el "+". */
   available: boolean;
   unavailableReason: UnavailableReason | null;
   /**

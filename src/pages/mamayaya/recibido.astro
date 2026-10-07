@@ -278,7 +278,6 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 
   <NavbarDesktop
     shortAddress={store.location?.shortAddress}
-    estimate={store.delivery?.estimate}
     hasLocation={hasLocation}
     hasSchedule={hasSchedule}
     cartTotal={cart?.total ?? 0}

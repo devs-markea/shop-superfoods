@@ -173,14 +173,15 @@ const itemsId = `${section.anchor}-platillos`;
     flex-direction: column;
     gap: 16px;
     /* Al saltar desde el indice la seccion se queda bajo lo que va anclado arriba: en
-       movil, la barra (48), la de pedido (80, ver components/OrderBar.astro) y la de
+       movil, la barra de pedido —anclada a 32 y de 94 de alto, ver
+       components/OrderBar.astro; la de arriba la tapa en parte y no suma— y la de
        las tabs (48, ver components/CategoryNav.astro), mas aire. */
-    scroll-margin-top: calc(48px + 80px + 48px + 16px);
+    scroll-margin-top: calc(32px + 94px + 48px + 16px);
   }
-  /* En los destacados las tabs no estan (ver components/CategoryNav.astro): solo las
-     dos barras. */
+  /* En los destacados las tabs no estan (ver components/CategoryNav.astro): solo la
+     barra de pedido. */
   .menu-section--featured {
-    scroll-margin-top: calc(48px + 80px + 16px);
+    scroll-margin-top: calc(32px + 94px + 16px);
   }
 
   /* Element: head — rotulos a la izquierda; en desktop, flechas a la derecha */

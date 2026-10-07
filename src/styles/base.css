@@ -19,7 +19,7 @@
   background-color: var(--sf-body-bg);
 }
 
-/* Botones "desnudos" (iconos de la navbar, "+" de la tarjeta). Reboot deja
+/* Botones "desnudos" (iconos de la navbar, flechas de los destacados). Reboot deja
    fondo y borde del agente de usuario en un <button> sin .btn. */
 .btn-plain {
   padding: 0;

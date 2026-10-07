@@ -66,13 +66,16 @@ const options: { id: string; mode: DeliveryType; label: string }[] = [
      Spec: pista 350x44 - radius 12 - padding 4 - bg #EAECF0
      opcion 171x36 - radius 8 - Inter 600 14/20
      350 - 8 (padding) = 342 -> 2 x 171, por eso flex: 1 1 0
+
+     Los 350 son los del artboard de 390. En movil la pista no tiene tope: va de
+     lado a lado de su contenedor, mida lo que mida la pantalla, y las dos opciones
+     se reparten lo que haya. El tope de 350 vuelve en desktop, mas abajo.
      --------------------------------------------------------------------------- */
   .switch {
     display: flex;
     width: 100%;
-    max-width: 350px;
+    max-width: 100%;
     height: 44px;
-    margin-inline: auto;
     padding: 4px;
     border-radius: 12px;
     background-color: var(--sf-border);
@@ -113,8 +116,15 @@ const options: { id: string; mode: DeliveryType; label: string }[] = [
      La pista sigue midiendo lo que le den: en /mamayaya/datos llena la columna de 350 del
      formulario, como cualquier otro campo. Quien la encoge a sus dos opciones de
      136 es la barra de la portada, porque alli comparte linea con las categorias
-     y el ancho es suyo, no del switch. Ver components/OrderBar.astro. */
+     y el ancho es suyo, no del switch. Ver components/OrderBar.astro.
+
+     Y aqui vuelve el tope de 350: la columna de /mamayaya/datos es mas ancha que
+     en movil, y sin el la pista la cruzaria entera. Queda arrimada al borde de la
+     columna, donde empiezan los campos. */
   @media (min-width: 768px) {
+    .switch {
+      max-width: 350px;
+    }
     .switch__option {
       padding-inline: 20px;
     }

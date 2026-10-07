@@ -10,8 +10,6 @@ interface Props {
    * aqui: la completa es del modal. Sin ella el pin rotula la accion, no el dato.
    */
   shortAddress?: string;
-  /** Plazo a domicilio configurado. Sin el, no se promete un tiempo. */
-  estimate?: string;
   /** Si la cabecera monto la hoja de ubicacion. Sin ella no hay nada que abrir. */
   hasLocation?: boolean;
   /** Si la cabecera monto la hoja del horario. Idem. */
@@ -24,7 +22,6 @@ interface Props {
 
 const {
   shortAddress,
-  estimate,
   hasLocation,
   hasSchedule,
   cartTotal,
@@ -48,21 +45,22 @@ const {
 // `data-sheet` que ya escucha src/scripts/sheet.ts.
 //
 // Con hoja el rotulo es un boton; sin hoja se queda en texto, porque un boton que
-// no abre nada es peor que un dato quieto. Los dos casos existen: se puede tener
-// plazo de envio configurado y ningun turno de horario.
+// no abre nada es peor que un dato quieto. Los dos casos solo se dan en el pin: se
+// puede tener direccion abreviada y ninguna hoja que abrir.
 //
-// El plazo no depende del switch de la barra de abajo: se lee directo de la
-// configuracion. En movil los dos plazos se turnan —domicilio y recoger— porque
-// comparten sitio con el switch que los elige; esta barra no tiene switch, asi
-// que afirma uno solo y es el de domicilio.
+// El plazo de envio no se rotula aqui: es de las metas de la barra de pedido, en
+// movil (ver components/OrderMeta.astro).
 interface Meta {
   icon: IconName;
   /** Lo que se lee. */
   label: string;
   /** La hoja que abre. `null` deja el rotulo en texto. */
   sheet: string | null;
-  /** Que es. Va en el nombre accesible del boton, detras del rotulo. */
-  name: string;
+  /**
+   * Que es, cuando el rotulo no lo dice. Va en el nombre accesible del boton,
+   * detras del rotulo; sin el, el nombre es el rotulo.
+   */
+  name?: string;
   /** Cinturon: la abreviada admite hasta 60 caracteres y la barra no da tantos. */
   truncate: boolean;
 }
@@ -94,14 +92,14 @@ if (shortAddress || hasLocation) {
   });
 }
 
-// El reloj se pinta si hay algo que decir —el plazo— o algo que abrir —el
-// horario—. Sin plazo pero con turnos, rotula el horario, que es lo que abre.
-if (estimate || hasSchedule) {
+// El reloj rotula lo que abre —"Horarios", fijo— y no el plazo de envio. Sin
+// turnos no hay hoja, y entonces tampoco reloj: "Horarios" en texto quieto no es
+// un dato, es un boton que no funciona.
+if (hasSchedule) {
   metas.push({
     icon: 'clock',
-    label: estimate || 'Horario',
-    sheet: hasSchedule ? 'sheet-schedule' : null,
-    name: 'Horario de la tienda',
+    label: 'Horarios',
+    sheet: 'sheet-schedule',
     truncate: false,
   });
 }
@@ -132,12 +130,13 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
           const Wrapper = meta.sheet ? 'button' : 'span';
 
           // El nombre accesible lleva el rotulo DELANTE, no en su lugar: quien
-          // navega por voz pide el boton por lo que ve ("25-35 min"), y lo que
-          // hace al pulsarlo no se lee en el rotulo.
+          // navega por voz pide el boton por lo que ve (la direccion), y lo que
+          // hace al pulsarlo no se lee en el rotulo. "Horarios" si lo dice: el
+          // reloj va sin `name` y su nombre es el texto.
           const opener = meta.sheet
             ? {
                 type: 'button' as const,
-                'aria-label': `${meta.label}. ${meta.name}`,
+                'aria-label': meta.name ? `${meta.label}. ${meta.name}` : undefined,
                 'aria-haspopup': 'dialog' as const,
                 'data-sheet': meta.sheet,
               }
