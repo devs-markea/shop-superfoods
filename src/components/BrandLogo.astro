@@ -1,6 +1,6 @@
 ---
 import { Image } from 'astro:assets';
-import logo from '../assets/logo-mama-yaya.png';
+import logo from '../assets/logo-mama-yaya-pokes-rosado.png';
 
 interface Props {
   class?: string;
@@ -18,15 +18,20 @@ const { class: className } = Astro.props;
 // tambien lo usa, y es el que lo pinta mas grande —96 de alto—: el tamano que se
 // pide es ese, para que ahi no salga borroso y en las barras solo se reduzca.
 //
-// 97x96 es la proporcion del archivo (548x540). El original venia de 798x798
+// 99x96 es la proporcion del archivo (229x223). El original venia de 308x308
 // con el logo flotando en el centro: recortado al contenido, la altura de la
-// barra la decide el CSS y no el margen transparente de la exportacion.
+// barra la decide el CSS y no el margen transparente de la exportacion. Esos
+// 223 de alto dan para el 2x del pie —192— y para poco mas: pintarlo mas grande
+// pide una exportacion mayor.
+//
+// Es el rosado de una tinta, el mismo de los iconos de public/. El cafe a color
+// —logo-mama-yaya.png— sigue solo en el chat (WatiChat.astro).
 ---
 
 <Image
   class={className}
   src={logo}
-  width={97}
+  width={99}
   height={96}
   densities={[1, 2]}
   alt="Mamá Yaya"
