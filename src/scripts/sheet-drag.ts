@@ -13,6 +13,8 @@
 //
 // Solo hacia abajo: hacia arriba la hoja ya esta donde tiene que estar.
 
+import { closeSheet } from '../lib/sheet-close.ts';
+
 /** Lo que hay que bajarla, como fraccion de su alto, para que se cierre al soltar. */
 const CLOSE_RATIO = 0.25;
 
@@ -64,7 +66,7 @@ function initSheetDrag(handle: HTMLElement, dialog: HTMLDialogElement): void {
     dialog.style.transition = '';
     dialog.style.translate = '';
 
-    if (offset > dialog.offsetHeight * CLOSE_RATIO || velocity > FLICK) dialog.close();
+    if (offset > dialog.offsetHeight * CLOSE_RATIO || velocity > FLICK) closeSheet(dialog);
   }
 
   handle.addEventListener('pointerup', release);

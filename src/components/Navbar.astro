@@ -81,7 +81,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
       }
 
       {/* Compartir no se pinta: sigue pendiente del dominio real (`publicUrl`),
-          y un icono que no comparte nada no gana su sitio en una barra de 48. */}
+          y un icono que no comparte nada no gana su sitio en la barra. */}
     </div>
   </div>
 </header>
@@ -92,7 +92,6 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
     su cuenta, una podria ofrecer un boton para una hoja que la otra no montó. */}
 <NavbarDesktop
   shortAddress={store.location?.shortAddress}
-  estimate={store.delivery?.estimate}
   hasLocation={hasLocation}
   hasSchedule={hasSchedule}
   cartTotal={cartTotal}
@@ -109,7 +108,11 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
      Block: navbar  (sobre .navbar de Bootstrap)
      ---------------------------------------------------------------------------
      La barra de MOVIL. 2 zonas: logo (izq) - iconos (der)
-     Spec mobile: height 48 - padding 12/20 - space-between
+     Spec mobile: height 92 - padding 12/20 - space-between
+     La fila mide 24 y queda centrada en los 92: el aire de arriba y abajo es de la
+     barra, no del relleno. La barra de pedido se ancla por detras de esta, a 32
+     (components/OrderBar.astro): cuanto asoma de ella al bajar depende de este
+     alto.
 
      Se usa .navbar de Bootstrap por el sticky y el fondo; el reparto es propio.
 
@@ -128,7 +131,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
     position: sticky;
     top: 0;
     z-index: 1020;
-    min-height: 48px;
+    min-height: 92px;
     /* El 20 es el gutter de la pagina en movil. Esta barra no existe de md en
        adelante —la releva .navbar-desktop— asi que nunca ve el de 32. */
     padding: 12px 20px;
@@ -195,8 +198,8 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   /* Element: navbar__logo — 40 de alto, el ancho lo da la proporcion del archivo.
      Mas alto que los 24 de la fila, a proposito: es un emblema cuadrado con el
      nombre dentro, y a 24 no se leeria. El enlace que lo envuelve conserva los 24
-     y lo centra, asi que desborda 8 por arriba y 8 por abajo sobre el padding de
-     12 y el alto de la barra no se mueve. */
+     y lo centra, asi que desborda 8 por arriba y 8 por abajo sobre el aire de la
+     barra y su alto no se mueve. */
   .navbar__logo {
     width: auto;
     height: 40px;

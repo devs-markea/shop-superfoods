@@ -25,7 +25,10 @@ const UNAVAILABLE_LABEL: Record<string, string> = {
 const NAME_MAX = 24;
 
 export interface ProductCardView {
-  /** Lleva el boton de agregar. */
+  /**
+   * Se puede pedir ahora. Si no, el "+" deja su sitio al motivo o, cuando no hay motivo
+   * que decir —la tienda esta cerrada—, se pinta apagado.
+   */
   orderable: boolean;
   /** El motivo que ocupa el sitio del boton, o null si no hay que decir nada. */
   notice: string | null;

@@ -25,6 +25,7 @@
 // antes el buscador.
 
 import { DISCOVER_EVENT, takeCategory } from '../lib/discover.ts';
+import { closeSheet } from '../lib/sheet-close.ts';
 
 /**
  * Donde esta la linea de lectura, como fraccion de lo que lo pegado arriba deja a la
@@ -243,7 +244,12 @@ function initMenuNav(sections: HTMLElement[], navs: Nav[]): void {
       // El indice de la hoja de movil: primero se cierra, y despues se baja. Al
       // cerrarse, el dialogo devuelve el foco al boton que la abrio; hecho al reves,
       // ese foco podria mover la pagina despues del salto.
-      link?.closest('dialog')?.close();
+      //
+      // Donde closeSheet tiene que esperar a la salida para cerrar (Firefox, ver
+      // src/lib/sheet-close.ts) el foco vuelve con el salto ya en marcha. Comprobado
+      // alli con un salto largo: no lo tuerce, llega al mismo sitio.
+      const sheet = link?.closest('dialog');
+      if (sheet) closeSheet(sheet);
       jump(section);
     });
   }

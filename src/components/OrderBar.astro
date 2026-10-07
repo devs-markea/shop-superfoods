@@ -52,8 +52,8 @@ const { estimate, shipping, pickup, hasLocation, selected, search, shortAddress 
   /* ---------------------------------------------------------------------------
      Block: order-bar
      ---------------------------------------------------------------------------
-     Spec mobile: switch (44) + meta (16) - gap 12 - padding 0 20 8
-     44 + 12 + 16 + 8 = 80
+     Spec mobile: switch (44) + meta (24, con su relleno de 4) - gap 18 - padding 0 20 8
+     44 + 18 + 24 + 8 = 94
 
      Las categorias ya no van aqui: en movil son las tabs que la siguen
      (components/CategoryNav.astro), fuera de la barra porque van pegadas arriba al
@@ -63,11 +63,12 @@ const { estimate, shipping, pickup, hasLocation, selected, search, shortAddress 
      min-height en lugar de height para que nada se recorte si el usuario sube
      el tamano de fuente del sistema.
 
-     ANCLADA EN MOVIL, bajo la barra de arriba (48): el switch y las metas se quedan a
-     la vista al bajar por el catalogo. Y de ella cuelgan las tabs de categorias, que
-     van dentro (el <slot>) para que la barra y las tabs sean una sola pieza: se
-     mueven juntas, tambien en el rebote del final de la pagina, donde una pieza fija
-     y otra anclada se separaban.
+     ANCLADA EN MOVIL, a 32: 60 por detras de la barra de arriba, que mide 92 y va
+     por encima. Al bajar por el catalogo el switch (44) y casi todo su hueco se meten
+     bajo ella, y a la vista se quedan las metas. Y de ella cuelgan las tabs de
+     categorias, que van dentro (el <slot>) para que la barra y las tabs sean una
+     sola pieza: se mueven juntas, tambien en el rebote del final de la pagina, donde
+     una pieza fija y otra anclada se separaban.
 
      En desktop son el buscador y el switch: las metas no se pintan (ver
      components/OrderMeta.astro).
@@ -77,9 +78,9 @@ const { estimate, shipping, pickup, hasLocation, selected, search, shortAddress 
      que se levanta sobre ella son las tarjetas. */
   .order-bar {
     position: sticky;
-    top: 48px;
+    top: 32px;
     z-index: 1010;
-    min-height: 80px;
+    min-height: 94px;
     padding: 0 20px 8px;
     background-color: var(--sf-body-bg);
   }
@@ -87,7 +88,7 @@ const { estimate, shipping, pickup, hasLocation, selected, search, shortAddress 
   .order-bar__inner {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 18px;
     width: 100%;
     max-width: 1140px;
     margin-inline: auto;
@@ -142,15 +143,11 @@ const { estimate, shipping, pickup, hasLocation, selected, search, shortAddress 
        en lugar de desbordarla.
 
        La pista no necesita suelo propio: sale de sus dos opciones, que ya lo
-       tienen. La medida vive en un solo sitio.
-
-       `margin-inline: 0` no es cosmetico: el `auto` que centra el switch en movil se
-       comeria aqui el espacio libre, y sin buscador lo dejaria centrado en la fila. */
+       tienen. La medida vive en un solo sitio. */
     .order-bar__inner .switch {
       flex: 0 0 auto;
       width: auto;
       max-width: none;
-      margin-inline: 0;
     }
     .order-bar__inner .switch__option {
       flex: 1 1 auto;
