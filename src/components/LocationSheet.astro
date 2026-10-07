@@ -4,32 +4,47 @@ import Icon from './Icon.astro';
 
 interface Props {
   /**
-   * Direccion escrita. Puede faltar: entonces solo se ofrece el boton.
+   * Mensaje personalizado del negocio para esta hoja —saludo, direccion con su
+   * referencia, invitacion a pedir—, de `location.message`. Es lo que se lee
+   * aqui desde el 2026-10-07. Puede faltar: entonces se lee la direccion.
    *
-   * Desde el 2026-10-06 es un mensaje de varios renglones —saludo, direccion con
-   * su referencia, invitacion a pedir— con sus `\n` tal cual se escribieron.
+   * Es HTML, no texto: solo `<strong>` y `<br>`, y el resto escapado. Lo
+   * garantiza el backend, que lo reescribe desde cero al guardarlo y al
+   * publicarlo.
+   */
+  message?: string;
+  /**
+   * Direccion escrita, una linea de texto llano. Aqui es el respaldo del mensaje:
+   * solo se pinta si el negocio no escribio uno. Puede faltar tambien.
    */
   address?: string;
   /** Enlace de Google Maps al local. Puede faltar: entonces no hay boton. */
   mapsUrl?: string;
 }
 
-const { address, mapsUrl } = Astro.props;
+const { message, address, mapsUrl } = Astro.props;
 
 // Ubicacion de la tienda, detras del icono del pin.
 //
-// Los dos datos sirven por separado y por eso ninguno obliga al otro: de un enlace
-// de Maps no sale una direccion legible —`maps.app.goo.gl/xxxx` es opaco— y de una
-// direccion escrita no sale un enlace fiable. Con los dos, se lee y se abre; con
+// El texto y el enlace sirven por separado y por eso ninguno obliga al otro: de un
+// enlace de Maps no sale una direccion legible —`maps.app.goo.gl/xxxx` es opaco— y
+// de un texto escrito no sale un enlace fiable. Con los dos, se lee y se abre; con
 // uno, se hace lo que ese permita.
 //
-// Quien decide si esta hoja existe es la barra superior: sin ninguno de los dos, el
-// icono no se pinta y aqui no se llega.
+// El texto es el mensaje o, si no hay, la direccion: nunca los dos. El mensaje ya
+// dice donde esta el local con las palabras del negocio, y la direccion debajo lo
+// repetiria.
+//
+// Quien decide si esta hoja existe es la barra superior, y lo decide con la
+// direccion y el enlace: sin ninguno de los dos, el icono no se pinta y aqui no se
+// llega. El mensaje no cuenta para eso: solo se lee aqui.
 ---
 
 <Sheet id="sheet-location" title="Ubicacion">
   {
-    address ? (
+    message ? (
+      <p class="location-sheet__message" set:html={message} />
+    ) : address ? (
       <p class="location-sheet__address">{address}</p>
     ) : (
       <p class="location-sheet__hint">Abre el mapa para ver donde estamos.</p>
@@ -55,32 +70,38 @@ const { address, mapsUrl } = Astro.props;
   /* ---------------------------------------------------------------------------
      Block: location-sheet
      ---------------------------------------------------------------------------
-     Contenido de la hoja de ubicacion: la direccion escrita y el boton que abre
-     Google Maps.
+     Contenido de la hoja de ubicacion: el mensaje del negocio —o, sin el, la
+     direccion escrita— y el boton que abre Google Maps.
 
      Sin spec de Figma: el boton es el de accion del proyecto (44 de alto, radius 12,
-     dorado) y la direccion, el tipo de dato de las tarjetas.
+     dorado) y el texto, el tipo de dato de las tarjetas.
 
-     Los dos elementos son independientes: con solo direccion la hoja se queda sin
-     boton, y con solo enlace la direccion se sustituye por una pista.
+     El texto y el boton son independientes: con solo texto la hoja se queda sin
+     boton, y con solo enlace el texto se sustituye por una pista.
      --------------------------------------------------------------------------- */
-  /* Element: direccion — Inter 500 14/20
-
-     `pre-line` respeta los `\n` del panel —los renglones en blanco incluidos, que
-     el negocio pone a proposito para separar— y colapsa los espacios repetidos.
-     Sin el, el mensaje se lee como un solo parrafo corrido. NO se convierten en
-     `<br>` con `set:html`: es texto del negocio, y asi se volveria HTML que se
-     ejecuta. */
+  /* Element: mensaje y direccion — Inter 500 14/20. Son el mismo sitio de la hoja
+     con dos origenes, y se leen igual. */
+  .location-sheet__message,
   .location-sheet__address {
     margin: 0;
     font-size: 14px;
     font-weight: 500;
     line-height: 20px;
     color: var(--sf-ink);
+  }
+
+  /* El mensaje llega como HTML y trae sus saltos en `<br>` —dos seguidos donde el
+     negocio dejo un renglon en blanco— y sus negritas en `<strong>`, que sobre el
+     500 del texto salen en 700 (`bolder`). No necesita nada mas.
+
+     La direccion es texto llano y de una linea desde el 2026-10-07. El `pre-line`
+     se queda por la API de antes de esa fecha, que la mandaba con sus `\n` y sin
+     `message`: sin el, aquel mensaje se leeria como un solo parrafo corrido. */
+  .location-sheet__address {
     white-space: pre-line;
   }
 
-  /* Element: pista cuando no hay direccion escrita */
+  /* Element: pista cuando no hay ni mensaje ni direccion */
   .location-sheet__hint {
     margin: 0;
     font-size: 12px;

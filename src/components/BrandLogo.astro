@@ -1,6 +1,5 @@
 ---
-import { Image } from 'astro:assets';
-import logo from '../assets/logo-mama-yaya-pokes-rosado.png';
+import logo from '../assets/logo-mama-yaya-magenta.png';
 
 interface Props {
   class?: string;
@@ -10,32 +9,43 @@ const { class: className } = Astro.props;
 
 // El logo, en un solo sitio.
 //
-// Las dos barras lo pintan con el MISMO width/height a proposito: las dos van
-// en el marcado y solo el breakpoint decide cual se ve, asi que pedir dos
-// tamanos distintos serviria dos archivos y el navegador se descargaria los
-// dos. Con una sola transformacion hay una sola URL —una peticion, y la segunda
-// ya esta en cache— y la altura final la pone el CSS de cada barra. El pie
-// tambien lo usa, y es el que lo pinta mas grande —96 de alto—: el tamano que se
-// pide es ese, para que ahi no salga borroso y en las barras solo se reduzca.
+// Se sirve el archivo ORIGINAL, a su tamano (969x951), sin pasar por <Image>: es
+// el que pidio el negocio, para que la cabecera se vea nitida en cualquier
+// pantalla y a cualquier zoom. Antes se pedia una version reducida a 98x96 —y su
+// 2x— convertida a WebP, y en la barra, a 40 de alto, se veia blanda. Pesa mas
+// (65 KB), y se acepto a cambio.
 //
-// 99x96 es la proporcion del archivo (229x223). El original venia de 308x308
-// con el logo flotando en el centro: recortado al contenido, la altura de la
-// barra la decide el CSS y no el margen transparente de la exportacion. Esos
-// 223 de alto dan para el 2x del pie —192— y para poco mas: pintarlo mas grande
-// pide una exportacion mayor.
+// Una sola URL para las tres piezas que lo pintan —las dos barras, que van las dos
+// en el marcado y solo el breakpoint decide cual se ve, y el pie—: una peticion, y
+// las otras dos ya lo encuentran en cache. La altura la pone el CSS de cada una;
+// el width/height de aqui solo da la proporcion, para que el hueco este reservado
+// antes de que llegue la imagen.
 //
-// Es el rosado de una tinta, el mismo del chat (WatiChat.astro) y de los iconos
-// de public/. El cafe a color —logo-mama-yaya.png— ya no lo pinta nadie: se
-// queda en assets/ por si se vuelve a el, que es cambiar el import de aqui y el
-// del chat.
+// El original venia de 1254x1254, SIN transparencia —la tinta sobre un cuadrado
+// blanco— y con el logo flotando en el centro. Se le quito el blanco, porque la
+// barra de movil va sobre el gris de la pagina y ahi el cuadrado se veria; y se
+// recorto al contenido, para que la altura de la barra la decida el CSS y no el
+// margen de la exportacion.
+//
+// El fondo no se recorto por color: la tinta es una sola, #EA1F65, y el alfa de
+// cada pixel es cuanto se acerca a ella desde el blanco, con el color fijado a la
+// tinta. Asi el borde antialiasado se queda sin el halo blanco que deja borrar
+// "lo blanco" a secas, y que se ve en cuanto el fondo no es blanco. Va guardado
+// como PNG de paleta: con una sola tinta y 256 niveles de alfa, la paleta es
+// exacta, y pesa un 40% menos que el mismo PNG a color completo.
+//
+// Es el mismo del chat (WatiChat.astro) y de los iconos de public/. Los dos
+// anteriores —el cafe a color, logo-mama-yaya.png, y el rosado,
+// logo-mama-yaya-pokes-rosado.png— ya no los pinta nadie: se quedan en assets/
+// por si se vuelve a uno, que es cambiar el import de aqui y el del chat.
 ---
 
-<Image
+<img
   class={className}
-  src={logo}
-  width={99}
-  height={96}
-  densities={[1, 2]}
+  src={logo.src}
+  width={logo.width}
+  height={logo.height}
   alt="Mamá Yaya"
   loading="eager"
+  decoding="async"
 />

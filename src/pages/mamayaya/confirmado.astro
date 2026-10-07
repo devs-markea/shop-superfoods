@@ -41,6 +41,7 @@ import {
   whatsAppUrl,
 } from '../../lib/whatsapp.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
+import { shiftLabel } from '../../lib/schedule.ts';
 import { getCategories, getProducts, type CategoryRef } from '../../lib/catalog.ts';
 import { TEST_MODE } from 'astro:env/server';
 
@@ -280,6 +281,7 @@ const action: {
 // Las dos condiciones se calculan aqui, en el mismo sitio que monta las hojas: si
 // las dedujera la barra de desktop por su cuenta, podria ofrecer un boton para una
 // hoja que esta pantalla no monto.
+const message = store.location?.message;
 const address = store.location?.address;
 const mapsUrl = store.location?.mapsUrl;
 const hasLocation = Boolean(address || mapsUrl);
@@ -298,9 +300,12 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   <BackHeader backHref="/mamayaya" mobileOnly />
 
   <NavbarDesktop
-    shortAddress={store.location?.shortAddress}
     hasLocation={hasLocation}
     hasSchedule={hasSchedule}
+    shift={schedule ? shiftLabel(schedule) : null}
+    estimate={store.delivery?.estimate}
+    pickup={store.pickup?.estimate}
+    selected={order?.deliveryType}
     cartTotal={cart?.total ?? 0}
     cartCount={cart?.itemsCount ?? 0}
   />
@@ -399,7 +404,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 
   {/* Las dos hojas que abren el pin y el reloj de la barra de desktop. */}
   {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
-  {hasLocation && <LocationSheet address={address} mapsUrl={mapsUrl} />}
+  {hasLocation && <LocationSheet message={message} address={address} mapsUrl={mapsUrl} />}
 
   <Footer store={store} categories={categories} />
 </Layout>
