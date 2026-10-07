@@ -46,7 +46,7 @@
 // capa superior del navegador queda por encima de cualquier z-index.
 // ---------------------------------------------------------------------------
 import { getImage } from 'astro:assets';
-import logo from '../assets/logo-mama-yaya.png';
+import logo from '../assets/logo-mama-yaya-pokes-rosado.png';
 import type { StoreSettings } from '../lib/store-config.ts';
 
 interface Props {
@@ -182,8 +182,9 @@ const options = {
      ganan por llevar ademas el id. */
 
   /* El circulo del logo. El widget le pone de fondo el color del boton, y el
-     logo es cafe sobre transparente: en rosa no se lee. El hueco lo mete dentro
-     del circulo, donde el redondeo ya no muerde las esquinas del dibujo. */
+     logo es rosa sobre transparente: sobre el rosa del tema no se ve. El hueco
+     lo mete dentro del circulo, donde el redondeo ya no muerde las esquinas del
+     dibujo. */
   #whatsapp-chat-widget .wa-chat-box-brand {
     padding: 8px;
     object-fit: contain;
