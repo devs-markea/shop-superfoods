@@ -328,9 +328,10 @@ export function orderMessageValues(order: StoreOrder, context: MessageContext = 
     // corta, asi que sirve igual: aqui el renglon vacio es el pedido que nadie
     // sabe donde recoger.
     //
-    // Puede ser de varios renglones, como `{platillos}`: la direccion admite `\n`
-    // desde el 2026-10-06. cleanUp() no los toca y encodeURIComponent los manda
-    // como `%0A`, asi que llegan al chat como saltos.
+    // Es una linea de texto llano desde el 2026-10-07. El mensaje de varios
+    // renglones que el negocio escribe para el modal viaja aparte, en
+    // `location.message`, y aqui NO entra: es HTML, y al chat tiene que llegar la
+    // direccion, no la promocion.
     sucursal: location.address?.trim() || location.shortAddress?.trim() || '',
     mapa: location.mapsUrl ?? '',
 

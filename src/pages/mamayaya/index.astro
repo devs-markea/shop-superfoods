@@ -175,8 +175,8 @@ const closed = isClosed(schedule);
 // src/lib/store-config.ts.
 const sidebarHeading = store.home?.panel?.presentation || store.name;
 
-// El turno en curso, bajo el encabezado de la columna lateral. Sin horario no se
-// afirma nada y la linea no se pinta.
+// El turno en curso: lo rotula el reloj de la barra de desktop y lo repite la hoja
+// de categorias de movil. Sin horario no se afirma nada y la linea no se pinta.
 const shift = schedule ? shiftLabel(schedule) : null;
 
 // La etiqueta del banner: abierta, o cerrada por el momento o por hoy.
@@ -193,6 +193,7 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
   <Navbar
     store={store}
     schedule={schedule}
+    selected={deliveryType}
     cartTotal={cart?.total ?? 0}
     cartCount={cart?.itemsCount ?? 0}
   />
@@ -211,7 +212,7 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
         envolver no cambia nada de lo que ya habia: el aviso de tienda cerrada se
         queda fuera porque flota. */}
     <div class="storefront__stack container-fluid">
-      <MenuSidebar heading={sidebarHeading} shift={shift} sections={sections} />
+      <MenuSidebar heading={sidebarHeading} sections={sections} />
 
       <div class="storefront__content">
         <Hero

@@ -8,9 +8,7 @@ import Icon from './Icon.astro';
 // hay texto, la portada cambia sus secciones por una sola lista de resultados. Todo eso
 // lo hace src/scripts/menu-search.ts.
 //
-// La pista del atajo no es un boton aparte: va dentro de la etiqueta, asi que pulsarla
-// lleva al campo como pulsar cualquier otra parte de la caja. El atajo funciona con ⌘K y
-// con Ctrl+K; el rotulo es el del diseno.
+// El atajo —⌘K o Ctrl+K— sigue llevando al campo, pero ya no se anuncia en la caja.
 ---
 
 <label class="menu-search">
@@ -26,8 +24,6 @@ import Icon from './Icon.astro';
     enterkeyhint="search"
     data-menu-search
   />
-
-  <kbd class="menu-search__shortcut" aria-hidden="true">⌘K</kbd>
 </label>
 
 <style is:global>
@@ -35,8 +31,7 @@ import Icon from './Icon.astro';
      Block: menu-search
      ---------------------------------------------------------------------------
      Spec: height 44 - radius 12 - fondo #FFFFFF
-           lupa 20x20 · texto Inter 600 14/20 #98A2B3 · atajo a 8 del borde:
-           40x28, padding 4/8, radius 7, fondo #F8F9FB, Inter 600 14/20 #6C757D
+           lupa 20x20 · texto Inter 600 14/20 #98A2B3
 
      El ancho no es fijo: ocupa lo que deja el switch en la fila.
      --------------------------------------------------------------------------- */
@@ -52,7 +47,7 @@ import Icon from './Icon.astro';
       gap: 8px;
       min-width: 0;
       height: 44px;
-      padding: 0 8px 0 16px;
+      padding: 0 16px;
       border-radius: 12px;
       background-color: var(--sf-white);
       color: var(--sf-subtle);
@@ -85,25 +80,6 @@ import Icon from './Icon.astro';
     .menu-search__input::placeholder {
       color: var(--sf-subtle);
       opacity: 1;
-    }
-
-    .menu-search__shortcut {
-      display: inline-flex;
-      flex: 0 0 auto;
-      align-items: center;
-      justify-content: center;
-      min-width: 40px;
-      height: 28px;
-      padding: 4px 8px;
-      border-radius: 7px;
-      background-color: var(--sf-body-bg);
-      /* <kbd> trae del Reboot su propia fuente, monoespaciada, y su propio fondo. */
-      font-family: inherit;
-      font-size: 14px;
-      font-weight: 600;
-      line-height: 20px;
-      color: var(--sf-muted);
-      box-shadow: none;
     }
   }
 </style>

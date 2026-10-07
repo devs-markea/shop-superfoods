@@ -17,7 +17,8 @@ import { ERROR_AREAS, errorCode, statusCode } from '../../lib/error-codes.ts';
 import { busyMessage } from '../../lib/throttle.ts';
 import { getCart } from '../../lib/cart.ts';
 import { peekCartToken } from '../../lib/cart-session.ts';
-import { isClosed } from '../../lib/schedule.ts';
+import { isClosed, shiftLabel } from '../../lib/schedule.ts';
+import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
 import {
   defaultVariant,
   getCategories,
@@ -230,10 +231,15 @@ const [store, schedule, cart, categories] = await Promise.all([
 // Las dos condiciones se calculan aqui, en el mismo sitio que monta las hojas: si
 // las dedujera la barra por su cuenta, podria ofrecer un boton para una hoja que
 // esta pagina no monto. Es lo mismo que hace <Navbar> en la portada.
+const message = store.location?.message;
 const address = store.location?.address;
 const mapsUrl = store.location?.mapsUrl;
 const hasLocation = Boolean(address || mapsUrl);
 const hasSchedule = Boolean(schedule && schedule.days.length > 0);
+
+// El plazo de la barra de desktop es el del modo de entrega ya elegido, en la
+// portada o en /mamayaya/datos: lo guarda el borrador.
+const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
 
 // Con la tienda cerrada la ficha se queda en ficha: se lee entera —foto, precio,
 // personalizaciones— y desaparece la fila de compra. Aqui no se repite la tarjeta
@@ -265,9 +271,12 @@ const closed = isClosed(schedule);
 
   {/* La barra de la tienda, la misma de la portada. */}
   <NavbarDesktop
-    shortAddress={store.location?.shortAddress}
     hasLocation={hasLocation}
     hasSchedule={hasSchedule}
+    shift={schedule ? shiftLabel(schedule) : null}
+    estimate={store.delivery?.estimate}
+    pickup={store.pickup?.estimate}
+    selected={deliveryType}
     cartTotal={cart?.total ?? 0}
     cartCount={cart?.itemsCount ?? 0}
   />
@@ -392,7 +401,7 @@ const closed = isClosed(schedule);
       botones y no texto quieto: la barra es la misma en las dos pantallas y tiene
       que hacer lo mismo en las dos. */}
   {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
-  {hasLocation && <LocationSheet address={address} mapsUrl={mapsUrl} />}
+  {hasLocation && <LocationSheet message={message} address={address} mapsUrl={mapsUrl} />}
 
   <Footer store={store} categories={categories} />
 </Layout>

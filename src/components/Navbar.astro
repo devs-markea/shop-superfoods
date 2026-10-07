@@ -5,17 +5,21 @@ import NavbarDesktop from './NavbarDesktop.astro';
 import ScheduleSheet from './ScheduleSheet.astro';
 import LocationSheet from './LocationSheet.astro';
 import type { StoreSchedule, StoreSettings } from '../lib/store-config.ts';
+import type { DeliveryType } from '../lib/checkout.ts';
+import { shiftLabel } from '../lib/schedule.ts';
 
 interface Props {
   store: StoreSettings;
   schedule: StoreSchedule | null;
+  /** Modo de entrega ya elegido. Decide cual de los dos plazos lee la barra de desktop. */
+  selected?: DeliveryType;
   /** Total del carrito de la sesion. Solo lo pinta la barra de desktop. */
   cartTotal?: number;
   /** Unidades en el carrito. Idem: la etiqueta sobre el icono es de desktop. */
   cartCount?: number;
 }
 
-const { store, schedule, cartTotal = 0, cartCount = 0 } = Astro.props;
+const { store, schedule, selected, cartTotal = 0, cartCount = 0 } = Astro.props;
 
 // La cabecera del listado son DOS barras, no una barra que se adapta: en movil
 // manda .navbar —logo y iconos— y de md hacia arriba la releva .navbar-desktop,
@@ -30,13 +34,17 @@ const { store, schedule, cartTotal = 0, cartCount = 0 } = Astro.props;
 // Los iconos existen solo si tienen algo que ensenar: un icono que abre una hoja
 // vacia es peor que un icono que no esta. Quien decide es el dato, no la
 // pantalla.
+const message = store.location?.message;
 const address = store.location?.address;
 const mapsUrl = store.location?.mapsUrl;
 
 // Ubicacion: basta con uno de los dos para que la hoja exista. Con direccion se
 // lee, con enlace se abre. La abreviada no cuenta aqui —no es contenido de la
-// hoja, que muestra la completa— y por eso una tienda que solo la tenga rotula el
-// pin de desktop sin ofrecer nada que abrir.
+// hoja, que muestra la completa— y por eso una tienda que solo la tenga se queda
+// sin pin en las dos barras: no hay nada que abrir.
+//
+// El mensaje tampoco cuenta. Es como presenta el negocio su ubicacion, no la
+// ubicacion, y lo lee SOLO la hoja: aqui no se hace con el mas que pasarselo.
 const hasLocation = Boolean(address || mapsUrl);
 
 // Horario: hace falta algo que ensenar. Sin horario predeterminado —o con uno sin
@@ -87,13 +95,16 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 </header>
 
 {/* Las dos condiciones viajan a la barra de desktop porque alli deciden lo mismo
-    que aqui: si el rotulo abre una hoja o se queda en texto. Las calcula esta
+    que aqui: si el pin y el reloj se pintan. Las calcula esta
     cabecera, que es tambien quien monta las hojas: si las dedujera cada barra por
     su cuenta, una podria ofrecer un boton para una hoja que la otra no montó. */}
 <NavbarDesktop
-  shortAddress={store.location?.shortAddress}
   hasLocation={hasLocation}
   hasSchedule={hasSchedule}
+  shift={schedule ? shiftLabel(schedule) : null}
+  estimate={store.delivery?.estimate}
+  pickup={store.pickup?.estimate}
+  selected={selected}
   cartTotal={cartTotal}
   cartCount={cartCount}
 />
@@ -101,7 +112,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 {/* Las dos hojas las monta esta cabecera para las dos barras y para la barra de
     pedido, que abre la ubicacion desde su "Ver mapa". */}
 {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
-{hasLocation && <LocationSheet address={address} mapsUrl={mapsUrl} />}
+{hasLocation && <LocationSheet message={message} address={address} mapsUrl={mapsUrl} />}
 
 <style is:global>
   /* ---------------------------------------------------------------------------
