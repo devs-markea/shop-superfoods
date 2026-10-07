@@ -16,9 +16,8 @@
 //   el color     el acento del tema, que llega del Layout: el mismo rosa —o el
 //                que toque— que los botones de la tienda. El widget lo usa en el
 //                boton, en la sombra de la burbuja y en la del recuadro.
-//   brandImg     el logo de la tienda —el cafe, no el rosado de BrandLogo.astro—
-//                en lugar del de Wati, que es lo unico de la marca que el widget
-//                pinta.
+//   brandImg     el logo de la tienda —el de BrandLogo.astro— en lugar del de
+//                Wati, que es lo unico de la marca que el widget pinta.
 //                `brandName` no lo pinta esta version, pero se le da el de la
 //                tienda por si una futura lo hace.
 //   altText      '""' con las comillas dentro: el widget lo escribe sin
@@ -47,7 +46,7 @@
 // capa superior del navegador queda por encima de cualquier z-index.
 // ---------------------------------------------------------------------------
 import { getImage } from 'astro:assets';
-import logo from '../assets/logo-mama-yaya.png';
+import logo from '../assets/logo-mama-yaya-pokes-rosado.png';
 import type { StoreSettings } from '../lib/store-config.ts';
 
 interface Props {
@@ -183,8 +182,9 @@ const options = {
      ganan por llevar ademas el id. */
 
   /* El circulo del logo. El widget le pone de fondo el color del boton, y el
-     logo es cafe sobre transparente: en rosa no se lee. El hueco lo mete dentro
-     del circulo, donde el redondeo ya no muerde las esquinas del dibujo. */
+     logo es rosa sobre transparente: sobre el rosa del tema no se ve. El hueco
+     lo mete dentro del circulo, donde el redondeo ya no muerde las esquinas del
+     dibujo. */
   #whatsapp-chat-widget .wa-chat-box-brand {
     padding: 8px;
     object-fit: contain;
