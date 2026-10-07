@@ -76,22 +76,29 @@ const WIDGET_URL = 'https://wati-integration-prod-service.clare.ai/v2/watiWidget
 const brandImg = await getImage({ src: logo, width: 104 });
 
 // El mensaje con el que se abre el chat: lo que el cliente se encuentra ya
-// escrito en WhatsApp, y que completa con su duda. Tres decisiones:
+// escrito en WhatsApp, y que completa con su duda. Cuatro decisiones:
 //
-// - Dice DE QUE va la duda con palabras y no con la URL de la pagina, que es lo
-//   que traia el snippet: el platillo en su ficha, el pedido en sus siete
-//   pantallas y el menu en la portada. Un enlace no le dice nada a quien lo
-//   manda, obliga a quien contesta a abrirlo, y WhatsApp le cuelga la vista
-//   previa de la propia tienda. "en línea" dice ademas por donde llega el chat.
-// - Acaba en dos puntos y un espacio: WhatsApp deja el cursor al final, y lo
-//   siguiente que se teclea es la pregunta.
+// - Dice DE QUE va la duda con palabras: el platillo en su ficha, el pedido en
+//   sus siete pantallas y el menu en la portada. "en línea" dice ademas por
+//   donde llega el chat.
+// - El enlace va solo en la ficha, que es donde dice algo: quien contesta abre
+//   el platillo de un toque. En el resto —lo que traia el snippet— seria la
+//   direccion de la tienda, que no le dice nada a nadie. Va en su propio
+//   renglon y con otro debajo, para que la pregunta no se teclee pegada a el.
+// - Sin enlace acaba en un espacio, sin signo: WhatsApp deja el cursor al
+//   final, y lo siguiente que se teclea es la pregunta.
 // - Lleva acentos aunque la tienda escriba sin ellos, por lo mismo que
 //   src/lib/whatsapp.ts: se lee en la conversacion, junto a los textos del ERP.
 //
 // Va codificado desde aqui porque el widget lo pega tal cual en el `href`: un
 // `&`, un `#` o unas comillas en el nombre de un platillo cortarian el mensaje o
 // el enlace. El `{{page_title}}` de Wati tiene ese problema, y por eso no se usa.
-const subject = dish ?? (order ? 'mi pedido en línea' : 'su menú en línea');
+const topic = order ? 'mi pedido en línea' : 'su menú en línea';
+
+// El hueco del enlace. Lo rellena el script, que es quien sabe en que dominio se
+// esta viendo la pagina: el `site` de astro.config.mjs no es el de la tienda. Son
+// letras y guiones bajos para que la codificacion de abajo no lo toque.
+const LINK_SLOT = '__dish_link__';
 
 // El saludo por nombre —"Hola, Mamá Yaya."—, quitado por ahora: se queda en
 // "Hola." Se apaga aqui y no se borra porque el nombre sigue llegando del panel,
@@ -99,7 +106,9 @@ const subject = dish ?? (order ? 'mi pedido en línea' : 'su menú en línea');
 const GREET_BY_NAME = false;
 
 const greeting = GREET_BY_NAME && store.name ? `Hola, ${store.name}.` : 'Hola.';
-const message = `${greeting} Tengo una duda sobre ${subject}: `;
+const message = dish
+  ? `${greeting} Tengo una duda sobre ${dish}\n${LINK_SLOT}\n`
+  : `${greeting} Tengo una duda sobre ${topic} `;
 
 const options = {
   enabled: true,
@@ -131,7 +140,15 @@ const options = {
 
 {
   ENABLED && (
-    <script is:inline define:vars={{ widgetUrl: WIDGET_URL, options }}>
+    <script is:inline define:vars={{ widgetUrl: WIDGET_URL, options, linkSlot: LINK_SLOT }}>
+      // El enlace del platillo, en el mensaje de la ficha: la pagina tal como se
+      // llama, sin la cola de parametros que le cuelgan los anuncios —fbclid,
+      // utm…—. En el resto de pantallas no hay hueco y esto no cambia nada.
+      options.brandSetting.messageText = options.brandSetting.messageText.replace(
+        linkSlot,
+        encodeURIComponent(window.location.origin + window.location.pathname),
+      );
+
       // El aviso de tienda cerrada: el chat va 14 por encima de su borde de arriba.
       // Se vuelve a medir si la tarjeta cambia de alto —el texto partido en otra
       // linea— o si cambia la ventana, que la mueve. Lo escrito en el <body> gana a
