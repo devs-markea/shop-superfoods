@@ -37,6 +37,8 @@ interface Meta {
   sheet?: string;
   /** El valor puede ser mas largo que la fila: se recorta con puntos suspensivos. */
   truncate?: boolean;
+  /** No se pinta: sigue en el marcado, con `d-none`. Es solo visual. */
+  hidden?: boolean;
 }
 
 const items: Meta[] = [];
@@ -55,6 +57,10 @@ if (shipping) {
 // en src/lib/store-config.ts).
 //
 // Solo a domicilio: para recoger, el par ya lleva su "Ver mapa" con el mismo pin.
+//
+// OCULTA, pin y direccion: a domicilio la fila se queda en el plazo. Es solo visual
+// —el dato sigue llegando y la meta sigue en el marcado—, asi que volver a verla es
+// quitar `hidden` de aqui.
 if (shortAddress) {
   items.push({
     mode: 'delivery',
@@ -62,6 +68,7 @@ if (shortAddress) {
     name: 'Ubicacion',
     value: shortAddress,
     truncate: true,
+    hidden: true,
   });
 }
 
@@ -88,7 +95,11 @@ if (hasLocation) {
     <ul class="order-meta list-unstyled">
       {items.map((item) => (
         <li
-          class:list={['order-meta__item', item.truncate && 'order-meta__item--truncate']}
+          class:list={[
+            'order-meta__item',
+            item.truncate && 'order-meta__item--truncate',
+            item.hidden && 'd-none',
+          ]}
           data-mode={item.mode}
         >
           <Icon name={item.icon} size="sm" class="order-meta__icon" />
