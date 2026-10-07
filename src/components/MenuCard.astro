@@ -19,9 +19,9 @@ const { product, eager = false, storeClosed = false } = Astro.props;
 // deciden las dos en src/lib/product-card.ts— con otra estructura en desktop:
 //
 //   texto a la izquierda   nombre, precio y descripcion, en ese orden
-//   foto a la derecha      de arriba abajo, con el "+" en su esquina: el boton se
-//                          queda donde estaba, abajo a la derecha de la tarjeta, y
-//                          ahora eso cae sobre la foto
+//   foto a la derecha      de arriba abajo, con el "+" en su esquina: se queda
+//                          donde estaba, abajo a la derecha de la tarjeta, y ahora
+//                          eso cae sobre la foto
 //
 // EN MOVIL ES LA TARJETA DE SIEMPRE —foto de 80 a la izquierda; nombre,
 // descripcion y, al pie, precio y "+"—: la estructura nueva es solo de desktop.
@@ -29,7 +29,7 @@ const { product, eager = false, storeClosed = false } = Astro.props;
 // (`display: contents`) y cada pieza se coloca en la rejilla de la tarjeta.
 //
 // LOS ROTULOS SON LOS DE <ProductCard>: nombre, insignia, precios, descripcion y
-// boton llevan sus clases, y con ellas sus estilos —tamanos, colores y recortes—. Las clases propias, .menu-card__*, son solo de la
+// "+" llevan sus clases, y con ellas sus estilos —tamanos, colores y recortes—. Las clases propias, .menu-card__*, son solo de la
 // estructura. Esos estilos viven en components/ProductCard.astro, que la portada
 // carga siempre: <MenuSection> importa las dos tarjetas.
 const { orderable, notice, promo, displayName, image } = productCardView(product, storeClosed);
@@ -45,7 +45,7 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
 >
   <div class="menu-card__body">
     <h3 class="product-card__title">
-      <!-- stretched-link: toda la tarjeta es clicable, sin anidar el boton.
+      <!-- stretched-link: toda la tarjeta es clicable, el "+" incluido.
            Los no disponibles tambien enlazan: el detalle existe.
            El title lleva el nombre entero: es lo que recupera lo que corta el
            recorte. -->
@@ -104,28 +104,26 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
     )
   }
 
-  {/* El boton, o el motivo en su lugar. Con la tienda cerrada ninguno de los dos:
-      sin boton, que no llevaria a ninguna parte, y sin etiqueta, que repetiria lo
-      ya dicho. */}
-  {
-    (notice || orderable) && (
-      <div class="menu-card__action">
-        {notice ? (
-          <span class="tag tag--optional badge">{notice}</span>
-        ) : (
-          <button
-            class="product-card__add btn-plain"
-            type="button"
-            aria-label={`Agregar ${product.name} al carrito`}
-            data-add
-            data-product-id={product.id}
-          >
-            <Icon name="plus" size="sm" />
-          </button>
-        )}
-      </div>
-    )
-  }
+  {/* El "+" o, si el platillo no se puede pedir por un motivo propio, ese motivo en
+      su lugar. Con la tienda cerrada el "+" se queda, apagado, y la etiqueta se
+      calla porque repetiria lo ya dicho.
+
+      El "+" no es un boton: es un dibujo dentro del area del enlace, igual que en
+      <ProductCard>. */}
+  <div class="menu-card__action">
+    {
+      notice ? (
+        <span class="tag tag--optional badge">{notice}</span>
+      ) : (
+        <span
+          class:list={['product-card__add', !orderable && 'product-card__add--disabled']}
+          aria-hidden="true"
+        >
+          <Icon name="plus" size="sm" />
+        </span>
+      )
+    }
+  </div>
 </article>
 
 <style is:global>
@@ -221,24 +219,31 @@ const { orderable, notice, promo, displayName, image } = productCardView(product
     object-fit: cover;
   }
 
-  /* Element: action — el "+" o el motivo. Por encima del stretched-link, que cubre
-     la tarjeta entera con su ::after de z-index 1. */
+  /* Element: action — el "+" o el motivo. Debajo del stretched-link, que cubre la
+     tarjeta entera con su ::after de z-index 1: pulsarlo es pulsar la tarjeta. */
   .menu-card__action {
-    position: relative;
-    z-index: 2;
     display: flex;
     grid-column: -2 / -1;
     grid-row: 3;
     align-self: center;
   }
 
-  /* Modifier: publicado pero no comprable ahora. Como .product-card--unavailable:
-     atenuada, clicable y con el motivo en lugar del boton. */
+  /* Modifier: no comprable ahora. Como .product-card--unavailable: atenuada,
+     clicable y, en el sitio del "+", el motivo —o el "+" apagado, si lo que pasa es
+     que la tienda esta cerrada—. */
   .menu-card--unavailable .menu-card__media,
   .menu-card--unavailable .product-card__title,
   .menu-card--unavailable .product-card__description,
   .menu-card--unavailable .menu-card__pricing {
     opacity: 0.55;
+  }
+  /* El area de clic, por encima de las piezas atenuadas: el titulo lleva dentro el
+     enlace, y sin esto la foto, el precio y la descripcion se quedaban con el clic.
+     Le vale sin `position` por ser un item de la rejilla en movil y uno flex en
+     desktop. El porque, entero, en .product-card--unavailable
+     (components/ProductCard.astro). */
+  .menu-card--unavailable .product-card__title {
+    z-index: 1;
   }
   .menu-card--unavailable:hover {
     box-shadow: 0 1px 2px 0 rgb(0 0 0 / 5%);

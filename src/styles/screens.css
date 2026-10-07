@@ -204,17 +204,6 @@
   .checkout-page--confirm .screen-body {
     gap: 24px;
   }
-  /* El switch de entrega se arrima al borde de la columna en lugar de quedarse
-     centrado: en movil la columna mide justo sus 350 y centrarlo es lo mismo que
-     alinearlo, pero aqui la columna es del doble y esos 350 flotando en medio no
-     se alinean con nada.
-
-     Va aqui, con el resto de lo que esta pantalla recoloca, y no en el bloque del
-     switch: es cosa de esta columna. La barra de la portada hace lo propio con la
-     suya (ver components/OrderBar.astro). */
-  .checkout-page .switch {
-    margin-inline: 0;
-  }
   /* Element: fields — los campos de /datos, a 20. Es el bloque que el switch de
      entrega encabeza: contacto y direccion dejan de ser dos grupos separados por
      el 24 de la columna y pasan a ser un solo formulario con un ritmo propio, mas

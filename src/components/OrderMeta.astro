@@ -124,7 +124,7 @@ if (hasLocation) {
   /* ---------------------------------------------------------------------------
      Block: order-meta
      ---------------------------------------------------------------------------
-     Dos pares icono + etiqueta al ras del gutter. Son dos por MODO DE ENTREGA y
+     Dos pares icono + etiqueta, a 4 del gutter. Son dos por MODO DE ENTREGA y
      ocupan el mismo sitio: a domicilio, el plazo y el costo del envio; para
      recoger, el plazo de recoleccion y el enlace al mapa.
 
@@ -141,6 +141,10 @@ if (hasLocation) {
      Spec: contenedor 178x16 - gap 16 - icono 16 dorado - label Inter 500 12/16
      min-height en lugar de height para que nada se recorte si el usuario sube el
      tamano de fuente del sistema.
+
+     Con 4 de relleno por los cuatro lados: la fila mide 24 —los 16 del contenido y 4
+     arriba y abajo—, que es lo que cuenta la barra de pedido para su alto (ver
+     components/OrderBar.astro).
      --------------------------------------------------------------------------- */
   .order-meta {
     display: flex;
@@ -149,6 +153,7 @@ if (hasLocation) {
     gap: 16px;
     min-height: 16px;
     margin: 0;
+    padding: 4px;
   }
 
   .order-meta__item {
