@@ -11,8 +11,8 @@ interface Props {
 const { store } = Astro.props;
 
 // Pie de pagina, SOLO desktop: en movil no se pinta (ver los estilos de este archivo). Tres
-// franjas separadas por 32: la marca con la columna de enlaces y redes, la divisoria,
-// y el aviso de derechos.
+// franjas separadas por 32: la marca con las columnas de enlaces y de redes, la
+// divisoria, y el aviso de derechos.
 //
 // El nombre no se escribe a mano en ningun sitio de aqui: lo pone la tienda. Sin
 // el, la frase de presentacion se cae entera antes que quedarse sin sujeto —y el
@@ -38,8 +38,9 @@ const copyright = name
 // muerto —"Facebook" e "Instagram" sin nada detras, porque la API no los daba—
 // es ahora una fila de iconos que llevan a alguna parte.
 //
-// Van en la columna de la derecha, debajo de "Descubre" y con su propio titulo,
-// "Síguenos": la fila queda debajo del titulo, igual que el enlace debajo del suyo.
+// Van en su propia columna, la tercera del pie, a la derecha de "Descubre" y con su
+// propio titulo, "Síguenos": la fila queda debajo del titulo, igual que el enlace
+// debajo del suyo.
 //
 // Se pinta la lista TAL CUAL viene:
 //
@@ -55,7 +56,7 @@ const copyright = name
 //   donde la marca escribe "TikTok" y "X (Twitter)".
 //
 // Sin redes configuradas no hay fila que pintar ni titulo que la anuncie:
-// "Síguenos" se cae entero y la columna se queda con "Descubre". Es la regla de
+// la columna de "Síguenos" se cae entera y el pie se queda en dos. Es la regla de
 // siempre: sin dato se degrada, no se finge un enlace a "#".
 //
 // El WhatsApp de esta fila NO sale de `store.whatsapp.phone`, que es el numero
@@ -75,7 +76,7 @@ const socials = store.socialLinks ?? [];
         {about && <p class="footer__about">{about}</p>}
       </div>
 
-      <div class="footer__aside">
+      <div class="footer__columns">
         <nav class="footer__group" aria-labelledby="footer-discover">
           <h2 class="footer__heading" id="footer-discover">Descubre</h2>
 
@@ -126,7 +127,7 @@ const socials = store.socialLinks ?? [];
      Pie de pagina, SOLO desktop. Spec: padding 48/160/32, gap 32, fondo blanco.
 
      En movil no existe. No es una decision de estilo: la spec lo pide asi, y en una
-     pantalla de 375 las dos columnas se apilarian en una torre de enlaces que nadie
+     pantalla de 375 las tres columnas se apilarian en una torre de enlaces que nadie
      pidio, debajo de una rejilla que ya se lee scrolleando.
 
      El `color: #FFFFFF` de la spec es el FONDO. Cada rotulo trae su propio color
@@ -161,7 +162,8 @@ const socials = store.socialLinks ?? [];
       max-width: 1140px;
       margin-inline: auto;
     }
-    /* Element: top — la marca a la izquierda y la columna de enlaces a la derecha */
+    /* Element: top — la marca a la izquierda y, a la derecha, las columnas de
+       enlaces y de redes */
     .footer__top {
       display: flex;
       align-items: flex-start;
@@ -173,8 +175,8 @@ const socials = store.socialLinks ?? [];
       flex-direction: column;
       gap: 16px;
       /* El parrafo no se estira a lo ancho del pie: a 1120 saldrian lineas de 150
-         caracteres, ilegibles. Se corta donde el diseno lo corta, antes de la
-         columna de enlaces. */
+         caracteres, ilegibles. Se corta donde el diseno lo corta, antes de las
+         columnas de la derecha. */
       max-width: 420px;
     }
     /* El logo a 96 de alto y el enlace sin alto propio: lo envuelve. La spec pedia
@@ -202,16 +204,19 @@ const socials = store.socialLinks ?? [];
       line-height: 22px;
       color: var(--sf-muted);
     }
-    /* Element: aside — la columna de la derecha: "Descubre" y, debajo, "Síguenos".
-       24 entre los dos, el doble de lo que separa a cada titulo de lo suyo, para
-       que se lean como dos grupos y no como una lista de cuatro lineas. */
-    .footer__aside {
+    /* Element: columns — las dos columnas de la derecha, una al lado de la otra:
+       "Descubre" y "Síguenos". Van juntas contra el borde derecho, no repartidas a
+       lo ancho: asi la marca sigue sola a la izquierda y lo demas se lee como un
+       bloque. 48 entre las dos, los mismos que el pie ya suma para su aire de
+       arriba, y por lo mismo escritos como suma. */
+    .footer__columns {
       display: flex;
       flex: 0 0 auto;
-      flex-direction: column;
-      gap: 24px;
+      align-items: flex-start;
+      gap: calc(32px + 16px);
     }
-    /* Element: group — un titulo y lo suyo debajo: el enlace o la fila de redes */
+    /* Element: group — una columna: un titulo y lo suyo debajo, el enlace o la fila
+       de redes */
     .footer__group {
       display: flex;
       flex-direction: column;
@@ -283,10 +288,10 @@ const socials = store.socialLinks ?? [];
        el `aria-label` del enlace —lo manda la API— y el `title` lo repite para
        el raton. El SVG queda `aria-hidden`, como el resto de BrandIcon.
 
-       Los 20 del icono son los mismos del sistema, aunque el enlace de arriba
-       sea de 14: es un blanco pulsable, no un texto. El color es el de ese
-       enlace —la fila es de su misma columna— y va al dorado en hover, igual
-       que el. */
+       Los 20 del icono son los mismos del sistema, aunque el enlace de la columna
+       de al lado sea de 14: es un blanco pulsable, no un texto. El color es el de
+       ese enlace —las dos columnas son del mismo rango— y va al dorado en hover,
+       igual que el. */
     .footer__social-link {
       display: flex;
       align-items: center;
