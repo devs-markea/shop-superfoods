@@ -89,7 +89,7 @@ if (hasLocation) {
   });
 }
 
-// El reloj rotula el turno en curso —"12:00 p.m. - 11:00 p.m.", o cuando vuelve a
+// El reloj rotula el turno en curso —"12:00 - 23:00 h.", o cuando vuelve a
 // abrir—, que es lo que iba bajo el encabezado de la columna lateral de la portada
 // y se mudo aqui: en la barra se lee en todas las pantallas, y al lado del boton
 // que abre la semana entera.
@@ -183,7 +183,7 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
             ]}
             type="button"
             aria-label={
-              // El turno puede acabar en "p.m.": ese punto ya cierra la frase.
+              // El turno puede acabar en "h.": ese punto ya cierra la frase.
               meta.name
                 ? `${meta.label}${meta.label.endsWith('.') ? '' : '.'} ${meta.name}`
                 : undefined
@@ -343,13 +343,13 @@ const cartLabel = cartChipLabel(cartTotal, cartCount);
       color: var(--sf-accent);
     }
     /* Modifier: el rotulo es un dato de largo variable —el turno, que cerrada dice
-       tambien cuando abre: "Cerrado · Abre el miercoles a las 9:00 a.m."—. Es la
+       tambien cuando abre: "Cerrado · Abre el miercoles a las 09:00 h."—. Es la
        unica meta que cede ancho: se recorta antes de empujar al carrito, y el texto
        entero queda en el `title`. El `min-width: 0` es lo que deja encoger a un hijo
        flex por debajo de su texto.
 
        El interlineado sube a 20, el alto del icono: con el 1 del resto, el
-       `overflow: hidden` le cortaria el rabo a la "p" de "p.m.". La fila no crece. */
+       `overflow: hidden` le cortaria el rabo a la "y" de "hoy". La fila no crece. */
     .navbar-desktop__meta--truncate {
       flex: 0 1 auto;
       min-width: 0;

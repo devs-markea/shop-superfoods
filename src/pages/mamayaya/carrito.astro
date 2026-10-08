@@ -24,7 +24,6 @@ import { resolveCartToken } from '../../lib/cart-session.ts';
 import { quoteForDraft } from '../../lib/shipping-quote.ts';
 import { DRAFT_COOKIE, parseDraft } from '../../lib/checkout-draft.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
-import { getCategories, getProducts, type CategoryRef } from '../../lib/catalog.ts';
 import { resolveShipping } from '../../lib/shipping.ts';
 import { isClosed, shiftLabel } from '../../lib/schedule.ts';
 import { formatPrice } from '../../lib/price.ts';
@@ -49,16 +48,6 @@ let cart: Cart | null = null;
 let unreachable = false;
 // El codigo del fallo, para el aviso y para el log. Ver src/lib/error-codes.ts.
 let cartCode: string | null = null;
-
-// El catalogo, solo para los tres rotulos de categoria del pie. Se pide a la vez
-// que el carrito y si falla el pie se queda con "Menu completo": son tres rotulos
-// de un pie, no el contenido de la pantalla.
-const categoriesPending = getProducts()
-  .then((items) => getCategories(items))
-  .catch((error) => {
-    console.error('[pedido] fallo el catalogo del pie', error);
-    return [] as CategoryRef[];
-  });
 
 try {
   // resolveCartToken emite la cookie si es la primera visita, asi que llegar
@@ -111,10 +100,9 @@ const quotePending = quoteForDraft(draft, resolveCartToken(Astro.cookies));
 // total que devuelve cada operacion de carrito, y el modo en data-free-shipping,
 // que es lo que le falta para volver a resolver el envio de la tarjeta: cruzar el
 // umbral con un "+" cambia el importe a "Gratis" sin recargar.
-const [store, schedule, categories, quote] = await Promise.all([
+const [store, schedule, quote] = await Promise.all([
   getStoreConfig(),
   getStoreSchedule(),
-  categoriesPending,
   quotePending,
 ]);
 
@@ -323,7 +311,7 @@ const closed = isClosed(schedule);
   {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
   {hasLocation && <LocationSheet message={message} address={address} mapsUrl={mapsUrl} />}
 
-  <Footer store={store} categories={categories} />
+  <Footer store={store} />
 </Layout>
 
 <script>
@@ -332,10 +320,6 @@ const closed = isClosed(schedule);
   // Abre las hojas del horario y la ubicacion desde la barra de desktop y desde
   // la tarjeta de tienda cerrada.
   import '../../scripts/sheet';
-  // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
-  // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
-  // que importarlo. Ver src/lib/discover.ts.
-  import '../../scripts/footer-discover';
 </script>
 
 <style is:global>

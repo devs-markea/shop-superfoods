@@ -2,15 +2,12 @@
 // y en movil las tabs (components/CategoryNav.astro) y la hoja de categorias
 // (components/MenuSheet.astro). Listan las mismas secciones, y se mueven juntos.
 //
-// Tres trabajos:
+// Dos trabajos:
 //
 //   marcar   la entrada de la seccion que se esta mirando, segun se scrollea.
 //   saltar   al pulsar una entrada, hasta su seccion. Sin tocar la URL: el
 //            `href="#..."` es para quien no tiene JavaScript; con el, cada pulsacion
 //            dejaria un paso mas en el boton de atras.
-//   llegar   con el pase de "Descubre" (ver src/lib/discover.ts): al abrir la portada
-//            desde el pie de otra pantalla, o al pulsar el pie en esta, baja hasta la
-//            seccion de esa categoria.
 //
 // Cada indice se declara con `data-menu-nav`, que lleva la clase de su entrada
 // marcada, y sus entradas con `data-menu-link`, el id de su seccion. Lo que scrollea
@@ -24,7 +21,6 @@
 // (src/scripts/menu-search.ts): la marca se queda quieta, y saltar a una seccion vacia
 // antes el buscador.
 
-import { DISCOVER_EVENT, takeCategory } from '../lib/discover.ts';
 import { closeSheet } from '../lib/sheet-close.ts';
 
 /**
@@ -196,8 +192,8 @@ function initMenuNav(sections: HTMLElement[], navs: Nav[]): void {
     autohide(reached && !featured(next));
   }
 
-  // Sin `behavior` decide el CSS —suave, salvo con movimiento reducido—.
-  function jump(section: HTMLElement, behavior?: ScrollBehavior): void {
+  // El `behavior` lo decide el CSS —suave, salvo con movimiento reducido—.
+  function jump(section: HTMLElement): void {
     // Sin secciones no hay a donde saltar: se vacia el buscador, que las devuelve en el
     // acto —el `input` lo atiende menu-search.ts antes de que esto siga—.
     if (search?.value) {
@@ -209,7 +205,7 @@ function initMenuNav(sections: HTMLElement[], navs: Nav[]): void {
     autohide(!featured(section));
     jumping = true;
     settle();
-    section.scrollIntoView({ block: 'start', behavior });
+    section.scrollIntoView({ block: 'start' });
   }
 
   let frame = 0;
@@ -268,24 +264,7 @@ function initMenuNav(sections: HTMLElement[], navs: Nav[]): void {
     });
   });
 
-  // La seccion de una categoria, por su id. Se compara el valor en lugar de componer un
-  // selector, por si un id trajera comillas.
-  const sectionFor = (category: string) =>
-    sections.find((section) => section.dataset.category === category);
-
-  // El pie de esta misma pantalla (src/scripts/footer-discover.ts).
-  document.addEventListener(DISCOVER_EVENT, (event) => {
-    const section = sectionFor(String((event as CustomEvent).detail ?? ''));
-    if (section) jump(section);
-  });
-
-  // Al llegar del pie de otra pantalla. Sin animar: es la pagina que se pidio, no un
-  // recorrido por ella.
-  const pending = takeCategory();
-  const arrival = pending ? sectionFor(pending) : undefined;
-
-  if (arrival) jump(arrival, 'instant');
-  else spy();
+  spy();
 }
 
 const sections = [...document.querySelectorAll<HTMLElement>('[data-menu-section]')];

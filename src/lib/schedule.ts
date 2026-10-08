@@ -435,24 +435,18 @@ export function storeStatus(schedule: StoreSchedule, now = new Date()): StoreSta
   return nextOpeningDay(schedule, now) === 'hoy' ? 'closed-now' : 'closed-today';
 }
 
-/** "23:00" en 12 horas: "11:00 p.m.". Tal cual si no es una hora. */
-function to12h(time: string): string {
-  const minutes = parseTime(time);
-  if (minutes === null) return time;
-
-  const hour = Math.floor(minutes / 60);
-  const minute = String(minutes % 60).padStart(2, '0');
-
-  return `${hour % 12 || 12}:${minute} ${hour < 12 ? 'a.m.' : 'p.m.'}`;
-}
-
 /**
- * El turno en curso, en 12 horas: la cabecera de la columna lateral de la portada. `null`
- * cuando no se sabe: entonces no se afirma nada.
+ * El turno en curso, en 24 horas: el rotulo del reloj de la barra de desktop y la
+ * cabecera de la hoja de categorias de movil. `null` cuando no se sabe: entonces no se
+ * afirma nada.
  *
- *   12:00 p.m. - 11:00 p.m.
+ *   12:00 - 23:00 h.
  *   Abierto las 24 horas
- *   Cerrado · Abre manana a las 9:00 a.m.
+ *   Cerrado · Abre manana a las 09:00 h.
+ *
+ * Las horas van tal cual las publica la API, que ya las manda en 24 horas, y con la
+ * misma "h." que llevan en la hoja del horario (ver formatShifts), pegada con un
+ * espacio duro. Iban en 12 horas —"12:00 p.m. - 11:00 p.m."— y se igualaron al resto.
  *
  * El tramo sale de los RANGOS, resueltos en este instante, igual que resolveSchedule(): el
  * servidor solo publica el cierre. Con turnos solapados se pinta el que cierra mas tarde,
@@ -466,7 +460,7 @@ export function shiftLabel(schedule: StoreSchedule, now = new Date()): string | 
     const { opensAt } = schedule;
     if (!opensAt) return 'Cerrado';
 
-    return `Cerrado · Abre ${nextOpeningDay(schedule, now)} a las ${to12h(opensAt.time)}`;
+    return `Cerrado · Abre ${nextOpeningDay(schedule, now)} a las ${opensAt.time} h.`;
   }
 
   const minute = storeMinuteOfWeek(now);
@@ -477,10 +471,10 @@ export function shiftLabel(schedule: StoreSchedule, now = new Date()): string | 
   if (covering.length > 0) {
     const shift = covering.reduce((latest, range) => (range.end > latest.end ? range : latest));
 
-    return `${to12h(shift.startTime)} - ${to12h(shift.closesAt ?? '')}`;
+    return `${shift.startTime} - ${shift.closesAt ?? ''} h.`;
   }
 
-  return schedule.closesAt ? `Abierto hasta las ${to12h(schedule.closesAt)}` : null;
+  return schedule.closesAt ? `Abierto hasta las ${schedule.closesAt} h.` : null;
 }
 
 /**
@@ -489,6 +483,9 @@ export function shiftLabel(schedule: StoreSchedule, now = new Date()): string | 
  *
  * El `+1 dia` avisa de los turnos que cruzan medianoche. Sin el, un "22:00 a
  * 02:00" se lee como un error de captura.
+ *
+ * Cada tramo cierra con su "h." —"12:00 a 23:30 h."—, pegada a la hora con un
+ * espacio duro para que no se quede sola en el renglon de abajo.
  */
 export function formatShifts(day: ScheduleDay): string {
   return day.shifts
@@ -496,7 +493,7 @@ export function formatShifts(day: ScheduleDay): string {
       // 00:00-00:00 es el turno continuo: no hay tramo que enunciar.
       if (shift.start === shift.end) return '24 horas';
 
-      return `${shift.start} a ${shift.end}${shift.crossesMidnight ? ' +1 dia' : ''}`;
+      return `${shift.start} a ${shift.end} h.${shift.crossesMidnight ? ' +1 dia' : ''}`;
     })
     .join(' · ');
 }
