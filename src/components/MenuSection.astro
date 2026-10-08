@@ -26,9 +26,6 @@ const { section, eager = false, storeClosed = false } = Astro.props;
 // propio indice: la columna lateral en desktop y las tabs en movil
 // (src/scripts/menu-nav.ts). Lo que cambia en movil es la medida: el titulo, los
 // huecos, una columna, y los destacados se recorren con el dedo, sin flechas.
-//
-// El id de la categoria va en la seccion (`data-category`): es a donde lleva el pase de
-// "Descubre" del pie.
 const featured = section.kind === 'featured';
 
 // Lo que encuentra el buscador de desktop en cada platillo: su nombre, su descripcion y
@@ -47,10 +44,10 @@ const searchText = (product: MenuSection['products'][number]) =>
 const count = section.products.length;
 const countLabel = `${count} ${count === 1 ? 'producto' : 'productos'}`;
 
-// Los cinco primeros destacados llevan su puesto sobre la foto: "#1 favoritos" a
-// "#5 favoritos". Van en el orden del panel (`featured.position`), asi que el puesto es
+// Los seis primeros destacados llevan su puesto sobre la foto: "#1 favoritos" a
+// "#6 favoritos". Van en el orden del panel (`featured.position`), asi que el puesto es
 // el indice.
-const RANKED = 5;
+const RANKED = 6;
 
 const titleId = `${section.anchor}-titulo`;
 const itemsId = `${section.anchor}-platillos`;
@@ -62,7 +59,6 @@ const itemsId = `${section.anchor}-platillos`;
   aria-labelledby={titleId}
   data-menu-section
   data-menu-featured={featured ? '' : undefined}
-  data-category={section.categoryId ?? undefined}
 >
   <header class="menu-section__head">
     <div class="menu-section__heading">

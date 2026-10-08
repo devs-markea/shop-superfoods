@@ -99,9 +99,9 @@ type ApiCategory = string | { id: string | number; name: string; description?: s
 export interface CategoryRef {
   /**
    * `menu_categories.id`, como texto. CON EL SE EMPAREJA TODO: la seccion con sus platillos,
-   * la entrada de la columna lateral con su seccion, el chip con lo que filtra y el pase de
-   * "Descubre" con su destino. No cambia si el administrador renombra la categoria, y dos
-   * categorias con el mismo nombre no se confunden.
+   * la entrada de la columna lateral con su seccion y el chip con lo que filtra. No cambia
+   * si el administrador renombra la categoria, y dos categorias con el mismo nombre no se
+   * confunden.
    */
   id: string;
   name: string;
@@ -285,24 +285,6 @@ function groupByCategory(
   return [...ordered, ...groups.values()];
 }
 
-/**
- * Las categorias con platillos, por id y en el orden del panel: los rotulos de "Descubre"
- * del pie. Los indices de la portada no salen de aqui sino de getMenuSections(), que usa
- * la misma agrupacion.
- *
- * `listed` es `store.categories`. Las pantallas que no la tienen a mano la omiten y se
- * quedan con el orden del catalogo, que es el mismo.
- */
-export function getCategories(
-  items: ProductListItem[],
-  listed: readonly CategoryRef[] = [],
-): CategoryRef[] {
-  return groupByCategory(items, listed).map(({ category }) => ({
-    id: category.id,
-    name: category.name,
-  }));
-}
-
 // ---------------------------------------------------------------------------
 // Secciones del menu
 //
@@ -342,8 +324,6 @@ export interface MenuSection {
   anchor: string;
   /** `featured` se pinta como lista horizontal; `category`, como rejilla. */
   kind: 'featured' | 'category';
-  /** El id de la categoria; null en los destacados, que no son una. */
-  categoryId: string | null;
   name: string;
   /** Cadena vacia cuando no hay bajada que pintar. */
   description: string;
@@ -358,8 +338,7 @@ export interface MenuSection {
  * Los destacados se ordenan aqui porque `featured` no cambia el orden de la lista. El
  * `sort` es estable, asi que dos posiciones iguales conservan el orden de la API.
  *
- * `listed` es `store.categories`, como en getCategories(): las dos dan la misma lista en el
- * mismo orden, que es lo que hace que cada rotulo del pie tenga su seccion.
+ * `listed` es `store.categories`.
  *
  * `heading` es `store.home.featured`: el titular y la bajada de los destacados. El titular
  * es el `name` de la seccion, asi que rotula tambien su entrada en los dos indices, igual
@@ -383,7 +362,6 @@ export function getMenuSections(
     sections.push({
       anchor: 'menu-destacados',
       kind: 'featured',
-      categoryId: null,
       // `||` y no `??`: lo que el negocio dejo vacio llega como cadena vacia.
       name: heading.title || FEATURED_SECTION.name,
       description: heading.description || FEATURED_SECTION.description,
@@ -397,7 +375,6 @@ export function getMenuSections(
       // en un `id` rompe el salto.
       anchor: `menu-categoria-${category.id.replace(/[^\w-]/g, '-')}`,
       kind: 'category',
-      categoryId: category.id,
       name: category.name,
       description: category.description,
       products,
@@ -609,7 +586,7 @@ export interface OptionGroupView {
  * (las variantes son filas de menu_prices, no una personalizacion), asi que la
  * copia vive aqui.
  */
-const VARIANTS_LABEL = 'Elige una opcion';
+const VARIANTS_LABEL = 'Elige una opción';
 
 /**
  * Nombre de respaldo de una variante sin nombre. Solo puede darse con

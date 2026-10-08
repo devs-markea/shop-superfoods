@@ -11,12 +11,7 @@ import StoreClosedNotice from '../../components/StoreClosedNotice.astro';
 import RetryNotice from '../../components/RetryNotice.astro';
 import CartFab from '../../components/CartFab.astro';
 import Footer from '../../components/Footer.astro';
-import {
-  getCategories,
-  getMenuSections,
-  getProducts,
-  type ProductListItem,
-} from '../../lib/catalog.ts';
+import { getMenuSections, getProducts, type ProductListItem } from '../../lib/catalog.ts';
 import { ApiError } from '../../lib/api.ts';
 import { ERROR_AREAS, errorCode } from '../../lib/error-codes.ts';
 import { busyMessage } from '../../lib/throttle.ts';
@@ -128,15 +123,14 @@ try {
 // esperarlas aqui no suma tiempo al del catalogo: solo lo que les falte.
 const [store, schedule, cart] = await Promise.all([storePending, schedulePending, cartPending]);
 
-// LAS CATEGORIAS VAN POR ID. La lista y su orden son los del panel —`categories` de
-// GET /api/store— y los platillos se les cuelgan por `category.id`. Chips, columna
-// lateral, secciones y pie salen de la misma lista, asi que cada chip tiene su seccion y
-// cada entrada de la columna su destino. Ver getCategories en src/lib/catalog.ts.
-const categories = getCategories(products, store.categories);
-
 // La portada pinta el catalogo por secciones —destacados y una por categoria— y las
 // recorre con su indice: la columna lateral en desktop y las tabs en movil. Ver
 // components/MenuSection.astro.
+//
+// LAS CATEGORIAS VAN POR ID. La lista y su orden son los del panel —`categories` de
+// GET /api/store— y los platillos se les cuelgan por `category.id`. Chips, columna
+// lateral y secciones salen de la misma lista, asi que cada chip tiene su seccion y
+// cada entrada de la columna su destino. Ver groupByCategory en src/lib/catalog.ts.
 //
 // El titular y la bajada de los destacados los escribe el panel (`home.featured`); sin
 // ellos, la seccion se rotula con los de la tienda.
@@ -301,12 +295,11 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
     <CartFab count={cart?.itemsCount ?? 0} />
   </main>
 
-  <Footer store={store} categories={categories} />
+  <Footer store={store} />
 </Layout>
 
 <script>
-  // Los dos indices —columna lateral y tabs—, que tambien cumplen el pase de
-  // "Descubre", y la lista horizontal de destacados.
+  // Los dos indices —columna lateral y tabs— y la lista horizontal de destacados.
   import '../../scripts/menu-nav';
   import '../../scripts/featured-carousel';
   // El buscador de desktop: filtra los platillos de la pagina.
@@ -318,7 +311,6 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
   import '../../scripts/sheet';
   // El tirador de la hoja de categorias: se cierra arrastrandola hacia abajo.
   import '../../scripts/sheet-drag';
-  import '../../scripts/footer-discover';
 </script>
 
 <style is:global>

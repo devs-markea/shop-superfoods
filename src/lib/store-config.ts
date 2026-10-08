@@ -185,8 +185,8 @@ export interface StoreSettings {
   /**
    * Las categorias con algun platillo publicado, en el orden del panel (el arrastre del
    * administrador). Es la lista de la portada: tabs, columna lateral y secciones salen de
-   * aqui, y los platillos se les cuelgan por `category.id` (ver getCategories y
-   * getMenuSections en src/lib/catalog.ts).
+   * aqui, y los platillos se les cuelgan por `category.id` (ver getMenuSections en
+   * src/lib/catalog.ts).
    *
    * Sin respaldo: es el menu del panel, y escrito aqui a mano se quedaria viejo. Vacia, la
    * portada ordena como llega el catalogo, que es el mismo orden.

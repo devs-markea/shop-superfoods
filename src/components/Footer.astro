@@ -2,20 +2,17 @@
 import BrandLogo from './BrandLogo.astro';
 import BrandIcon from './BrandIcon.astro';
 import { storeYear } from '../lib/schedule.ts';
-import type { CategoryRef } from '../lib/catalog.ts';
 import type { StoreSettings } from '../lib/store-config.ts';
 
 interface Props {
   store: StoreSettings;
-  /** Las categorias publicadas, por id. */
-  categories: readonly CategoryRef[];
 }
 
-const { store, categories } = Astro.props;
+const { store } = Astro.props;
 
 // Pie de pagina, SOLO desktop: en movil no se pinta (ver los estilos de este archivo). Tres
-// franjas separadas por 32: marca y enlaces, la divisoria, y el aviso de derechos
-// con los iconos de las redes.
+// franjas separadas por 32: la marca con la columna de enlaces y redes, la divisoria,
+// y el aviso de derechos.
 //
 // El nombre no se escribe a mano en ningun sitio de aqui: lo pone la tienda. Sin
 // el, la frase de presentacion se cae entera antes que quedarse sin sujeto —y el
@@ -23,34 +20,26 @@ const { store, categories } = Astro.props;
 const name = store.name;
 
 const about = name
-  ? `${name} ofrece la mejor comida mexicana tradicional preparada con ingredientes de la mas alta calidad y un sabor inigualable.`
+  ? `${name} ofrece la mejor comida mexicana tradicional preparada con ingredientes de la más alta calidad y un sabor inigualable.`
   : null;
 
 const copyright = name
   ? `© ${storeYear()} ${name}. Todos los derechos reservados.`
   : `© ${storeYear()}. Todos los derechos reservados.`;
 
-// "Descubre" no lista los platillos de la spec —"Tacos al Pastor", "Burritos
-// Gigantes", "Bebidas Artesanales"—: son de la maqueta, y este catalogo vende
-// otras cosas. Rotular en el pie un platillo que la tienda no sirve es la misma
-// mentira que prometer un envio gratis que el negocio apago. Se pintan las
-// categorias PUBLICADAS, que es lo que hay de verdad que descubrir, y hasta tres:
-// la columna es un resumen, no un indice.
-//
-// Los cuatro navegan a la portada. Los tres de categoria llevan ademas su ID en un
-// `data-` —el nombre solo se lee—, y de ahi lo toma src/scripts/footer-discover.ts
-// para dejarlo pasado a la portada por sessionStorage, que al llegar baja a la
-// seccion de esa categoria: asi la direccion sigue siendo `/mamayaya` a secas en
-// lugar de arrastrar un parametro. Ver src/lib/discover.ts.
-//
-// El `href` no es decorativo: sin JavaScript el enlace sigue llevando al menu
-// completo, y con el boton central o un Ctrl+click se abre en otra pestana.
-const discover = categories.slice(0, 3);
+// "Descubre" es un solo enlace: "Menú completo", a la portada. No lista los
+// platillos de la spec —"Tacos al Pastor", "Burritos Gigantes", "Bebidas
+// Artesanales"—: son de la maqueta, y este catalogo vende otras cosas. Tampoco las
+// categorias publicadas, que estuvieron aqui: su indice es el de la portada —la
+// columna lateral y las tabs—, y el pie se queda con la puerta al menu.
 
 // Las redes. Ya no son tres rotulos escritos aqui: `GET /api/store` publica
 // `socialLinks`, y con el perfil viene su enlace, asi que lo que antes era texto
 // muerto —"Facebook" e "Instagram" sin nada detras, porque la API no los daba—
 // es ahora una fila de iconos que llevan a alguna parte.
+//
+// Van en la columna de la derecha, debajo de "Descubre" y con su propio titulo,
+// "Síguenos": la fila queda debajo del titulo, igual que el enlace debajo del suyo.
 //
 // Se pinta la lista TAL CUAL viene:
 //
@@ -65,9 +54,9 @@ const discover = categories.slice(0, 3);
 //   mantiene una tabla de nombres: capitalizar el token daria "Tiktok" y "X"
 //   donde la marca escribe "TikTok" y "X (Twitter)".
 //
-// Sin redes configuradas no hay fila que pintar y la franja de abajo se queda
-// con el aviso de derechos solo. Es la regla de siempre: sin dato se degrada, no
-// se finge un enlace a "#".
+// Sin redes configuradas no hay fila que pintar ni titulo que la anuncie:
+// "Síguenos" se cae entero y la columna se queda con "Descubre". Es la regla de
+// siempre: sin dato se degrada, no se finge un enlace a "#".
 //
 // El WhatsApp de esta fila NO sale de `store.whatsapp.phone`, que es el numero
 // al que llega el comprobante del pedido: son dos datos y el negocio los
@@ -86,53 +75,47 @@ const socials = store.socialLinks ?? [];
         {about && <p class="footer__about">{about}</p>}
       </div>
 
-      <nav class="footer__nav" aria-labelledby="footer-discover">
-        <h2 class="footer__heading" id="footer-discover">Descubre</h2>
+      <div class="footer__aside">
+        <nav class="footer__group" aria-labelledby="footer-discover">
+          <h2 class="footer__heading" id="footer-discover">Descubre</h2>
 
-        <ul class="footer__links list-unstyled" data-discover>
-          <li>
-            <a class="footer__link" href="/mamayaya">Menu completo</a>
-          </li>
+          <ul class="footer__links list-unstyled">
+            <li>
+              <a class="footer__link" href="/mamayaya">Menú completo</a>
+            </li>
+          </ul>
+        </nav>
 
-          {
-            discover.map((category) => (
-              <li>
-                <a class="footer__link" href="/mamayaya" data-discover-category={category.id}>
-                  {category.name}
-                </a>
-              </li>
-            ))
-          }
-        </ul>
-      </nav>
+        {
+          socials.length > 0 && (
+            <div class="footer__group">
+              <h2 class="footer__heading">Síguenos</h2>
+
+              <ul class="footer__social list-unstyled">
+                {socials.map((social) => (
+                  <li>
+                    <a
+                      class="footer__social-link"
+                      href={social.url}
+                      target="_blank"
+                      rel="noopener"
+                      aria-label={social.label}
+                      title={social.label}
+                    >
+                      <BrandIcon name={social.network} />
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )
+        }
+      </div>
     </div>
 
     <hr class="footer__divider" />
 
-    <div class="footer__bottom">
-      <p class="footer__copyright">{copyright}</p>
-
-      {
-        socials.length > 0 && (
-          <ul class="footer__social list-unstyled">
-            {socials.map((social) => (
-              <li>
-                <a
-                  class="footer__social-link"
-                  href={social.url}
-                  target="_blank"
-                  rel="noopener"
-                  aria-label={social.label}
-                  title={social.label}
-                >
-                  <BrandIcon name={social.network} />
-                </a>
-              </li>
-            ))}
-          </ul>
-        )
-      }
-    </div>
+    <p class="footer__copyright">{copyright}</p>
   </div>
 </footer>
 
@@ -219,10 +202,18 @@ const socials = store.socialLinks ?? [];
       line-height: 22px;
       color: var(--sf-muted);
     }
-    /* Element: nav — "Descubre" y su lista */
-    .footer__nav {
+    /* Element: aside — la columna de la derecha: "Descubre" y, debajo, "Síguenos".
+       24 entre los dos, el doble de lo que separa a cada titulo de lo suyo, para
+       que se lean como dos grupos y no como una lista de cuatro lineas. */
+    .footer__aside {
       display: flex;
       flex: 0 0 auto;
+      flex-direction: column;
+      gap: 24px;
+    }
+    /* Element: group — un titulo y lo suyo debajo: el enlace o la fila de redes */
+    .footer__group {
+      display: flex;
       flex-direction: column;
       gap: 12px;
     }
@@ -245,11 +236,10 @@ const socials = store.socialLinks ?? [];
       gap: 12px;
       margin: 0;
     }
-    /* Los cuatro rotulos de "Descubre" son enlaces: "Menu completo" a la portada
-       entera y las tres categorias a la portada ya filtrada (ver
-       src/lib/discover.ts). La clase sigue partida en dos porque el hover se declara
-       sobre `a` y no sobre ella, que es lo que .footer__social-link necesita: ahi si
-       convive un <a> con dos <span>. */
+    /* El rotulo de "Descubre" es un enlace: "Menú completo", a la portada. La clase
+       sigue partida en dos porque el hover se declara sobre `a` y no sobre ella, que
+       es lo que .footer__social-link necesita: ahi si convive un <a> con dos
+       <span>. */
     .footer__link {
       font-size: 14px;
       font-weight: 400;
@@ -269,13 +259,6 @@ const socials = store.socialLinks ?? [];
       border: 0;
       border-top: 1px solid var(--sf-border);
       opacity: 1;
-    }
-    /* Element: bottom — derechos a la izquierda, redes a la derecha */
-    .footer__bottom {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 16px;
     }
     /* 13px: el cuerpo menor del pie. No esta en la escala (12/14/16/24) y no la
        abre, igual que el 15 de los rotulos de la barra de desktop. */
@@ -300,14 +283,14 @@ const socials = store.socialLinks ?? [];
        el `aria-label` del enlace —lo manda la API— y el `title` lo repite para
        el raton. El SVG queda `aria-hidden`, como el resto de BrandIcon.
 
-       Los 20 del icono son los mismos del sistema, aunque el rotulo de al lado
-       sea de 13: es un blanco pulsable, no un texto. El color arranca en el gris
-       del aviso de derechos —la fila es del mismo rango— y va al dorado en
-       hover, igual que los enlaces de "Descubre". */
+       Los 20 del icono son los mismos del sistema, aunque el enlace de arriba
+       sea de 14: es un blanco pulsable, no un texto. El color es el de ese
+       enlace —la fila es de su misma columna— y va al dorado en hover, igual
+       que el. */
     .footer__social-link {
       display: flex;
       align-items: center;
-      color: var(--sf-placeholder);
+      color: var(--sf-muted);
       transition: color 160ms ease;
     }
     .footer__social-link:hover {

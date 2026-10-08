@@ -40,7 +40,7 @@ const { message, address, mapsUrl } = Astro.props;
 // llega. El mensaje no cuenta para eso: solo se lee aqui.
 ---
 
-<Sheet id="sheet-location" title="Ubicacion">
+<Sheet id="sheet-location" title="Ubicación">
   {
     message ? (
       <p class="location-sheet__message" set:html={message} />
