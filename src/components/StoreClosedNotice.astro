@@ -26,6 +26,10 @@ const { schedule } = Astro.props;
 //   3. que dia abre                (negro, desambigua el "a las 09:00" de arriba)
 //   4. el horario completo         (boton, abre la hoja del reloj)
 //
+// La tercera solo se pinta si el dia NO es hoy. "Abrimos hoy a las 13:00" debajo de
+// "Regresamos a las 13:00" era la misma frase dos veces: sin dia, la hora ya se lee
+// como de hoy. Manana o el lunes si hay que decirlo, porque el titulo no lo dice.
+//
 // El boton abre la MISMA hoja que el reloj de la cabecera (`sheet-schedule`), asi
 // que el horario completo se lee en un solo sitio. Quien monte esta tarjeta se
 // asegura de que esa hoja este en la pagina: en la portada la pone la cabecera, y
@@ -35,8 +39,14 @@ const openingDay = nextOpeningDay(schedule);
 
 // Sin proxima apertura —cerrada sin ningun turno por delante— no se promete una
 // hora que no existe: queda el que y el mientras tanto, sin el cuando.
-const title = openingTime ? `Regresamos a las ${openingTime}` : 'Estamos cerrados';
-const opening = openingTime && openingDay ? `Abrimos ${openingDay} a las ${openingTime}` : null;
+//
+// La hora lleva su "h." pegada con un espacio duro: en una tarjeta estrecha no se
+// queda sola en el renglon de abajo.
+const title = openingTime ? `Regresamos a las ${openingTime} h.` : 'Estamos cerrados';
+const opening =
+  openingTime && openingDay && openingDay !== 'hoy'
+    ? `Abrimos ${openingDay} a las ${openingTime} h.`
+    : null;
 
 // Sin dias que ensenar, la hoja del horario abriria en blanco: mejor sin boton.
 const hasSchedule = schedule.days.length > 0;
@@ -50,7 +60,7 @@ const hasSchedule = schedule.days.length > 0;
     </p>
 
     <p class="store-closed__text">
-      Los pedidos estan deshabilitados. Solo podras ver el menu.
+      Los pedidos están deshabilitados. Solo podrás ver el menú.
     </p>
 
     {opening && <p class="store-closed__opening">{opening}</p>}
@@ -164,7 +174,8 @@ const hasSchedule = schedule.days.length > 0;
   }
 
   /* Element: dia de apertura — Inter 600 14/20 sobre negro. Vuelve al negro porque
-     es dato, no explicacion: es lo que desambigua el "a las 09:00" del titulo. */
+     es dato, no explicacion: es lo que desambigua el "a las 09:00" del titulo. No
+     sale cuando la tienda abre hoy mismo. */
   .store-closed__opening {
     margin: 0;
     font-size: 14px;

@@ -25,7 +25,6 @@ import {
 import { formatPrice } from '../../lib/price.ts';
 import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
 import { shiftLabel } from '../../lib/schedule.ts';
-import { getCategories, getProducts, type CategoryRef } from '../../lib/catalog.ts';
 import { TEST_MODE } from 'astro:env/server';
 
 // UNA PANTALLA, DOS FORMAS
@@ -82,20 +81,10 @@ const cartPending = getCart(token).catch((error) => {
   return null as Cart | null;
 });
 
-// El catalogo, solo para los tres rotulos de categoria del pie: si falla, el pie
-// se queda con "Menu completo" y la pantalla sigue en pie.
-const categoriesPending = getProducts()
-  .then((items) => getCategories(items))
-  .catch((error) => {
-    console.error('[recibido] fallo el catalogo del pie', error);
-    return [] as CategoryRef[];
-  });
-
-const [store, schedule, cart, categories] = await Promise.all([
+const [store, schedule, cart] = await Promise.all([
   getStoreConfig(),
   getStoreSchedule(),
   cartPending,
-  categoriesPending,
 ]);
 
 const phone = store.whatsapp?.phone ?? '';
@@ -360,7 +349,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
   {hasLocation && <LocationSheet message={message} address={address} mapsUrl={mapsUrl} />}
 
-  <Footer store={store} categories={categories} />
+  <Footer store={store} />
 </Layout>
 
 <script>
@@ -370,8 +359,4 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   import '../../scripts/copy-button';
   // Abre las hojas del horario y la ubicacion desde la barra de desktop.
   import '../../scripts/sheet';
-  // Los rotulos de "Descubre" del pie llevan a la portada con su categoria ya
-  // filtrada, y el pase lo deja este script: la pantalla que monte el pie tiene
-  // que importarlo. Ver src/lib/discover.ts.
-  import '../../scripts/footer-discover';
 </script>

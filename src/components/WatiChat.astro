@@ -93,7 +93,6 @@ const brandImg = await getImage({ src: logo, width: 104 });
 // Va codificado desde aqui porque el widget lo pega tal cual en el `href`: un
 // `&`, un `#` o unas comillas en el nombre de un platillo cortarian el mensaje o
 // el enlace. El `{{page_title}}` de Wati tiene ese problema, y por eso no se usa.
-const topic = order ? 'mi pedido en línea' : 'su menú en línea';
 
 // El hueco del enlace. Lo rellena el script, que es quien sabe en que dominio se
 // esta viendo la pagina: el `site` de astro.config.mjs no es el de la tienda. Son
@@ -106,9 +105,14 @@ const LINK_SLOT = '__dish_link__';
 const GREET_BY_NAME = false;
 
 const greeting = GREET_BY_NAME && store.name ? `Hola, ${store.name}.` : 'Hola.';
+
+// Las tres frases: la ficha, las pantallas del pedido y la portada. La de la
+// portada lleva su propio saludo porque es la frase tal como la pidio el negocio.
 const message = dish
   ? `${greeting} Tengo una duda sobre ${dish}\n${LINK_SLOT}\n`
-  : `${greeting} Tengo una duda sobre ${topic} `;
+  : order
+    ? `${greeting} Tengo una duda sobre mi pedido en línea `
+    : '¡Hola! Tengo una duda sobre el menú en línea ';
 
 const options = {
   enabled: true,
@@ -127,7 +131,9 @@ const options = {
     brandSubTitle: '',
     brandImg: brandImg.src,
     altText: '""',
-    welcomeText: 'Hola, en que podemos ayudarlo?',
+    // Con acentos y signo de apertura, aunque la tienda escriba sin ellos: es la
+    // frase tal como la pidio el negocio.
+    welcomeText: 'Hola, ¿en qué podemos ayudarte?',
     messageText: encodeURIComponent(message),
     backgroundColor: accent,
     ctaText: 'Chatea con nosotros',
