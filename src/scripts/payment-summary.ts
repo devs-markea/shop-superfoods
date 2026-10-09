@@ -228,6 +228,6 @@ if (form) {
     // que ofrece pagarlo desde alli. Ver src/lib/confirmation.ts.
     const gateway = outcome.order.payment?.redirectUrl;
 
-    window.location.assign(gateway || '/mamayaya/confirmado');
+    window.location.assign(gateway || '/mamayaya/recibido');
   });
 }

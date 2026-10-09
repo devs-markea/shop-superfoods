@@ -69,7 +69,7 @@
 
   /* --- Senales: no las cambia el tema ------------------------------------ */
 
-  /* Verde de confirmacion: el sello de /confirmado y la ubicacion ya guardada.
+  /* Verde de confirmacion: el sello de /recibido y la ubicacion ya guardada.
      No es el de WhatsApp —aquel identifica un canal, este dice que algo salio
      bien— y por eso son dos colores y no uno. */
   --sf-success: #3aa678;

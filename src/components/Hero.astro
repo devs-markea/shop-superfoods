@@ -26,17 +26,17 @@ const STATUS_LABEL: Record<StoreStatus, string> = {
   'closed-today': 'CERRADO POR HOY',
 };
 
-// Panel de bienvenida de la portada. SOLO DESKTOP: en movil no se pinta —lo
-// oculta los estilos de este archivo— porque ahi la primera pantalla es del catalogo y
-// un panel de este tamano la empujaria entera fuera de la vista.
+// Panel de bienvenida de la portada. En movil va pegado bajo la cabecera, de
+// lado a lado; en desktop es un bloque mas de la columna del catalogo (ver los
+// estilos de este archivo).
 //
 // Lo escribe el panel de la tienda (`home.banner` de GET /api/store) y no el
 // codigo: es una campana, y cambiarla no puede exigir un despliegue.
 //
 // Las tres piezas sirven por separado, asi que se comprueban por separado: con
-// texto y sin foto queda una franja de texto, con foto y sin texto un fondo, y
-// sin nada de lo tres no hay banner que inventar —la portada abre en el
-// catalogo—.
+// texto y sin foto queda una franja de texto, con foto y sin texto la foto sin
+// velo —con la etiqueta encima, si hay horario—, y sin nada de lo tres no hay
+// banner que inventar —la portada abre en el catalogo—.
 const hasText = Boolean(title || description);
 
 // La URL acaba dentro de un `url()` en el atributo style, asi que se filtra
@@ -50,7 +50,7 @@ const style = photo ? `--sf-hero-photo: url(${JSON.stringify(photo)})` : undefin
 {
   (hasText || photo) && (
     <section class="hero" aria-label="Bienvenida">
-      <div class="hero__panel" style={style}>
+      <div class:list={['hero__panel', !hasText && 'hero__panel--bare']} style={style}>
         {(hasText || status) && (
           <div class="hero__text">
             {status && (
@@ -71,102 +71,145 @@ const style = photo ? `--sf-hero-photo: url(${JSON.stringify(photo)})` : undefin
   /* ---------------------------------------------------------------------------
      Block: hero
      ---------------------------------------------------------------------------
-     Panel de bienvenida de la portada. SOLO DESKTOP: en movil la primera pantalla
-     es del catalogo, y un panel de este tamano la empujaria entera fuera de la
-     vista.
+     Panel de bienvenida de la portada.
 
-     Que se oculte con display: none, y que la foto solo se declare dentro del
-     media query, es lo que evita que el movil descargue una imagen que no va a
-     ver: la referencia a --sf-hero-photo no existe hasta los 768.
+     Movil: de lado a lado, y por DEBAJO de la cabecera, que va encima de la foto
+     y transparente hasta que la pagina baja (ver components/Navbar.astro).
+     Arriba no lleva radio —sale del borde de la pantalla— y abajo cierra con 16.
+     Spec mobile: 390x244 - padding 36/20 - radius 0 0 16 16. Los 244 cuentan
+     desde el borde de la pantalla, con la cabecera encima: el texto del banner
+     y el logo y los iconos se cruzan, A PROPOSITO por ahora —es la prueba para
+     ver como queda y decidir que se quita—.
+     titulo Inter 700 24/32 - bajada Inter 400 14/20 - gap 12
 
-     Spec: radius 16 - padding 48 - texto blanco sobre foto de comida
-     titulo Inter 700 36/44 - bajada Inter 400 16/24 - gap 12
+     Desktop: un bloque mas de la columna del catalogo, redondeado entero.
+     Spec: radius 16 - padding 58/48 - alto minimo 268 - texto blanco sobre foto
+     de comida - titulo Inter 700 36/44 - bajada Inter 400 16/24 - gap 12
+
+     La foto se descarga en los dos anchos: se ve en los dos.
      --------------------------------------------------------------------------- */
+  /* Sin sangria propia en ningun ancho: en movil ocupa la pantalla entera, y en
+     desktop el margen lateral lo pone la pila de la portada (ver
+     pages/mamayaya/index.astro).
+
+     Arriba, en movil, sube los 92 de la cabecera (components/Navbar.astro) para
+     quedar detras de ella. Si la cabecera cambia de alto, cambia aqui.
+
+     Abajo, el aire hasta la barra de pedido. La barra no lleva relleno arriba —su
+     anclaje cuenta con ello, ver components/OrderBar.astro— y sin este margen el
+     switch quedaria pegado a la foto. */
   .hero {
-    display: none;
+    margin-top: -92px;
+    margin-bottom: 20px;
+  }
+  .hero__panel {
+    width: 100%;
+    /* Minimo y no alto: el panel crece con lo que le echen. Con etiqueta,
+       titular de una linea y bajada de una se queda en 173 —36 + 25 + 12 + 32 +
+       12 + 20 + 36—, y el que llega SOLO con foto, en los 72 del padding. Un
+       titular de tres lineas todavia cabe en los 244; lo que pase de ahi lo
+       estira. */
+    min-height: 244px;
+    padding: 36px 20px;
+    border-radius: 0 0 16px 16px;
+    /* Dos capas: el velo oscuro y, debajo, la foto que manda el panel. El velo
+       no es decoracion —es lo que sostiene el texto blanco—: una foto de comida
+       trae zonas claras y sin el la bajada desaparece en la primera tortilla que
+       le toque. Componerlo es cosa de la tienda: la API manda las tres piezas
+       sueltas, no una imagen con el texto quemado dentro.
+
+       El velo va en su propia variable para que el banner sin texto pueda
+       quitarlo sin repetir la foto ni el degradado (ver --bare).
+
+       Sin foto manda el degradado de marca, el mismo de la ficha de platillo:
+       asi un banner de solo texto se lee como una franja intencionada y no como
+       una imagen que no cargo. */
+    --sf-hero-veil: linear-gradient(0deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45));
+    background-color: var(--sf-ink);
+    background-image: var(--sf-hero-veil), var(--sf-hero-photo, linear-gradient(180deg, var(--sf-accent-bright) 0%, var(--sf-accent) 100%));
+    background-position: center;
+    background-size: cover;
+    background-repeat: no-repeat;
+  }
+  /* Modifier: bare — el panel no mando titular ni bajada. Sin texto blanco que
+     sostener el velo solo apaga la foto, asi que se quita y la foto se ve tal
+     cual. La etiqueta se queda: trae su propio fondo y se lee sobre cualquier
+     foto. */
+  .hero__panel--bare {
+    --sf-hero-veil: none;
+  }
+  .hero__text {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .hero__title {
+    margin: 0;
+    /* El titular no cruza el panel de lado a lado: pasados los ~500 la linea se
+       hace demasiado larga para leerla de un vistazo. Lo que sobra rompe a la
+       linea siguiente, que el panel ya estira. En movil no llega a aplicar. */
+    max-width: 500px;
+    font-size: 24px;
+    font-weight: 700;
+    line-height: 32px;
+    color: var(--sf-white);
+  }
+  .hero__subtitle {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    color: var(--sf-white);
+  }
+
+  /* Element: status — "ABIERTO · ENTREGA DISPONIBLE" sobre el titular.
+     Spec: 197x25 - padding 6/10 - radius 100 - fondo #228B5A
+     Inter 700 11/100% blanco. Arrimada a la izquierda: en la columna del texto no
+     se estira. */
+  .hero__status {
+    display: inline-flex;
+    align-self: flex-start;
+    align-items: center;
+    min-height: 25px;
+    padding: 6px 10px;
+    border-radius: 100px;
+    background-color: var(--sf-success-strong);
+    color: var(--sf-white);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    white-space: nowrap;
+  }
+  /* Modifier: cerrada. El rojo es de un solo uso, y por eso va aqui y no en
+     styles/colors.css: el de error de la paleta de grises del diseno. */
+  .hero__status--closed {
+    background-color: #d92d20;
   }
 
   /* --- Desktop ------------------------------------------------------------- */
   @media (min-width: 768px) {
-    /* Sin sangria propia: el margen lateral lo pone la pila de la portada (ver
-       pages/index.astro), que es el contenedor de los tres bloques. */
+    /* La cabecera de desktop no va encima, y el hueco hasta la barra lo pone la
+       pila (ver pages/mamayaya/index.astro). */
     .hero {
-      display: block;
+      margin: 0;
     }
+    /* Con etiqueta, titular de una linea y bajada se queda en 233 —58 + 25 + 12 +
+       44 + 12 + 24 + 58—, y el que llega SOLO con foto, en los 116 del padding.
+       Un titular de dos lineas ya rebasa el minimo —277—. */
     .hero__panel {
-      width: 100%;
-      /* El minimo es para el banner que llega SOLO con foto: sin texto que lo
-         sostenga se quedaria en los 116 del padding, y una tira asi no es un
-         banner. Con texto no llega a aplicar —58 + 44 (titulo) + 12 + 24 (bajada)
-         + 58 = 196—, y un titular de dos lineas lo estira todavia mas. Es minimo y
-         no alto justamente para eso: el panel crece con lo que le echen. */
-      min-height: 176px;
+      min-height: 268px;
       padding: 58px 48px;
       border-radius: 16px;
-      /* Dos capas: el velo oscuro y, debajo, la foto que manda el panel. El velo
-         no es decoracion —es lo que sostiene el texto blanco—: una foto de comida
-         trae zonas claras y sin el la bajada de 16 desaparece en la primera
-         tortilla que le toque. Componerlo es cosa de la tienda: la API manda las
-         tres piezas sueltas, no una imagen con el texto quemado dentro.
-
-         Sin foto manda el degradado de marca, el mismo de la ficha de platillo:
-         asi un banner de solo texto se lee como una franja intencionada y no como
-         una imagen que no cargo. */
-      background-color: var(--sf-ink);
-      background-image: linear-gradient(0deg, rgba(0, 0, 0, 0.45), rgba(0, 0, 0, 0.45)), var(--sf-hero-photo, linear-gradient(180deg, var(--sf-accent-bright) 0%, var(--sf-accent) 100%));
-      background-position: center;
-      background-size: cover;
-      background-repeat: no-repeat;
-    }
-    .hero__text {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
     }
     /* 36/44 no esta en la escala de tokens y no se anade por una pieza: es el
        unico titular de este tamano del diseno. */
     .hero__title {
-      margin: 0;
-      /* El titular no cruza el panel de lado a lado: pasados los ~500 la linea se
-         hace demasiado larga para leerla de un vistazo, y en un panel de 176 de
-         alto el texto tiene que entrar de golpe. Lo que sobra rompe a la linea
-         siguiente, que el panel ya estira. */
-      max-width: 500px;
       font-size: 36px;
-      font-weight: 700;
       line-height: 44px;
-      color: var(--sf-white);
     }
     .hero__subtitle {
-      margin: 0;
       font-size: 16px;
-      font-weight: 400;
       line-height: 24px;
-      color: var(--sf-white);
-    }
-
-    /* Element: status — "ABIERTO · ENTREGA DISPONIBLE" sobre el titular.
-       Spec: 197x25 - padding 6/10 - radius 100 - fondo #228B5A
-       Inter 700 11/100% blanco. Arrimada a la izquierda: en la columna del texto no
-       se estira. */
-    .hero__status {
-      display: inline-flex;
-      align-self: flex-start;
-      align-items: center;
-      min-height: 25px;
-      padding: 6px 10px;
-      border-radius: 100px;
-      background-color: var(--sf-success-strong);
-      color: var(--sf-white);
-      font-size: 11px;
-      font-weight: 700;
-      line-height: 1;
-      white-space: nowrap;
-    }
-    /* Modifier: cerrada. El rojo es de un solo uso, y por eso va aqui y no en
-       styles/colors.css: el de error de la paleta de grises del diseno. */
-    .hero__status--closed {
-      background-color: #d92d20;
     }
   }
 </style>
