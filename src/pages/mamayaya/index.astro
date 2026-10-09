@@ -158,6 +158,10 @@ const banner = store.home?.banner;
 // sin ninguno la hoja no existe y el boton abriria la nada.
 const hasLocation = Boolean(store.location?.address || store.location?.mapsUrl);
 
+// Lo mismo para la hoja del horario, que tambien monta la cabecera: la abre el
+// reloj del pie, que necesita saber si esta.
+const hasSchedule = Boolean(schedule && schedule.days.length > 0);
+
 // Con la tienda cerrada la portada se queda en menu: se puede mirar todo, pero no
 // se agrega nada. Lo dice la tarjeta flotante una vez, y las tarjetas de platillo
 // se callan —el "+" apagado y sin etiqueta— en lugar de repetir "Fuera de horario"
@@ -295,13 +299,15 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
     <CartFab count={cart?.itemsCount ?? 0} />
   </main>
 
-  <Footer store={store} />
+  <Footer store={store} hasLocation={hasLocation} hasSchedule={hasSchedule} schedule={schedule} />
 </Layout>
 
 <script>
   // Los dos indices —columna lateral y tabs— y la lista horizontal de destacados.
   import '../../scripts/menu-nav';
   import '../../scripts/featured-carousel';
+  // La barra de movil: transparente sobre el banner, con su fondo al bajar.
+  import '../../scripts/navbar-scroll';
   // El buscador de desktop: filtra los platillos de la pagina.
   import '../../scripts/menu-search';
   // Retira el esqueleto de cada foto cuando llega. Solo esta pantalla lo necesita:
@@ -331,8 +337,8 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
      Repartido asi, mover la portada arriba o abajo no toca los margenes, y
      cambiar de ancho no toca el aire.
 
-     En movil ni la pila ni su columna existen: las piezas —barra de pedido y
-     lista— se apilan solas y cada una trae su propio gutter y su propio aire, como
+     En movil ni la pila ni su columna existen: las piezas —banner, barra de
+     pedido y lista— se apilan solas y cada una trae su propio gutter y su propio aire, como
      hasta ahora. En desktop la pila es EL contenedor, asi que el unico margen
      lateral de la portada es el suyo: el indice arranca en la misma linea que el
      logo de la cabecera, y la ultima tarjeta acaba en la misma que el carrito.
@@ -342,18 +348,10 @@ const { deliveryType } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
      archivo): en desktop lo pone la pila, en un solo sitio, y no la suma de los
      margenes de cada bloque.
      --------------------------------------------------------------------------- */
-  /* Movil: el hueco del boton flotante del pedido. Flota sobre el catalogo (ver
-     components/CartFab.astro), asi que al final de la lista se quedaria encima de
-     la ultima tarjeta y justo sobre su "+", que es lo que se viene a pulsar. Lo
-     reserva <main>, que es lo que scrollea: el circulo esta fuera del flujo y no
-     puede reservarselo el.
-
-     Se reserva el diametro mas la separacion del borde; el aire entre la ultima
-     tarjeta y el circulo lo pone el padding que la lista ya trae. En desktop no
-     hace falta —ahi no hay boton— y lo sustituye el `padding-block` de mas abajo. */
-  .storefront {
-    padding-bottom: calc(70px + 20px + env(safe-area-inset-bottom, 0px));
-  }
+  /* Movil: sin relleno abajo. El boton flotante del pedido (ver
+     components/CartFab.astro) ya no puede quedarse sobre el "+" de la ultima
+     tarjeta: detras de la lista viene el pie (components/Footer.astro), y al final
+     de la pagina el circulo cae sobre el. */
 
   /* display: contents: en movil los envoltorios no pintan ni ocupan nada —ni el
      ancho ni el relleno del .container-fluid llegan a aplicarse—, asi que sus hijos

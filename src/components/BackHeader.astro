@@ -13,9 +13,9 @@ interface Props {
 
 const { backHref = '/mamayaya', mobileOnly = false } = Astro.props;
 
-// Cabecera sin titulo: solo el control de vuelta. La usa /mamayaya/confirmado,
-// donde el titular ("Pedido confirmado") es el propio contenido y repetirlo
-// arriba sobraria.
+// Cabecera sin titulo: solo el control de vuelta. La usa /mamayaya/recibido,
+// donde el titular ("Pedido recibido", "Pedido confirmado") es el propio
+// contenido y repetirlo arriba sobraria.
 //
 // Comparte el bloque .topbar con ScreenHeader y TopBar —mismo element __back,
 // mismo padding 12/20— y cambia solo el alto y el tamano de la caja tactil.

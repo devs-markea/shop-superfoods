@@ -227,7 +227,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
   {hasLocation && <LocationSheet message={message} address={address} mapsUrl={mapsUrl} />}
 
-  <Footer store={store} />
+  <Footer store={store} hasLocation={hasLocation} hasSchedule={hasSchedule} schedule={schedule} />
 </Layout>
 
 <script>

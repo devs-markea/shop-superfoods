@@ -137,7 +137,8 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 
      Opaco y no transparente aunque el color sea el mismo: la barra es sticky y el
      catalogo le pasa por debajo. Con un fondo transparente se leerian las tarjetas
-     a traves del logo. */
+     a traves del logo. La excepcion es arriba del todo sobre el banner, mas
+     abajo. */
   .navbar {
     position: sticky;
     top: 0;
@@ -147,6 +148,36 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
        adelante —la releva .navbar-desktop— asi que nunca ve el de 32. */
     padding: 12px 20px;
     background-color: var(--sf-body-bg);
+    transition: background-color 200ms ease;
+  }
+
+  /* Sobre el banner — la portada con banner (components/Hero.astro) lo sube por
+     detras de esta barra, y mientras la pagina esta arriba del todo la barra es
+     transparente: logo e iconos van sobre la foto. En cuanto la pagina baja,
+     src/scripts/navbar-scroll.ts pone --scrolled y vuelve el fondo.
+
+     Lo decide el :has() y no una clase puesta por la pagina porque el banner se
+     pinta o no segun lo que mande el panel: sin banner no hay nada debajo y la
+     barra lleva su fondo desde el principio. Y transparente es el punto de partida,
+     sin esperar al script: es lo que toca en casi toda carga, que empieza arriba.
+
+     Los iconos pasan a blanco, dentro de un circulo oscuro: el gris de siempre se
+     pierde sobre la foto, y el circulo los sostiene tambien sobre una foto clara o
+     sin velo. Spec: 32x32 - radius 26 - padding 4 - fondo #00000099.
+
+     Y el logo no se pinta: vuelve con el fondo. Con visibility y no solo con
+     opacity, para que el enlace invisible no reciba ni el toque ni el foco; y no
+     con display, para que conserve su sitio y los iconos no se muevan. */
+  .page:has(.hero) .navbar:not(.navbar--scrolled) {
+    background-color: transparent;
+  }
+  .page:has(.hero) .navbar:not(.navbar--scrolled) .navbar__action {
+    color: var(--sf-white);
+    background-color: rgba(0, 0, 0, 0.6);
+  }
+  .page:has(.hero) .navbar:not(.navbar--scrolled) .navbar__brand {
+    visibility: hidden;
+    opacity: 0;
   }
 
   .navbar__inner {
@@ -167,16 +198,28 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
     gap: 16px;
   }
 
-  /* Element: navbar__action — area tactil 24x24 con icono de 20 */
+  /* Element: navbar__action — area tactil 32x32, redonda, con icono de 20.
+
+     Mide 32 en los dos estados aunque el circulo solo se pinte sobre el banner:
+     si encogiera a 24 al volver el fondo de la barra, los iconos saltarian de sitio
+     a media bajada. Es mas alta que los 24 de la fila y la desborda 4 por arriba
+     y 4 por abajo, sobre el aire de la barra, como el logo.
+
+     El padding 4 del spec no se declara: .btn-plain lo pone a 0 con la misma
+     especificidad, y el centrado del flex deja el icono donde lo dejaria. */
   .navbar__action {
     display: inline-flex;
+    flex: 0 0 auto;
     align-items: center;
     justify-content: center;
-    width: 24px;
-    height: 24px;
+    width: 32px;
+    height: 32px;
     color: var(--sf-muted);
-    border-radius: 8px;
-    transition: opacity 160ms ease;
+    border-radius: 26px;
+    transition:
+      opacity 160ms ease,
+      color 200ms ease,
+      background-color 200ms ease;
   }
   .navbar__action:hover {
     opacity: 0.7;
@@ -200,7 +243,9 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
     height: 24px;
     margin: 0;
     padding: 0;
-    transition: opacity 160ms ease;
+    transition:
+      opacity 160ms ease,
+      visibility 160ms ease;
   }
   .navbar__brand:hover {
     opacity: 0.8;

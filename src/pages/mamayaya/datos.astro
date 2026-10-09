@@ -275,7 +275,7 @@ const areaNotice = TEST_MODE ? '' : (quote?.notice ?? '');
   {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
   {hasLocation && <LocationSheet message={message} address={address} mapsUrl={mapsUrl} />}
 
-  <Footer store={store} />
+  <Footer store={store} hasLocation={hasLocation} hasSchedule={hasSchedule} schedule={schedule} />
 </Layout>
 
 <script>

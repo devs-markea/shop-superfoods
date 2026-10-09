@@ -26,6 +26,7 @@ import '../styles/screens.css';
 import { STORE_THEME } from 'astro:env/server';
 import type { StoreSettings } from '../lib/store-config.ts';
 import { getTheme, themeStyle } from '../lib/theme.ts';
+import ChatFab from '../components/ChatFab.astro';
 import WatiChat from '../components/WatiChat.astro';
 
 interface Props {
@@ -52,7 +53,7 @@ interface Props {
   /**
    * El platillo de la ficha, y solo ella lo pasa. Es para el chat: con el, el
    * mensaje que se abre en WhatsApp pregunta por ese platillo (ver
-   * WatiChat.astro). No se saca de `title` porque la ficha tambien titula
+   * src/lib/chat.ts). No se saca de `title` porque la ficha tambien titula
    * "Platillo no encontrado".
    */
   dish?: string;
@@ -185,6 +186,8 @@ const theme = getTheme(STORE_THEME);
   </head>
   <body class="page">
     <slot />
+    <ChatFab store={store} dish={dish} order={noindex} />
+    {/* Apagado: lo releva ChatFab. Ver su ENABLED. */}
     <WatiChat store={store} accent={theme.accent} dish={dish} order={noindex} />
   </body>
 </html>

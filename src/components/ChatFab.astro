@@ -1,0 +1,385 @@
+---
+// ---------------------------------------------------------------------------
+// El boton del chat: un circulo con el icono de WhatsApp que abre la
+// conversacion con el negocio, con el mensaje ya escrito, y a su lado la
+// burbuja "Chatea con nosotros", que se cierra con su X.
+//
+// Releva al widget de Wati (components/WatiChat.astro, apagado): la misma idea
+// —su boton y su burbuja— hecha en la tienda, y sin el recuadro intermedio que
+// abria Wati. Aqui el boton lleva directo a WhatsApp. Lo que se gana es no
+// cargar un script de terceros en cada pantalla, y que el boton se vea y se
+// coloque como el resto de piezas de la tienda.
+//
+// Abre wa.me con whatsAppUrl(), el mismo enlace que los botones de las
+// pantallas de cierre. El numero y los tres mensajes —ficha, pedido y portada—
+// viven en src/lib/chat.ts.
+//
+// Lo monta Layout.astro, asi que esta en todas las pantallas. El boton se puede
+// arrastrar, y en cada pantalla vuelve a empezar en su sitio: ver
+// src/scripts/chat-fab.ts.
+//
+// DONDE SE PONE. Abajo a la derecha, por encima de lo que ya flota ahi:
+//
+//   el carrito flotante   en el menu, solo en movil (components/CartFab.astro)
+//   la barra de accion    en el resto, solo en movil (components/ActionBar.astro)
+//   el aviso de cerrado   en el menu y el pedido (components/StoreClosedNotice.astro)
+//
+// Los dos primeros miden siempre lo mismo y van en el CSS de abajo. El aviso no:
+// su alto depende del texto y del ancho, asi que lo mide el script. En desktop no
+// hay carrito flotante ni barra —el pedido sigue en la barra de arriba y la
+// accion va dentro de la columna—, asi que se queda en el hueco de la pagina.
+//
+// Las hojas del horario y la ubicacion no cuentan: son <dialog> modales, y la
+// capa superior del navegador queda por encima de cualquier z-index.
+// ---------------------------------------------------------------------------
+import Icon from './Icon.astro';
+import WhatsAppIcon from '../assets/icons/whatsapp.svg';
+import { CHAT_LINK_SLOT, CHAT_PHONE, chatMessage } from '../lib/chat.ts';
+import type { StoreSettings } from '../lib/store-config.ts';
+import { whatsAppUrl } from '../lib/whatsapp.ts';
+
+interface Props {
+  store: StoreSettings;
+  /** El platillo, cuando la pantalla es su ficha. */
+  dish?: string;
+  /** Si la pantalla es una de las siete del pedido. */
+  order?: boolean;
+}
+
+const { store, dish, order = false } = Astro.props;
+
+const href = whatsAppUrl(CHAT_PHONE, chatMessage({ storeName: store.name, dish, order }));
+---
+
+{
+  href && (
+    <div class="chat-fab">
+      {/* El mensaje va antes que el boton: es el orden en que se lee, de arriba
+          abajo, y el del tabulador. La X va en el mismo grupo porque lo cierra
+          entero. La burbuja es otro enlace al mismo chat, porque es lo que se toca
+          al leer "Chatea con nosotros"; fuera del tabulador, que ya pasa por el
+          boton. */}
+      <div class="chat-fab__callout">
+        <a class="chat-fab__bubble" href={href} target="_blank" rel="noopener" tabindex="-1">
+          Chatea con nosotros
+        </a>
+        <button class="chat-fab__close btn-plain" type="button" aria-label="Cerrar el aviso del chat">
+          <Icon name="close" size="sm" />
+        </button>
+      </div>
+
+      <a
+        class="chat-fab__button"
+        href={href}
+        target="_blank"
+        rel="noopener"
+        aria-label="Chatea con nosotros por WhatsApp"
+      >
+        <WhatsAppIcon class="chat-fab__glyph" width={28} height={28} aria-hidden="true" focusable="false" />
+      </a>
+    </div>
+  )
+}
+
+{/*
+  INLINE Y JUSTO DETRAS DEL BOTON, como el pase de la portada: el aviso de
+  cerrado tiene que estar medido antes del primer pintado para que el boton no
+  salte. El aviso ya esta parseado: lo pinta la pantalla, que va antes que el
+  chat en el Layout.
+*/}
+{
+  href && (
+    <script is:inline define:vars={{ linkSlot: CHAT_LINK_SLOT }}>
+      const chat = document.querySelector('.chat-fab');
+      const callout = chat.querySelector('.chat-fab__callout');
+      const button = chat.querySelector('.chat-fab__button');
+
+      // El enlace del platillo, en el mensaje de la ficha: la pagina tal como se
+      // llama, sin la cola de parametros que le cuelgan los anuncios —fbclid,
+      // utm…—. En el resto de pantallas no hay hueco y esto no cambia nada.
+      const link = encodeURIComponent(window.location.origin + window.location.pathname);
+
+      for (const anchor of chat.querySelectorAll('a')) {
+        anchor.setAttribute('href', anchor.getAttribute('href').replace(linkSlot, link));
+      }
+
+      // La X cierra la burbuja en ESTA pantalla y nada mas, como la de Wati: no se
+      // guarda en ningun sitio, y en la siguiente pantalla vuelve a salir. Lo pidio
+      // el negocio, que la quiere visible en cada pagina.
+      //
+      // Al cerrar, el foco pasa al boton: si se queda en la X, que desaparece,
+      // quien navega con teclado vuelve al principio de la pagina.
+      chat.querySelector('.chat-fab__close').addEventListener('click', () => {
+        callout.hidden = true;
+        button.focus();
+      });
+
+      // El aviso de tienda cerrada: el chat va 14 por encima de su borde de arriba.
+      // Se vuelve a medir si la tarjeta cambia de alto —el texto partido en otra
+      // linea— o si cambia la ventana, que la mueve. Lo escrito en el elemento gana
+      // a las reglas del CSS de abajo, y ahi no hay carrito que salvar: el aviso lo
+      // tapa.
+      const notice = document.querySelector('.store-closed__card');
+
+      if (notice) {
+        const lift = () => {
+          const above = window.innerHeight - notice.getBoundingClientRect().top;
+          chat.style.bottom = `${Math.ceil(above) + 14}px`;
+        };
+
+        lift();
+        new ResizeObserver(lift).observe(notice);
+        window.addEventListener('resize', lift);
+      }
+    </script>
+  )
+}
+
+{/* El arrastre del boton. No tiene prisa —nadie arrastra antes de ver el boton—,
+    asi que va como modulo y no en linea. Sin boton no hace nada. */}
+<script>
+  import '../scripts/chat-fab.ts';
+</script>
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: chat-fab
+     ---------------------------------------------------------------------------
+     El boton del chat y, encima y a su izquierda, un mensaje de chat cuyo pico
+     baja en diagonal hacia el circulo, con la X arriba a la derecha.
+     Medidas (no vienen del diseno, se decidieron aqui): circulo de 56 en el
+     acento, WhatsApp de 28 en blanco - burbuja blanca de 42, radio de 18 menos la
+     esquina del pico (6), frase en 14/600 negra - pico de lados rectos y punta
+     redondeada - X en un circulo negro de 24 - 10 entre la burbuja y el circulo
+
+     El envoltorio no intercepta el toque —los huecos entre las piezas son
+     catalogo—; la X, la burbuja y el boton si.
+
+     En desktop va a 32 de los bordes, el gutter de la pagina. En movil se aparta
+     de lo que flota debajo (ver mas abajo).
+     --------------------------------------------------------------------------- */
+  .chat-fab {
+    position: fixed;
+    right: 32px;
+    bottom: 32px;
+    z-index: 1020;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 10px;
+    pointer-events: none;
+  }
+
+  /* Element: button — el circulo. Mismo halo que el carrito flotante: los dos son
+     piezas sueltas sobre el catalogo y se recortan contra el por cualquier lado.
+
+     Se puede arrastrar (src/scripts/chat-fab.ts). `touch-action: none` es lo que
+     deja moverlo con el dedo: sin el, el navegador se queda el gesto para hacer
+     scroll. A cambio, un scroll que empiece justo encima del boton no mueve la
+     pagina. Sin seleccion ni arrastre nativo, que con el raton sacarian el enlace
+     como URL. */
+  .chat-fab__button {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    color: var(--sf-white);
+    background-color: var(--sf-accent);
+    border-radius: 50%;
+    box-shadow: 0 0 4px 0 rgba(0, 0, 0, 0.25);
+    pointer-events: auto;
+    transition:
+      background-color 160ms ease,
+      transform 160ms ease,
+      box-shadow 160ms ease;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-drag: none;
+  }
+
+  /* Mientras se arrastra, el boton se levanta: un poco mas grande y con mas
+     sombra, como algo que se ha cogido. */
+  .chat-fab--dragging .chat-fab__button {
+    cursor: grabbing;
+    transform: scale(1.08);
+    box-shadow: 0 8px 20px 0 rgba(0, 0, 0, 0.25);
+  }
+  /* El color se repite porque Reboot le da a los enlaces su propio color de hover,
+     y sin esto el icono dejaria de ser blanco al tocarlo. */
+  .chat-fab__button:hover,
+  .chat-fab__button:active {
+    color: var(--sf-white);
+    background-color: var(--sf-accent-hover);
+  }
+
+  /* Element: glyph — el WhatsApp, en blanco por currentColor. */
+  .chat-fab__glyph {
+    width: 28px;
+    height: 28px;
+  }
+
+  /* Element: callout — el mensaje y su X, encima del circulo y a su izquierda: su
+     borde derecho cae en la vertical del borde izquierdo del circulo (56), y su
+     borde de abajo, 10 por encima de lo alto del circulo. Desde ahi el pico baja
+     en diagonal y su punta queda a 4 del borde del circulo, apuntando a su centro.
+     Asi en desktop; en movil va sin pico y encima del circulo (ver mas abajo).
+
+     Entra como entra un mensaje: sube un poco y se asienta desde la esquina del
+     pico, un instante despues de pintarse la pagina. Con movimiento reducido lo
+     corta base.css. */
+  .chat-fab__callout {
+    position: relative;
+    margin-right: 56px;
+    transform-origin: bottom right;
+    animation: chat-fab-message 260ms cubic-bezier(0.2, 0.8, 0.2, 1) 300ms both;
+  }
+
+  @keyframes chat-fab-message {
+    from {
+      opacity: 0;
+      transform: translateY(8px) scale(0.92);
+    }
+  }
+
+  /* Element: bubble — el mensaje, como en una app de chat: blanco, frase en
+     14/600 negra y las esquinas de 18 menos la de abajo a la derecha (6), que es
+     de donde sale el pico. La sombra es un filtro y no un box-shadow porque tiene
+     que seguir tambien el contorno del pico. En una linea siempre.
+
+     A proposito, nada de pegatina —fondo claro, contorno oscuro y sombra solida de
+     color desplazada—: es el estilo del widget de Wati, y la tienda no lo copia.
+
+     El color se repite en :hover porque Reboot le da a los enlaces el suyo. Al
+     pasar por encima el fondo pasa al gris de la pagina, y el pico con el. */
+  .chat-fab__bubble,
+  .chat-fab__bubble:hover {
+    position: relative;
+    display: block;
+    padding: 11px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    color: var(--sf-ink);
+    text-decoration: none;
+    white-space: nowrap;
+    background-color: var(--sf-white);
+    border-radius: 18px 18px 6px 18px;
+    filter: drop-shadow(0 3px 6px rgba(20, 24, 33, 0.1))
+      drop-shadow(0 1px 1px rgba(20, 24, 33, 0.06));
+    pointer-events: auto;
+    transition:
+      background-color 160ms ease,
+      transform 120ms ease;
+  }
+  .chat-fab__bubble:hover {
+    background-color: var(--sf-body-bg);
+  }
+  .chat-fab__bubble:active {
+    transform: scale(0.97);
+  }
+
+  /* El pico: un triangulo de lados rectos que sale del borde de abajo, junto a la
+     esquina de 6, y baja en diagonal hasta una punta redondeada, 7 a la derecha y
+     14 por debajo de la burbuja. Su x = 18 es el borde derecho de la burbuja: de
+     ahi el -9. Monta 1 sobre la burbuja para que no se vea la costura. Hereda el
+     fondo, asi que cambia con el al pasar por encima. */
+  .chat-fab__bubble::after {
+    position: absolute;
+    top: calc(100% - 1px);
+    right: -9px;
+    width: 27px;
+    height: 16px;
+    content: '';
+    background: inherit;
+    clip-path: path('M2 0 H14 L22.93 12.18 Q25 15 22.07 13.09 Z');
+  }
+
+  /* Element: close — la X, por fuera de la esquina de arriba a la derecha del
+     mensaje —su centro, 12 a la derecha del borde y 10 por encima—: un circulo
+     negro de 24 con la equis en blanco, que pasa al acento al pasar por encima.
+     El circulo se ve de 24, pero el toque llega 8 mas alla por cada lado (::before):
+     un dedo necesita mas que eso. */
+  .chat-fab__close {
+    position: absolute;
+    right: -24px;
+    bottom: calc(100% - 2px);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    color: var(--sf-white);
+    background-color: var(--sf-ink);
+    border-radius: 50%;
+    pointer-events: auto;
+    transition: background-color 160ms ease;
+  }
+  .chat-fab__close::before {
+    position: absolute;
+    inset: -8px;
+    content: '';
+  }
+  .chat-fab__close:hover {
+    background-color: var(--sf-accent);
+  }
+
+  /* La equis a 12, en un circulo de 24. El trazo sube a 2.5 en la rejilla de 20
+     para que, reducido, siga leyendose: sale de 1.5 en pantalla. */
+  .chat-fab__close .icon {
+    width: 12px;
+    height: 12px;
+    stroke-width: 2.5;
+  }
+
+  /* --- Movil ---------------------------------------------------------------
+     Encima del carrito flotante en el menu y de la barra de accion en el resto.
+
+       104 = el carrito (20 + 70) y 14 de aire. La barra mide 84, asi que tambien
+             queda libre.
+       132 = la barra con nota bajo el boton (84 + 12 + 16, la misma cuenta que
+             hace StoreClosedNotice.astro) y 20 de aire.
+
+     El 27 de la derecha centra el circulo de 56 sobre el carrito de 70, que va a
+     20: 20 + (70 - 56) / 2. Se queda en 27 tambien donde no hay carrito, para que
+     el boton no cambie de sitio de una pantalla a otra.
+
+     La burbuja, sin pico y casi alineada con el boton: su borde derecho, 4 por
+     dentro del del circulo, justo encima de el. En una pantalla estrecha el
+     mensaje se lee mejor apilado sobre el boton que desplazado a su izquierda, y
+     sin pico, que a esa distancia no tiene adonde apuntar. La X se acerca a la
+     burbuja —su centro, 8 a la derecha del borde— para no quedarse pegada al
+     borde de la pantalla. */
+  @media (max-width: 767.98px) {
+    .chat-fab {
+      right: 27px;
+      bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .page:has(.action-bar__note) .chat-fab {
+      bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .chat-fab__callout {
+      margin-right: 4px;
+    }
+
+    .chat-fab__bubble::after {
+      display: none;
+    }
+
+    /* Sin pico, la esquina de 6 de donde salia ya no tiene razon de ser: las
+       cuatro a 18, simetrica. Va tambien con :hover porque la regla de arriba lo
+       lleva y le ganaria al tocarla. */
+    .chat-fab__bubble,
+    .chat-fab__bubble:hover {
+      border-radius: 18px;
+    }
+
+    .chat-fab__close {
+      right: -20px;
+    }
+  }
+</style>

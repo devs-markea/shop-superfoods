@@ -1,46 +1,72 @@
 ---
 import BrandLogo from './BrandLogo.astro';
 import BrandIcon from './BrandIcon.astro';
-import { storeYear } from '../lib/schedule.ts';
-import type { StoreSettings } from '../lib/store-config.ts';
+import Icon from './Icon.astro';
+import { shiftLabel, storeYear } from '../lib/schedule.ts';
+import type { StoreSchedule, StoreSettings } from '../lib/store-config.ts';
 
 interface Props {
   store: StoreSettings;
+  /**
+   * Si la pagina monto la hoja de la ubicacion. Lo dice ella, que es quien la
+   * monta —o su cabecera, en la portada—, y no el pie: deducido aqui por su
+   * cuenta, el pin podria ofrecer una hoja que la pagina no monto.
+   */
+  hasLocation: boolean;
+  /** Lo mismo para la hoja del horario. */
+  hasSchedule: boolean;
+  /** El horario, para el rotulo del reloj: el turno en curso o "Cerrado.". */
+  schedule: StoreSchedule | null;
 }
 
-const { store } = Astro.props;
+const { store, hasLocation, hasSchedule, schedule } = Astro.props;
 
-// Pie de pagina, SOLO desktop: en movil no se pinta (ver los estilos de este archivo). Tres
-// franjas separadas por 32: la marca con las columnas de enlaces y de redes, la
-// divisoria, y el aviso de derechos.
+// Pie de pagina, en movil y en desktop: un solo marcado que el CSS reparte (ver los
+// estilos de este archivo). Tres franjas: la marca con las columnas de enlaces y
+// de redes, la divisoria, y el aviso de derechos.
 //
 // El nombre no se escribe a mano en ningun sitio de aqui: lo pone la tienda. Sin
-// el, la frase de presentacion se cae entera antes que quedarse sin sujeto —y el
-// aviso de derechos sigue en pie, que para eso basta el ano—.
+// el, el aviso de derechos sigue en pie, que para eso basta el ano.
+//
+// Debajo del logo no va frase de presentacion. Hubo una —"{nombre} ofrece la mejor
+// comida mexicana tradicional…"—, y se quito: la marca queda sola en su columna.
 const name = store.name;
 
-const about = name
-  ? `${name} ofrece la mejor comida mexicana tradicional preparada con ingredientes de la más alta calidad y un sabor inigualable.`
-  : null;
+// El aviso de derechos se arma en el marcado y no en una cadena: el nombre va
+// destacado —negrita y el color del tema—, y para eso necesita su propio elemento.
+const year = storeYear();
 
-const copyright = name
-  ? `© ${storeYear()} ${name}. Todos los derechos reservados.`
-  : `© ${storeYear()}. Todos los derechos reservados.`;
+// "Conócenos": donde esta la tienda y cuando abre. Son el pin y el reloj de la
+// barra de arriba, con las mismas dos hojas: el pie no las monta, las abre (la
+// delegacion de src/scripts/sheet.ts sirve para cualquier [data-sheet] de la
+// pagina). La barra los conserva; esto es otra puerta a lo mismo, al final de la
+// pagina, donde la barra de movil ya no se ve.
+//
+// Primero la ubicacion y luego el horario, cada uno con su icono y su rotulo.
+// Cada uno sale solo si su hoja existe, y sin ninguno de los dos la columna se
+// cae entera, titulo incluido.
+//
+// Releva a "Descubre", que era un solo enlace —"Menú completo"— a la portada: la
+// misma a la que ya lleva el logo.
+const hasAbout = hasLocation || hasSchedule;
 
-// "Descubre" es un solo enlace: "Menú completo", a la portada. No lista los
-// platillos de la spec —"Tacos al Pastor", "Burritos Gigantes", "Bebidas
-// Artesanales"—: son de la maqueta, y este catalogo vende otras cosas. Tampoco las
-// categorias publicadas, que estuvieron aqui: su indice es el de la portada —la
-// columna lateral y las tabs—, y el pie se queda con la puerta al menu.
+// El rotulo del reloj: el turno en curso, "12:00 - 23:30 h.", el mismo de la barra
+// de desktop (ver shiftLabel en src/lib/schedule.ts). Fuera de turno, o sin turno
+// que leer, "Cerrado." a secas: la barra anade cuando vuelve a abrir, y aqui eso
+// ya lo cuenta la hoja que abre el reloj.
+//
+// Abierta pero sin tramo que leer —la forma vieja de la API, que solo manda el
+// estado— queda "Abierto.": es lo unico que se sabe.
+const shift = schedule?.isOpen ? (shiftLabel(schedule) ?? 'Abierto.') : 'Cerrado.';
 
 // Las redes. Ya no son tres rotulos escritos aqui: `GET /api/store` publica
 // `socialLinks`, y con el perfil viene su enlace, asi que lo que antes era texto
 // muerto —"Facebook" e "Instagram" sin nada detras, porque la API no los daba—
-// es ahora una fila de iconos que llevan a alguna parte.
+// es ahora una lista de enlaces, cada uno con el glifo de la red y su nombre.
 //
-// Van en su propia columna, la tercera del pie, a la derecha de "Descubre" y con su
-// propio titulo, "Síguenos": la fila queda debajo del titulo, igual que el enlace
-// debajo del suyo.
+// Van en su propia columna, la tercera del pie, a la derecha de "Conócenos" y con
+// su propio titulo, "Síguenos": la lista queda debajo del titulo, igual que la de
+// la ubicacion y el horario debajo del suyo.
 //
 // Se pinta la lista TAL CUAL viene:
 //
@@ -51,11 +77,11 @@ const copyright = name
 //   redes que la tienda no sabe pintar ya se cayeron al normalizar la
 //   configuracion, asi que aqui todo lo que llega tiene glifo.
 //
-//   El nombre accesible lo manda la API en `label`, y por eso el pie no
-//   mantiene una tabla de nombres: capitalizar el token daria "Tiktok" y "X"
-//   donde la marca escribe "TikTok" y "X (Twitter)".
+//   El nombre lo manda la API en `label`, y por eso el pie no mantiene una
+//   tabla de nombres: capitalizar el token daria "Tiktok" y "X" donde la marca
+//   escribe "TikTok" y "X (Twitter)".
 //
-// Sin redes configuradas no hay fila que pintar ni titulo que la anuncie:
+// Sin redes configuradas no hay lista que pintar ni titulo que la anuncie:
 // la columna de "Síguenos" se cae entera y el pie se queda en dos. Es la regla de
 // siempre: sin dato se degrada, no se finge un enlace a "#".
 //
@@ -72,38 +98,62 @@ const socials = store.socialLinks ?? [];
         <a class="footer__brand-link" href="/mamayaya">
           <BrandLogo class="footer__logo" />
         </a>
-
-        {about && <p class="footer__about">{about}</p>}
       </div>
 
       <div class="footer__columns">
-        <nav class="footer__group" aria-labelledby="footer-discover">
-          <h2 class="footer__heading" id="footer-discover">Descubre</h2>
+        {
+          hasAbout && (
+            <div class="footer__group">
+              <h2 class="footer__heading">Conócenos</h2>
 
-          <ul class="footer__links list-unstyled">
-            <li>
-              <a class="footer__link" href="/mamayaya">Menú completo</a>
-            </li>
-          </ul>
-        </nav>
+              <ul class="footer__list list-unstyled">
+                {hasLocation && (
+                  <li>
+                    <button
+                      class="footer__item btn-plain"
+                      type="button"
+                      aria-haspopup="dialog"
+                      data-sheet="sheet-location"
+                    >
+                      <Icon name="map-pin" />
+                      <span>Ubicación</span>
+                    </button>
+                  </li>
+                )}
+
+                {/* El turno solo no dice que abre el horario: el nombre accesible
+                    lo antepone, y conserva el rotulo visible dentro para que quien
+                    maneja la pantalla por voz lo nombre como lo ve. */}
+                {hasSchedule && (
+                  <li>
+                    <button
+                      class="footer__item btn-plain"
+                      type="button"
+                      aria-label={`Horario: ${shift}`}
+                      aria-haspopup="dialog"
+                      data-sheet="sheet-schedule"
+                    >
+                      <Icon name="clock" />
+                      <span>{shift}</span>
+                    </button>
+                  </li>
+                )}
+              </ul>
+            </div>
+          )
+        }
 
         {
           socials.length > 0 && (
             <div class="footer__group">
               <h2 class="footer__heading">Síguenos</h2>
 
-              <ul class="footer__social list-unstyled">
+              <ul class="footer__list list-unstyled">
                 {socials.map((social) => (
                   <li>
-                    <a
-                      class="footer__social-link"
-                      href={social.url}
-                      target="_blank"
-                      rel="noopener"
-                      aria-label={social.label}
-                      title={social.label}
-                    >
+                    <a class="footer__item" href={social.url} target="_blank" rel="noopener">
                       <BrandIcon name={social.network} />
+                      <span>{social.label}</span>
                     </a>
                   </li>
                 ))}
@@ -116,7 +166,20 @@ const socials = store.socialLinks ?? [];
 
     <hr class="footer__divider" />
 
-    <p class="footer__copyright">{copyright}</p>
+    <p class="footer__copyright">
+      {
+        name ? (
+          // El espacio va escrito: entre una expresion y una etiqueta, el que hay
+          // en el marcado no llega al HTML, y saldria "2026Mamá Yaya".
+          <Fragment>
+            {`© ${year} `}
+            <strong class="footer__name">{name}</strong>. Todos los derechos reservados.
+          </Fragment>
+        ) : (
+          `© ${year}. Todos los derechos reservados.`
+        )
+      }
+    </p>
   </div>
 </footer>
 
@@ -124,11 +187,17 @@ const socials = store.socialLinks ?? [];
   /* ---------------------------------------------------------------------------
      Block: footer
      ---------------------------------------------------------------------------
-     Pie de pagina, SOLO desktop. Spec: padding 48/160/32, gap 32, fondo blanco.
+     Pie de pagina. Spec (desktop): padding 48/160/32, gap 32, fondo blanco.
 
-     En movil no existe. No es una decision de estilo: la spec lo pide asi, y en una
-     pantalla de 375 las tres columnas se apilarian en una torre de enlaces que nadie
-     pidio, debajo de una rejilla que ya se lee scrolleando.
+     En movil no hay spec: es el mismo pie, apilado. El logo arriba, las dos
+     columnas debajo —una al lado de la otra, que son cortas: un enlace y una fila
+     de iconos—, la divisoria y el aviso. Las medidas son las de la tienda en movil,
+     20 de gutter y 24 entre piezas, y lo de la spec se aplica de md en adelante (ver
+     el final de este bloque).
+
+     Hasta ahora en movil no se pintaba: en 375 las columnas eran una torre de
+     enlaces debajo de una rejilla que ya se lee scrolleando. La torre ya no existe
+     —se fueron las categorias y la frase de presentacion— y lo que queda cabe.
 
      El `color: #FFFFFF` de la spec es el FONDO. Cada rotulo trae su propio color
      —#6C757D, #D5AA53, #9CA3AF—, asi que no queda texto al que ese blanco pueda
@@ -141,165 +210,210 @@ const socials = store.socialLinks ?? [];
      contenido para en 1140 para no separarse de la rejilla de platillos. La
      misma sangria la usa .navbar-desktop, que es la otra pieza a ancho completo.
      --------------------------------------------------------------------------- */
+  /* 32 arriba y abajo, y el gutter de movil a los lados.
+
+     El pie acaba en el aviso de derechos, como en desktop: no reserva debajo el
+     hueco de lo que flota —el chat, el carrito de la portada—, que al final de la
+     pagina pasa por encima de el, igual que el chat en desktop. Abajo solo se suma
+     el safe-area, para que el aviso no caiga bajo la barra de gestos del iPhone. */
   .footer {
-    display: none;
+    padding: 32px 20px calc(32px + env(safe-area-inset-bottom, 0px));
+    background-color: var(--sf-white);
+  }
+  .footer__inner {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    width: 100%;
+    max-width: 1140px;
+    margin-inline: auto;
+  }
+  /* Element: top — en movil, la marca y debajo las columnas de "Conócenos" y
+     "Síguenos"; en desktop, la marca a la izquierda y las columnas a la derecha
+     (ver el final de este bloque).
+
+     32 entre el logo y las columnas, los mismos que separan las dos columnas entre
+     si: con menos, el logo se leeria pegado a la primera. */
+  .footer__top {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 32px;
+  }
+  .footer__brand {
+    display: flex;
+    flex-direction: column;
+  }
+  /* El enlace sin alto propio: envuelve al logo. La spec pedia una caja de 160x36,
+     que era la del logo anterior —horizontal, 5.8:1—. Este es un emblema cuadrado
+     con el nombre dentro, y a 36 de alto no se leeria. */
+  .footer__brand-link {
+    display: flex;
+    align-items: center;
+    align-self: flex-start;
+    transition: opacity 160ms ease;
+  }
+  .footer__brand-link:hover {
+    opacity: 0.8;
+  }
+  /* 72 en movil y 96 en desktop. Mas que los 40 de la barra de arriba, porque en el
+     pie el logo es la pieza principal y no tiene una fila de 24 que respetar; menos
+     que los 96, que en una pantalla de 375 se comerian el pie entero. */
+  .footer__logo {
+    width: auto;
+    height: 72px;
+  }
+  /* Element: columns — "Conócenos" y "Síguenos". En movil, una debajo de la otra,
+     a 32. En desktop, una al lado de la otra (ver el final de este bloque). */
+  .footer__columns {
+    display: flex;
+    flex-direction: column;
+    gap: 32px;
+  }
+  /* Element: group — una columna: un titulo y debajo su lista */
+  .footer__group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  /* La spec pide letter-spacing 100%, que en Inter 14 son 14px por letra:
+     "C O N Ó C E N O S" pasaria de 200 y dejaria de leerse como una palabra. Se usa
+     0.1em, el tracking con el que se compone un rotulo en versales, que es lo que
+     el valor queria decir. */
+  .footer__heading {
+    margin: 0;
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--sf-accent);
+  }
+  /* Element: divider — la linea de 1 de la spec (height 0 + borde) */
+  .footer__divider {
+    height: 0;
+    margin: 0;
+    border: 0;
+    border-top: 1px solid var(--sf-border);
+    opacity: 1;
+  }
+  /* 13px: el cuerpo menor del pie. No esta en la escala (12/14/16/24) y no la
+     abre, igual que el 15 de los rotulos de la barra de desktop.
+
+     20 de interlineado en movil, el del cuerpo: el aviso lleva el nombre de la
+     tienda, y en un telefono estrecho puede partirse en dos lineas que con el 1 de
+     desktop se tocarian. */
+  .footer__copyright {
+    margin: 0;
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 20px;
+    color: var(--sf-placeholder);
+  }
+  /* Element: name — el nombre de la tienda dentro del aviso: en negrita y en el
+     acento, que es el color del tema (ver src/lib/theme.ts), no un rosa escrito
+     aqui. Con otro tema cambia con el. */
+  .footer__name {
+    font-weight: 700;
+    color: var(--sf-accent);
+  }
+  /* Element: list — la lista de cada columna, una entrada por renglon: la
+     ubicacion y el horario en "Conócenos", las redes en "Síguenos". Es la misma
+     en las dos, para que se lean como del mismo rango. */
+  .footer__list {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    margin: 0;
+  }
+  /* Element: item — una entrada: el glifo a 20 y su rotulo a 8, en 14/20 gris como
+     el resto de letra secundaria del pie, y los dos al dorado en hover. En
+     "Conócenos" es un <button> que abre su hoja; en "Síguenos", un enlace al
+     perfil. El SVG queda `aria-hidden`, como el resto de Icon y BrandIcon: el
+     nombre lo da el rotulo.
+
+     El blanco es mas alto que el renglon: 32, para el dedo. Los 6 de relleno los
+     devuelve el margen negativo, asi que la lista no se mueve de sitio, y 32 es
+     justo lo que hay de renglon a renglon —20 de alto y 12 de hueco—: los blancos
+     se tocan sin pisarse. El relleno, la letra y el color le ganan al reseteo de
+     .btn-plain en los botones por lo mismo que en .navbar__action: los estilos del
+     componente van detras de base.css. */
+  .footer__item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-block: -6px;
+    padding-block: 6px;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    color: var(--sf-muted);
+    text-align: left;
+    transition: color 160ms ease;
+  }
+  .footer__item:hover {
+    color: var(--sf-accent);
   }
 
+  /* --- Movil ---------------------------------------------------------------- */
+  @media (max-width: 767.98px) {
+    /* La barra de accion, al fondo de la PRIMERA pantalla, como antes del pie. La
+       manda ahi la cadena flex —.page > main > form, y `margin-top: auto` en la
+       barra (ver components/ActionBar.astro)—, pero con el pie en la misma columna
+       el alto se reparte entre los dos: en una pantalla corta —un pedido de una
+       linea, un acuse— la barra quedaria a media altura con el pie debajo.
+
+       Con un <main> de al menos una pantalla el pie empieza por debajo del borde.
+       El sticky de la barra la sigue pegando abajo mientras se recorre el
+       contenido, y al acabarse el <main> se detiene y el pie asoma debajo.
+
+       svh y no dvh: es el alto con la barra del navegador a la vista, y no cambia
+       al scrollear. Con dvh el pie se recolocaria cada vez que esa barra se
+       esconde. */
+    .page:has(.action-bar) > main {
+      min-height: 100svh;
+    }
+
+    /* Y una raya entre la barra y el pie. Los dos son blancos, y al final de la
+       pagina, con la barra detenida encima del pie, se leerian como una sola
+       pieza. Es la misma raya que la barra lleva arriba. */
+    .page:has(.action-bar) .footer {
+      border-top: 1px solid var(--sf-border);
+    }
+  }
+
+  /* --- Desktop -------------------------------------------------------------- */
   @media (min-width: 768px) {
     .footer {
-      display: block;
       /* 48 arriba y 32 abajo. Los 48 no estan en la escala del sistema —32 es el
          ultimo escalon— y se escriben sumando dos que si estan, para no abrir un
          token que usaria un solo bloque. */
       padding: calc(32px + 16px) clamp(32px, calc((100% - 1120px) / 2), 160px) 32px;
-      background-color: var(--sf-white);
     }
     .footer__inner {
-      display: flex;
-      flex-direction: column;
       gap: 32px;
-      width: 100%;
-      max-width: 1140px;
-      margin-inline: auto;
     }
-    /* Element: top — la marca a la izquierda y, a la derecha, las columnas de
-       enlaces y de redes */
+    /* La marca a la izquierda y las columnas contra el borde derecho, juntas y no
+       repartidas a lo ancho: asi la marca sigue sola y lo demas se lee como un
+       bloque. Arriba las dos: junto a un logo de 96, las columnas se leen desde su
+       titulo. */
     .footer__top {
-      display: flex;
-      align-items: flex-start;
+      flex-direction: row;
       justify-content: space-between;
-      gap: 32px;
-    }
-    .footer__brand {
-      display: flex;
-      flex-direction: column;
-      gap: 16px;
-      /* El parrafo no se estira a lo ancho del pie: a 1120 saldrian lineas de 150
-         caracteres, ilegibles. Se corta donde el diseno lo corta, antes de las
-         columnas de la derecha. */
-      max-width: 420px;
-    }
-    /* El logo a 96 de alto y el enlace sin alto propio: lo envuelve. La spec pedia
-       una caja de 160x36, que era la del logo anterior —horizontal, 5.8:1—. Este es
-       un emblema cuadrado con el nombre dentro, y a 36 de alto no se leeria. */
-    .footer__brand-link {
-      display: flex;
-      align-items: center;
-      align-self: flex-start;
-      transition: opacity 160ms ease;
-    }
-    .footer__brand-link:hover {
-      opacity: 0.8;
     }
     .footer__logo {
-      width: auto;
       height: 96px;
     }
-    /* 22 de interlineado: es un parrafo, el unico del sistema, y por eso no sale de
-       la escala de --sf-line-height-*. */
-    .footer__about {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 400;
-      line-height: 22px;
-      color: var(--sf-muted);
-    }
-    /* Element: columns — las dos columnas de la derecha, una al lado de la otra:
-       "Descubre" y "Síguenos". Van juntas contra el borde derecho, no repartidas a
-       lo ancho: asi la marca sigue sola a la izquierda y lo demas se lee como un
-       bloque. 48 entre las dos, los mismos que el pie ya suma para su aire de
+    /* Una al lado de la otra, a 48: los mismos que el pie suma para su aire de
        arriba, y por lo mismo escritos como suma. */
     .footer__columns {
-      display: flex;
       flex: 0 0 auto;
-      align-items: flex-start;
+      flex-direction: row;
       gap: calc(32px + 16px);
     }
-    /* Element: group — una columna: un titulo y lo suyo debajo, el enlace o la fila
-       de redes */
-    .footer__group {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-    /* La spec pide letter-spacing 100%, que en Inter 14 son 14px por letra:
-       "D E S C U B R E" ocuparia 180 y dejaria de leerse como una palabra. Se usa
-       0.1em, el tracking con el que se compone un rotulo en versales, que es lo que
-       el valor queria decir. */
-    .footer__heading {
-      margin: 0;
-      font-size: 14px;
-      font-weight: 600;
-      line-height: 1;
-      letter-spacing: 0.1em;
-      text-transform: uppercase;
-      color: var(--sf-accent);
-    }
-    .footer__links {
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      margin: 0;
-    }
-    /* El rotulo de "Descubre" es un enlace: "Menú completo", a la portada. La clase
-       sigue partida en dos porque el hover se declara sobre `a` y no sobre ella, que
-       es lo que .footer__social-link necesita: ahi si convive un <a> con dos
-       <span>. */
-    .footer__link {
-      font-size: 14px;
-      font-weight: 400;
-      line-height: 1;
-      color: var(--sf-muted);
-    }
-    a.footer__link {
-      transition: color 160ms ease;
-    }
-    a.footer__link:hover {
-      color: var(--sf-accent);
-    }
-    /* Element: divider — la linea de 1 de la spec (height 0 + borde) */
-    .footer__divider {
-      height: 0;
-      margin: 0;
-      border: 0;
-      border-top: 1px solid var(--sf-border);
-      opacity: 1;
-    }
-    /* 13px: el cuerpo menor del pie. No esta en la escala (12/14/16/24) y no la
-       abre, igual que el 15 de los rotulos de la barra de desktop. */
     .footer__copyright {
-      margin: 0;
-      font-size: 13px;
-      font-weight: 400;
       line-height: 1;
-      color: var(--sf-placeholder);
-    }
-    .footer__social {
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      margin: 0;
-    }
-    /* Los tres rotulos de la spec son ahora iconos: la API publica el perfil con
-       su enlace, y una fila de glifos reconocibles dice lo mismo en menos sitio
-       que "Facebook · Instagram · WhatsApp" escrito.
-
-       El glifo es la unica etiqueta visible, asi que el nombre accesible va en
-       el `aria-label` del enlace —lo manda la API— y el `title` lo repite para
-       el raton. El SVG queda `aria-hidden`, como el resto de BrandIcon.
-
-       Los 20 del icono son los mismos del sistema, aunque el enlace de la columna
-       de al lado sea de 14: es un blanco pulsable, no un texto. El color es el de
-       ese enlace —las dos columnas son del mismo rango— y va al dorado en hover,
-       igual que el. */
-    .footer__social-link {
-      display: flex;
-      align-items: center;
-      color: var(--sf-muted);
-      transition: color 160ms ease;
-    }
-    .footer__social-link:hover {
-      color: var(--sf-accent);
     }
   }
 </style>

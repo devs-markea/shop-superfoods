@@ -63,7 +63,7 @@ export const prerender = false;
 const rejectedOrder = Astro.url.searchParams.get('order');
 
 if (Astro.url.searchParams.get('pago') === 'rechazado' && rejectedOrder) {
-  return Astro.redirect(`/mamayaya/confirmado?order=${encodeURIComponent(rejectedOrder)}`);
+  return Astro.redirect(`/mamayaya/recibido?order=${encodeURIComponent(rejectedOrder)}`);
 }
 
 const token = resolveCartToken(Astro.cookies);
@@ -96,7 +96,7 @@ try {
 //             avisar a la tienda, y quien no llego a verlos no tiene otra via.
 //   ya visto  al menu. Repetirle "Pedido confirmado" en cada atras se lee como
 //             que pago dos veces, y ademas dejaria el boton atras en bucle:
-//             /mamayaya/confirmado -> /mamayaya/pago -> /mamayaya/confirmado.
+//             /mamayaya/recibido -> /mamayaya/pago -> /mamayaya/recibido.
 //
 // El carrito vacio es condicion, no adorno: la cookie del pedido dura un dia, asi
 // que quien pidio ayer y hoy vuelve a llenar el carrito tiene que poder pagarlo.
@@ -107,12 +107,10 @@ try {
 // nadie lo mande a ningun otro sitio.
 const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
 
-// Cada metodo tiene su acuse —la misma reparticion que hace /mamayaya/recibido al reves—,
+// El acuse es uno para los tres metodos —/mamayaya/recibido pinta el de cada uno—,
 // y el menu es el destino comun en cuanto ese acuse ya se leyo.
 if (pointer && isEmptyCart(cart)) {
-  return Astro.redirect(
-    pointer.seen ? '/mamayaya' : pointer.method === 'mercado_pago' ? '/mamayaya/confirmado' : '/mamayaya/recibido',
-  );
+  return Astro.redirect(pointer.seen ? '/mamayaya' : '/mamayaya/recibido');
 }
 
 // Y sin puntero, el carrito vacio es lo que parece: no hay pedido que resumir ni
@@ -308,7 +306,7 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
   {hasLocation && <LocationSheet message={message} address={address} mapsUrl={mapsUrl} />}
 
-  <Footer store={store} />
+  <Footer store={store} hasLocation={hasLocation} hasSchedule={hasSchedule} schedule={schedule} />
 </Layout>
 
 <script>

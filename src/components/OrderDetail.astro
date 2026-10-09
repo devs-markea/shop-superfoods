@@ -302,7 +302,7 @@ const breakdown = discount > 0 || tip > 0 || shipping.state !== 'none';
   }
 
   /* La divisora discontinua es .dashed-divider: la comparte con el resumen de
-     /mamayaya/confirmado. */
+     /mamayaya/recibido. */
   /* Element: fila del total */
   .order-detail__total {
     display: flex;
@@ -478,7 +478,7 @@ const breakdown = discount > 0 || tip > 0 || shipping.state !== 'none';
      Block: dashed-divider
      ---------------------------------------------------------------------------
      Divisora discontinua. Spec: 1px, trazos de 4 y huecos de 2, #EAECF0.
-     Separa el total del detalle en /mamayaya/pago/transferencia y en /mamayaya/confirmado.
+     Separa el total del detalle en /mamayaya/pago/transferencia y en /mamayaya/recibido.
 
      Es un bloque propio y no un element de cada uno por el mismo motivo que
      .section-label: son dos bloques distintos con la misma divisora, y la tecnica
