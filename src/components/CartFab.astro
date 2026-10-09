@@ -55,10 +55,9 @@ const label =
      icono de 38 - burbuja de 20x17 dorada, cifra en 11/700 blanco
 
      Flota, no empuja: `position: fixed` lo saca del flujo, asi que sigue en su
-     esquina mientras se recorre el catalogo y no parte la rejilla. El hueco que
-     necesita al final de la lista lo reserva <main> (ver
-     pages/index.astro): el circulo esta fuera del flujo y no puede
-     reservarselo el.
+     esquina mientras se recorre el catalogo y no parte la rejilla. Al final de la
+     pagina no tapa la ultima tarjeta: detras de la lista viene el pie (ver
+     components/Footer.astro), y es sobre el donde cae el circulo.
 
      La sangria de la derecha es la de la pagina —20 en movil, la misma a la que
      arrancan las tarjetas—, no una distancia inventada: el circulo cae en la

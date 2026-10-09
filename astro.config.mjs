@@ -77,7 +77,8 @@ export default defineConfig({
     '/pago/transferencia': { status: 302, destination: '/mamayaya/pago/transferencia' },
     '/pago/efectivo': { status: 302, destination: '/mamayaya/pago/efectivo' },
     '/recibido': { status: 302, destination: '/mamayaya/recibido' },
-    '/confirmado': { status: 302, destination: '/mamayaya/confirmado' },
+    // El acuse de Mercado Pago vive ya en /mamayaya/recibido: se va directo.
+    '/confirmado': { status: 302, destination: '/mamayaya/recibido' },
   },
 
   // Origen de la API de la tienda (Laravel). Solo se consume desde el
@@ -126,6 +127,23 @@ export default defineConfig({
       // Mientras el Laravel la tenga vacia no exige nada, asi que mandarla no rompe nada;
       // al reves —backend primero— la tienda entera responde 401 hasta el segundo despliegue.
       SHOP_API_KEY: envField.string({
+        context: 'server',
+        access: 'secret',
+        optional: true,
+      }),
+
+      // Clave con la que el BACKEND pide vaciar la cache de esta tienda: la cabecera
+      // `X-Cache-Purge-Key` de POST /api/cache/invalidate (src/pages/api/cache/invalidate.ts).
+      // Es lo que deja al boton del panel refrescar la tienda sin entrar a Vercel.
+      //
+      // Va en sentido CONTRARIO a SHOP_API_KEY —aquella la manda esta tienda al backend, esta
+      // la manda el backend a la tienda— y por eso es otro secreto: si se filtra una, la otra
+      // sigue cerrando su puerta.
+      //
+      // Opcional, pero sin ella el endpoint no purga NADA: responde 503 a todo. Es al reves que
+      // SHOP_API_KEY a proposito —una URL publica que vacia la cache, abierta, es una forma
+      // gratis de mandarle rafagas de lecturas al backend—.
+      SHOP_CACHE_PURGE_KEY: envField.string({
         context: 'server',
         access: 'secret',
         optional: true,
@@ -227,7 +245,7 @@ export default defineConfig({
       provider: fontProviders.google(),
       name: 'Inter',
       cssVariable: '--sf-font-inter',
-      // El 800 lo piden dos rotulos —el folio de /confirmado y el nombre del
+      // El 800 lo piden dos rotulos —el folio de /recibido y el nombre del
       // platillo en la ficha de desktop— y suma dos ficheros al preload de todas
       // las paginas. Si esa factura pesa mas que el peso exacto, se quita de aqui
       // y los dos caen al 700.

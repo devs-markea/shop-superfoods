@@ -10,9 +10,11 @@
 //
 // DONDE VIVE: en la Runtime Cache de Vercel, que es regional y se comparte entre las
 // instancias de la funcion. Se eligio sobre una memoria por instancia por una razon
-// concreta: SE PUEDE PURGAR desde el panel de Vercel (CDN -> Caches -> Purge cache) o con
-// `vercel cache invalidate --tag`, que es como el negocio refresca la tienda despues de
-// editar el panel. Una memoria de proceso solo se vacia al desplegar.
+// concreta: SE PUEDE PURGAR, que es como el negocio refresca la tienda despues de editar el
+// panel. Lo normal es el boton "Refrescar tienda" de Configuracion de la tienda, que llama a
+// POST /api/cache/invalidate (`expireTags`, abajo); el panel de Vercel (CDN -> Caches ->
+// Purge cache) y `vercel cache invalidate --tag` siguen valiendo. Una memoria de proceso solo
+// se vaciaria al desplegar.
 //
 // Fuera de Vercel —`npm run dev`— getCache() cae a una cache en memoria del proceso, asi
 // que esto funciona igual en local, sin compartirse entre arranques.
@@ -24,7 +26,7 @@
 // guarda lo que `load` devuelve sin lanzar.
 // ---------------------------------------------------------------------------
 
-import { getCache } from '@vercel/functions';
+import { getCache, invalidateByTag } from '@vercel/functions';
 
 /**
  * Version de la FORMA de lo guardado, no de su contenido.
@@ -45,6 +47,36 @@ export const CACHE_TAGS = {
   schedule: 'tienda-horario',
   config: 'tienda-config',
 } as const;
+
+export type CacheTag = (typeof CACHE_TAGS)[keyof typeof CACHE_TAGS];
+
+const KNOWN_TAGS: ReadonlySet<string> = new Set(Object.values(CACHE_TAGS));
+
+/** ¿Es una de las etiquetas de arriba? Lo que no lo sea no se purga desde fuera. */
+export function isCacheTag(value: unknown): value is CacheTag {
+  return typeof value === 'string' && KNOWN_TAGS.has(value);
+}
+
+/**
+ * Vacia lo guardado con estas etiquetas. La siguiente visita vuelve a pedirlo a la API.
+ *
+ * DOS LLAMADAS, porque ninguna de las dos basta sola:
+ *
+ *   · `invalidateByTag` es la misma purga que el boton del panel de Vercel —la que ya se
+ *     usaba— y, si Vercel no la acepta, LANZA. Pero fuera de Vercel no hace nada.
+ *   · `getCache().expireTag` es la de la Runtime Cache y funciona tambien en `npm run dev`,
+ *     sobre la cache en memoria. Pero un fallo no llega aqui: el paquete lo deja en el log
+ *     y sigue.
+ *
+ * Con las dos, la purga funciona en los dos sitios y en Vercel un fallo llega a quien la pidio.
+ * Lanza solo lo que lance `invalidateByTag`.
+ */
+export async function expireTags(tags: CacheTag[]): Promise<void> {
+  await getCache().expireTag(tags);
+  await invalidateByTag(tags);
+
+  console.info(`[cache] purgado: ${tags.join(', ')}`);
+}
 
 /** Lo minimo que vale la pena guardar algo: por debajo, cada visita volveria a pedirlo. */
 const MIN_FRESH_MS = 30_000;

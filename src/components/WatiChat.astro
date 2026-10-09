@@ -23,11 +23,16 @@
 //   altText      '""' con las comillas dentro: el widget lo escribe sin
 //                comillas en el `alt` del icono. Asi sale `alt=""`, decorativo,
 //                en lugar de un lector de pantalla diciendo "undefined".
-//   messageText  escrito aqui, segun la pantalla, en lugar del "tengo una
-//                pregunta sobre {{page_link}}" de Wati: ver `message`.
+//   messageText  el de la tienda, segun la pantalla, en lugar del "tengo una
+//                pregunta sobre {{page_link}}" de Wati: ver src/lib/chat.ts,
+//                de donde salen tambien el numero y el hueco del enlace.
 //
 // Lo monta Layout.astro, asi que esta en todas las pantallas: las dudas llegan
 // tanto mirando el menu como a mitad del pago. Se apaga con ENABLED.
+//
+// HOY ESTA APAGADO: lo releva el boton propio, components/ChatFab.astro, que abre
+// WhatsApp directo y sin el recuadro de Wati. Los dos a la vez serian dos
+// botones de chat en la misma esquina: encender este es apagar aquel.
 //
 // DONDE SE PONE. La esquina que pide Wati —derecha, a 20 del fondo— la ocupan
 // otras piezas que flotan abajo, y el widget va con un z-index de 16 millones:
@@ -47,6 +52,7 @@
 // ---------------------------------------------------------------------------
 import { getImage } from 'astro:assets';
 import logo from '../assets/logo-mama-yaya-magenta.png';
+import { CHAT_LINK_SLOT, CHAT_PHONE, chatMessage } from '../lib/chat.ts';
 import type { StoreSettings } from '../lib/store-config.ts';
 
 interface Props {
@@ -68,51 +74,17 @@ const { store, accent, dish, order = false } = Astro.props;
 // —numero, colores, logo y la colocacion— sigue revisado y listo, asi que
 // mostrarlo otra vez es devolver esta linea a `true`. Apagado no se pinta nada:
 // ni el script de Wati ni ninguna peticion a su servidor.
-const ENABLED = true;
+const ENABLED = false;
 
 const WIDGET_URL = 'https://wati-integration-prod-service.clare.ai/v2/watiWidget.js?66582';
 
 // El circulo del recuadro mide 52; 104 es su 2x.
 const brandImg = await getImage({ src: logo, width: 104 });
 
-// El mensaje con el que se abre el chat: lo que el cliente se encuentra ya
-// escrito en WhatsApp, y que completa con su duda. Cuatro decisiones:
-//
-// - Dice DE QUE va la duda con palabras: el platillo en su ficha, el pedido en
-//   sus siete pantallas y el menu en la portada. "en línea" dice ademas por
-//   donde llega el chat.
-// - El enlace va solo en la ficha, que es donde dice algo: quien contesta abre
-//   el platillo de un toque. En el resto —lo que traia el snippet— seria la
-//   direccion de la tienda, que no le dice nada a nadie. Va en su propio
-//   renglon y con otro debajo, para que la pregunta no se teclee pegada a el.
-// - Sin enlace acaba en un espacio, sin signo: WhatsApp deja el cursor al
-//   final, y lo siguiente que se teclea es la pregunta.
-// - Lleva acentos aunque la tienda escriba sin ellos, por lo mismo que
-//   src/lib/whatsapp.ts: se lee en la conversacion, junto a los textos del ERP.
-//
 // Va codificado desde aqui porque el widget lo pega tal cual en el `href`: un
 // `&`, un `#` o unas comillas en el nombre de un platillo cortarian el mensaje o
 // el enlace. El `{{page_title}}` de Wati tiene ese problema, y por eso no se usa.
-
-// El hueco del enlace. Lo rellena el script, que es quien sabe en que dominio se
-// esta viendo la pagina: el `site` de astro.config.mjs no es el de la tienda. Son
-// letras y guiones bajos para que la codificacion de abajo no lo toque.
-const LINK_SLOT = '__dish_link__';
-
-// El saludo por nombre —"Hola, Mamá Yaya."—, quitado por ahora: se queda en
-// "Hola." Se apaga aqui y no se borra porque el nombre sigue llegando del panel,
-// asi que volver a saludar con el es cambiar esta linea.
-const GREET_BY_NAME = false;
-
-const greeting = GREET_BY_NAME && store.name ? `Hola, ${store.name}.` : 'Hola.';
-
-// Las tres frases: la ficha, las pantallas del pedido y la portada. La de la
-// portada lleva su propio saludo porque es la frase tal como la pidio el negocio.
-const message = dish
-  ? `${greeting} Tengo una duda sobre ${dish}\n${LINK_SLOT}\n`
-  : order
-    ? `${greeting} Tengo una duda sobre mi pedido en línea `
-    : '¡Hola! Tengo una duda sobre el menú en línea ';
+const message = chatMessage({ storeName: store.name, dish, order });
 
 const options = {
   enabled: true,
@@ -139,14 +111,14 @@ const options = {
     ctaText: 'Chatea con nosotros',
     borderRadius: '25',
     autoShow: false,
-    phoneNumber: '5219987566999',
+    phoneNumber: CHAT_PHONE,
   },
 };
 ---
 
 {
   ENABLED && (
-    <script is:inline define:vars={{ widgetUrl: WIDGET_URL, options, linkSlot: LINK_SLOT }}>
+    <script is:inline define:vars={{ widgetUrl: WIDGET_URL, options, linkSlot: CHAT_LINK_SLOT }}>
       // El enlace del platillo, en el mensaje de la ficha: la pagina tal como se
       // llama, sin la cola de parametros que le cuelgan los anuncios —fbclid,
       // utm…—. En el resto de pantallas no hay hueco y esto no cambia nada.

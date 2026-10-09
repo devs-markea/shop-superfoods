@@ -3,19 +3,39 @@ import Layout from '../../layouts/Layout.astro';
 import BackHeader from '../../components/BackHeader.astro';
 import NavbarDesktop from '../../components/NavbarDesktop.astro';
 import OrderStatus from '../../components/OrderStatus.astro';
+import OrderReceipt from '../../components/OrderReceipt.astro';
 import Steps from '../../components/Steps.astro';
 import ClabeCard from '../../components/ClabeCard.astro';
 import ActionBar from '../../components/ActionBar.astro';
 import ConfirmationCta from '../../components/ConfirmationCta.astro';
+import DeviceFingerprint from '../../components/DeviceFingerprint.astro';
 import ScheduleSheet from '../../components/ScheduleSheet.astro';
 import LocationSheet from '../../components/LocationSheet.astro';
 import Footer from '../../components/Footer.astro';
+import FormError from '../../components/FormError.astro';
 import { getCart, type Cart } from '../../lib/cart.ts';
 import { getOrder } from '../../lib/orders.ts';
 import { ERROR_AREAS, errorCode } from '../../lib/error-codes.ts';
 import { resolveCartToken } from '../../lib/cart-session.ts';
-import { ORDER_COOKIE, markPointerSeen, parseOrderPointer } from '../../lib/checkout-draft.ts';
-import { type DeliveryType, type StoreOrder } from '../../lib/checkout.ts';
+import {
+  DRAFT_COOKIE,
+  ORDER_COOKIE,
+  markPointerSeen,
+  parseDraft,
+  parseOrderPointer,
+} from '../../lib/checkout-draft.ts';
+import {
+  type DeliveryType,
+  type OrderLine,
+  type PaymentMethod,
+  type StoreOrder,
+} from '../../lib/checkout.ts';
+import {
+  confirmationWithoutOrder,
+  inferMethod,
+  resolveConfirmation,
+  type ConfirmationView,
+} from '../../lib/confirmation.ts';
 import {
   fillMessage,
   orderMessageValues,
@@ -27,144 +47,185 @@ import { getStoreConfig, getStoreSchedule } from '../../lib/store-config.ts';
 import { shiftLabel } from '../../lib/schedule.ts';
 import { TEST_MODE } from 'astro:env/server';
 
+// EL ACUSE DE LOS TRES METODOS
+//
+// Aqui terminan las tres compras, y el metodo decide que se pinta:
+//
+//   transferencia  el sello de "Pedido recibido", los pasos y la cuenta a la que
+//                  transferir: el dinero sale despues y hay que mandar el comprobante
+//   efectivo       el mismo sello y sus pasos: el dinero se entrega en mano
+//   mercado_pago   el estado del cobro —aprobado, esperando al webhook, rechazado—
+//                  con el resumen del pedido y la accion que toque. Ver
+//                  src/lib/confirmation.ts
+//
+// Mercado Pago tenia su propia pantalla, /mamayaya/confirmado, que hoy solo
+// redirige aqui: es la URL de vuelta que arma el backend.
+//
 // UNA PANTALLA, DOS FORMAS
 //
-// En movil es la de siempre: la cabecera de 64, el sello, los pasos, la cuenta a
-// la que transferir y "Abrir WhatsApp" en la barra fija del fondo.
+// En movil es la de siempre: la cabecera de 64, el sello, lo que queda por hacer
+// y la accion en la barra fija del fondo.
 //
 // En desktop se monta como el resto de la tienda —la misma barra de tienda
 // arriba, el mismo pie abajo— y el contenido pasa a una columna centrada con 40
-// entre sus piezas, rematada por la misma accion que en movil lleva la barra:
-// abrir WhatsApp. Ver components/ConfirmationCta.astro.
+// entre sus piezas, rematada por la misma accion que en movil lleva la barra.
+// Ver components/ConfirmationCta.astro.
 
-// Depende de la sesion: el mensaje de WhatsApp lleva el folio del pedido, y quien
-// reciba la captura tiene que saber a que pedido corresponde.
+// Depende de la sesion: el pedido se relee en cada visita.
 export const prerender = false;
 
 const token = resolveCartToken(Astro.cookies);
 
+// El pedido no se guarda en la cookie, solo se apunta: su estado cambia sin que
+// el comprador toque nada —el webhook de Mercado Pago lo mueve sin que nadie
+// pulse nada—, y el folio de una transferencia aparece cuando la tienda da el
+// pago por bueno.
+const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
+
+// Mercado Pago devuelve al comprador a /mamayaya/confirmado?order={id}, que lo trae
+// aqui con el mismo `order`. Ese id vale como respaldo si la cookie se perdio
+// —leerlo no abre nada ajeno: la API acota los pedidos a la sesion y responde 404
+// si es de otra—, pero NADA MAS de la URL se usa: los parametros los pone el
+// cliente y no son de fiar. El estado del pago se lee releyendo el pedido, que es
+// lo unico que dice la verdad.
+const hintedId = Astro.url.searchParams.get('order');
+const orderId = pointer?.id ?? hintedId;
+
 // QUIEN PUEDE ESTAR AQUI
 //
 // Esta pantalla va DESPUES de cerrar el pedido, y lo unico que prueba que el
-// cierre ocurrio es el puntero: ni el carrito ni el borrador sirven, porque los
-// dos existen desde antes de comprar. Sin el, lo que se pintaba era un "Pedido
-// recibido" de un pedido que no existe, con los pasos y la CLABE de la tienda
-// invitando a transferir sin nadie a quien mandarle el comprobante.
+// cierre ocurrio es el pedido al que se apunta: ni el carrito ni el borrador
+// sirven, porque los dos existen desde antes de comprar. Sin el, lo que se
+// pintaba era un acuse de un pedido que no existe —un "Pedido recibido" con la
+// CLABE invitando a transferir, o un sello verde de "Pedido confirmado"—, que es
+// la mentira mas cara del flujo.
 //
-// Se vuelve al menu, que es adonde lleva ya el control de vuelta de la cabecera.
-// Con el 302 que pone Astro.redirect por defecto y no un 301: la regla depende de
-// la sesion, y un 301 se queda cacheado en el navegador para siempre.
+// Sin puntero y sin el id de la vuelta de la pasarela no hay nada de donde tirar,
+// asi que se vuelve al menu —adonde lleva ya el control de vuelta de la cabecera—
+// antes de pedirle nada a la API. Con el 302 que pone Astro.redirect por defecto y
+// no un 301: la regla depende de la sesion, y un 301 se queda cacheado en el
+// navegador para siempre.
 //
-// La comprobacion va aqui arriba, antes de pedir nada: es local y no cuesta, asi
-// que quien no deberia estar se va sin gastarle a la API cuatro llamadas.
-//
-// En modo de pruebas no se guarda nada, y las pantallas se sirven como esten: es
-// la unica forma de revisar el diseno sin pasar por una compra. Ver TEST_MODE en
+// En modo de pruebas no se guarda nada y la pantalla se sirve como este, que es
+// como se revisa el diseno sin pasar por una compra: sin nada rotula la
+// transferencia, y con un `?order=` cualquiera, Mercado Pago. Ver TEST_MODE en
 // astro.config.mjs.
-const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
+if (!orderId && !TEST_MODE) return Astro.redirect('/mamayaya');
 
-if (!TEST_MODE) {
-  if (!pointer) return Astro.redirect('/mamayaya');
+// Todo lo que hace falta se pide a la vez: ninguno de los cuatro depende de otro.
+//
+// El pedido viaja con su `failed` al lado porque no leerlo significa dos cosas
+// distintas: getOrder() devuelve null en el 404 —el pedido no existe, o es de
+// otra sesion, que la API responde igual— y lanza si la lectura se cae. El
+// primero es un id que no vale y sale de la pantalla; el segundo es un fallo de
+// la casa, y por eso no echa a nadie: lo que se viene a buscar aqui —la CLABE,
+// donde recoger, el estado del cobro— se sirve con lo que haya cargado. Sin aviso
+// en pantalla, pero el log lleva el codigo: es lo que permite seguirlo si alguien
+// reporta que su acuse salio a medias. Ver src/lib/error-codes.ts.
+const orderPending: Promise<{ order: StoreOrder | null; failed: boolean }> = orderId
+  ? getOrder(orderId, token).then(
+      (found) => ({ order: found, failed: false }),
+      (error: unknown) => {
+        console.error(
+          `[recibido] ${errorCode(ERROR_AREAS.receipt, error)} fallo GET /api/orders`,
+          error,
+        );
+        return { order: null, failed: true };
+      },
+    )
+  : Promise.resolve({ order: null, failed: false });
 
-  // Mercado Pago tiene su propia pantalla de cierre, y no es esta: aqui veria la
-  // copia de la transferencia —los tres pasos y la cuenta a la que pagar— despues
-  // de haber pagado ya con tarjeta.
-  if (pointer.method === 'mercado_pago') return Astro.redirect('/mamayaya/confirmado');
-}
-
-// El carrito, solo para el chip de la barra de desktop. Aqui el pedido ya esta
-// hecho —el cierre lo vacio—, asi que lo normal es que llegue en cero; se lee de
-// todas formas porque se puede volver a esta pantalla con la tienda ya visitada
-// otra vez, y un chip que afirma un importe viejo es peor que no tenerlo.
+// El carrito hace dos cosas: es el importe del chip de la barra de desktop —tras
+// el cierre esta vacio, que es la verdad, pero se puede volver aqui con la tienda
+// ya visitada otra vez— y es ademas lo que lista el resumen de Mercado Pago cuando
+// se revisa la pantalla sin pedido.
 const cartPending = getCart(token).catch((error) => {
   console.error('[recibido] fallo GET /api/cart', error);
   return null as Cart | null;
 });
 
-const [store, schedule, cart] = await Promise.all([
+const [store, schedule, read, cart] = await Promise.all([
   getStoreConfig(),
   getStoreSchedule(),
+  orderPending,
   cartPending,
 ]);
 
-const phone = store.whatsapp?.phone ?? '';
+// Habia un id y la API dice que no es de nadie: se sale al menu, igual que si no
+// hubiera habido ninguno. Cubre tambien el `?order=` inventado a mano, que es la
+// unica parte de la URL de la que esta pantalla se fia lo justo para preguntar.
+const { order } = read;
 
-// El pedido esta hecho y esperando el cobro, pero el cobro no se parece:
-//
-//   transferencia  el dinero ya salio y hay que mandar el comprobante
-//   efectivo       el dinero se entrega en mano: al repartidor o en el local
-//
-// Asi que el metodo decide la pantalla entera —pasos, tarjeta y aviso— y decide
-// tambien el mensaje. Se resuelve mas abajo, cuando el pedido ya esta leido: el
-// puntero es una cookie de este navegador y el pedido lo sabe de primera mano.
-
-// El pedido, releido de la API. Hace dos cosas: pone el folio y el total en el
-// mensaje de WhatsApp, y remata la guarda de arriba.
-//
-// La API responde 404 igual si el pedido no existe que si es de otra sesion, y
-// getOrder() traduce las dos a null: eso es un puntero que no vale, y se sale al
-// menu. Un fallo de la API es otra cosa —lanza— y ahi la pantalla se sirve igual:
-// el que falla es el servidor, no quien mira, y lo que se viene a buscar aqui —la
-// CLABE, o donde recoger— no depende de haber podido leer el pedido. Echar a un
-// comprador de su propio acuse porque la API tosio seria peor que servirle esto
-// sin folio.
-let order: StoreOrder | null = null;
-
-if (pointer) {
-  let failed = false;
-
-  try {
-    order = await getOrder(pointer.id, token);
-  } catch (error) {
-    // Sin aviso en pantalla que lo muestre —esta pantalla se sirve con lo que haya
-    // cargado—, pero el log lleva el codigo igual: es lo que permite seguirlo si alguien
-    // reporta que su acuse salio a medias. Ver src/lib/error-codes.ts.
-    console.error(`[recibido] ${errorCode(ERROR_AREAS.receipt, error)} fallo GET /api/orders`, error);
-    failed = true;
-  }
-
-  if (!order && !failed && !TEST_MODE) return Astro.redirect('/mamayaya');
-}
-
-// EL ACUSE QUEDA VISTO
-//
-// Lo mismo que hace /mamayaya/confirmado, y por lo mismo: las pantallas del pago consultan
-// esta marca para decidir a donde mandar a quien vuelve con el carrito ya vacio —a
-// su acuse si no lo ha visto, al menu si ya lo vio—.
-//
-// Aqui no hay que mirar que accion ofrece la pantalla, como alli: este acuse
-// termina siempre en "Abrir WhatsApp". El pago pasa fuera —una transferencia que
-// alguien revisa, o unos billetes en mano— y no hay nada que reintentar desde la
-// tienda, asi que en cuanto se ve, se ha visto.
-if (order && pointer && !pointer.seen) {
-  markPointerSeen(Astro.cookies, pointer);
-}
+if (orderId && !order && !read.failed && !TEST_MODE) return Astro.redirect('/mamayaya');
 
 // CON QUE SE PAGA Y COMO SE RECIBE: los dos datos que parten esta pantalla
 //
 // Mandan los del PEDIDO, que es el que lo sabe de primera mano; el puntero es el
-// respaldo para cuando la lectura se cae, y el modo de entrega cae del lado de
-// recoger cuando no hay ninguno de los dos —es lo que hacia antes, de cuando el
-// efectivo no salia a domicilio—.
+// respaldo para cuando la lectura se cae. Sin ninguno de los dos, `?order=` solo
+// lo pone la vuelta de la pasarela, asi que es Mercado Pago; y sin eso tampoco se
+// rotula la transferencia, que es lo que se revisa en modo de pruebas.
 //
-// Sin metodo se rotula el flujo de transferencia: en produccion no se llega —la
-// guarda de arriba lo impide—, pero es lo que se revisa en modo de pruebas.
-const method = order?.paymentMethod ?? pointer?.method ?? null;
+// El modo de entrega cae del lado de recoger cuando no hay ninguno de los dos —es
+// lo que hacia antes, de cuando el efectivo no salia a domicilio—.
+const method: PaymentMethod | null =
+  order?.paymentMethod ??
+  pointer?.method ??
+  (order ? inferMethod(order) : hintedId ? 'mercado_pago' : null);
+
 const deliveryType: DeliveryType = order?.deliveryType ?? pointer?.deliveryType ?? 'pickup';
 
-const cash = method === 'efectivo';
+// MERCADO PAGO: el estado del cobro
+//
+// Titular, aviso, sello, folio y accion salen de aqui. Ver src/lib/confirmation.ts:
+// con Mercado Pago hay media docena de situaciones distintas —pagado, esperando
+// al webhook, rechazado, cobro sin abrir...— y cada una necesita otra cosa.
+//
+// Los otros dos metodos no pasan por aqui: su pago ocurre fuera de la tienda y su
+// acuse es siempre el mismo, el de abajo.
+const view: ConfirmationView | null =
+  method === 'mercado_pago'
+    ? order
+      ? resolveConfirmation(method, order, pointer?.chargeStarted)
+      : confirmationWithoutOrder()
+    : null;
 
-// En efectivo, el modo de entrega parte otra vez la copia: al recoger hay que ir al
-// local, a domicilio solo hay que esperar con el dinero preparado.
-const cashPickup = cash && deliveryType !== 'delivery';
+// Si la accion es cobrar otra vez: es la unica que envuelve la pantalla en un
+// formulario y la unica que necesita la huella de dispositivo.
+const retry = view?.action.kind === 'pay';
+
+// EL ACUSE QUEDA VISTO
+//
+// Se anota en el puntero para que las pantallas del pago sepan que este pedido ya
+// se acuso. Sin la marca, volver a /mamayaya/pago con el carrito vacio trae aqui —que
+// es lo que hay que hacer con quien nunca llego a ver su folio, porque la pasarela
+// lo devolvio a otro navegador o cerro la pestana—; con ella, lleva al menu, para
+// no repetirle el acuse en cada atras.
+//
+// Tres condiciones, y ninguna sobra:
+//
+//   order    solo un pedido leido de verdad. El acuse de mentira del modo de
+//            pruebas no marca nada.
+//   pointer  sin cookie no hay donde anotarlo. Es quien llega por `?order=` sin
+//            sesion, y ahi ya no se le puede ayudar desde aqui.
+//   accion   que no quede nada pendiente en la tienda. En transferencia y
+//            efectivo siempre: el pago pasa fuera —una transferencia que alguien
+//            revisa, o unos billetes en mano— y el acuse termina en WhatsApp. En
+//            Mercado Pago, solo si la accion resuelta es WhatsApp: con un cobro por
+//            reintentar o un webhook sin llegar, esta pantalla SIGUE siendo su
+//            sitio, y marcarla le quitaria el boton al volver.
+if (order && pointer && !pointer.seen && (!view || view.action.kind === 'whatsapp')) {
+  markPointerSeen(Astro.cookies, pointer);
+}
+
+// El chat de la tienda, con el pedido ya identificado.
+const phone = store.whatsapp?.phone ?? '';
 
 // LA PLANTILLA LA ELIGEN ESOS DOS DATOS, NO ESTA PANTALLA
 //
-// Cada flujo viene a decir algo distinto: uno manda una captura, el otro solo abre
-// la conversacion porque paga al recibir. Y el efectivo dice ademas dos cosas
-// distintas segun como reciba el pedido: a domicilio paga al recibir, y al recoger
-// paga en el mostrador, donde lo que necesita es saber DONDE esta el mostrador.
-// Por eso la llave son dos datos y no uno.
+// Cada flujo viene a decir algo distinto: uno manda una captura, otro solo abre
+// la conversacion porque paga al recibir, y el de Mercado Pago ya pago. Y cada uno
+// dice ademas dos cosas segun como reciba el pedido: al recoger, lo que necesita
+// es saber DONDE esta el local. Por eso la llave son dos datos y no uno.
 const template = method
   ? pickTemplate(store.whatsapp?.templates, deliveryType, method)
   : undefined;
@@ -175,7 +236,7 @@ const template = method
 // vacio o mandar el texto de otro metodo.
 //
 // Los veinte marcadores salen del pedido en un solo sitio —orderMessageValues()—
-// para que las tres pantallas de cierre manden exactamente el mismo mensaje.
+// para que todos los cierres manden exactamente el mismo mensaje.
 const whatsapp =
   phone && order && template
     ? whatsAppUrl(
@@ -188,6 +249,59 @@ const whatsapp =
         ),
       )
     : null;
+
+// --- Mercado Pago: el resumen del pedido -----------------------------------
+//
+// Con pedido, todo sale de el: el checkout vacia el carrito, asi que leerlo aqui
+// devolveria una lista vacia.
+//
+// El envio ya viene dentro: la API lo calcula al cerrar el pedido y su `total` lo
+// incluye, asi que aqui no se suma nada por encima.
+let items: OrderLine[] = order?.items ?? [];
+let total = order?.total ?? 0;
+
+// Sin pedido se pinta el carrito, para que la pantalla siga siendo revisable. Ya
+// no es el caso de quien entra directo —ese no llega—, sino los dos que quedan:
+// el modo de pruebas y una lectura que se cayo.
+if (view && !order && cart) {
+  const { tip } = parseDraft(Astro.cookies.get(DRAFT_COOKIE)?.value);
+
+  items = cart.items;
+  total = cart.total + tip;
+}
+
+// Folio del pedido: el `id`, que es la numeracion que ya lleva el backend (1, 2,
+// 3...). Es un rotulo, no una llave: sirve para que el comprador diga "mi pedido
+// 91" por telefono.
+//
+// No se usa `orderNumber` a proposito. Ademas de ser un ULID de 26 caracteres que
+// no se puede leer en voz alta ni cabe en los 40px del diseno, NO dice si el pago
+// esta validado: en Mercado Pago llega desde el primer momento y con el pedido sin
+// cobrar. Lo que dice la verdad es `status`, y de eso vive el acuse.
+//
+// Sin pedido se rotula el del mockup, para poder revisar el diseno en modo de
+// pruebas. Es lo unico escrito a mano que queda en el flujo, y desde que la
+// pantalla esta guardada solo lo ve el equipo.
+const MOCK_FOLIO = '91';
+const folio = order?.id ?? MOCK_FOLIO;
+
+// "Actualizar" recarga esta misma pantalla, que relee el pedido en el servidor. Se
+// conserva el `order` de la URL para que siga funcionando si la cookie no esta.
+const selfUrl = hintedId ? `${Astro.url.pathname}?order=${encodeURIComponent(hintedId)}` : Astro.url.pathname;
+
+// --- Transferencia y efectivo: lo que queda por hacer ----------------------
+//
+// El pedido esta hecho y esperando el cobro, pero el cobro no se parece:
+//
+//   transferencia  el dinero ya salio y hay que mandar el comprobante
+//   efectivo       el dinero se entrega en mano: al repartidor o en el local
+//
+// Asi que el metodo decide la pantalla entera —pasos, tarjeta y aviso—.
+const cash = method === 'efectivo';
+
+// En efectivo, el modo de entrega parte otra vez la copia: al recoger hay que ir al
+// local, a domicilio solo hay que esperar con el dinero preparado.
+const cashPickup = cash && deliveryType !== 'delivery';
 
 // Los pasos del efectivo. El pedido ya esta hecho, pero el comprador todavia tiene
 // trabajo: esperar el aviso, contar el dinero y entregarlo en mano.
@@ -211,7 +325,8 @@ const cashSteps = [
   'Paga al repartidor al momento de la entrega o en el local para pick-up',
 ];
 
-// La copia de los tres cierres, junta: se lee de un tiron en que se diferencian.
+// La copia de los tres cierres sin pasarela, junta: se lee de un tiron en que se
+// diferencian.
 //
 // Los tres llevan pasos, porque en los tres queda algo pendiente y el orden es parte
 // del dato: en transferencia, pagar y mandar el comprobante; en efectivo, esperar,
@@ -247,6 +362,61 @@ const copy: {
       barNote: 'Tu pedido quedara pendiente hasta confirmar el pago',
     };
 
+// --- Lo que pintan los dos ---------------------------------------------------
+//
+// El sello. Con Mercado Pago dice como acabo el cobro, y el folio solo se rotula si
+// la vista lo permite: junto a un pago que fallo pareceria un comprobante. En los
+// otros dos es siempre el mismo, porque el pedido esta recibido, no cobrado: con
+// transferencia falta el comprobante y con efectivo falta entregar el dinero.
+const status: {
+  state: 'success' | 'pending';
+  folio?: string;
+  title: string;
+  note: string;
+} = view
+  ? {
+      state: view.state,
+      folio: view.showFolio ? folio : undefined,
+      title: view.title,
+      note: view.note,
+    }
+  : { state: 'pending', title: 'Pedido recibido', note: copy.note };
+
+// La accion del acuse, en un solo sitio: la pintan dos controles —la barra fija
+// al fondo en movil y el remate de la columna en desktop— y ofrecer una cosa
+// distinta segun el ancho de la pantalla seria mentir en uno de los dos.
+//
+// Las tres salidas:
+//
+//   pay       cobrar de nuevo sobre el mismo pedido: es un submit y no lleva
+//             destino, asi que lo recoge el formulario que envuelve la pantalla
+//   refresh   releer esta misma pantalla, que es donde el servidor vuelve a
+//             preguntar por el pedido
+//   whatsapp  el chat de la tienda, con el mensaje de este flujo ya escrito. Es
+//             la unica de transferencia y efectivo
+//
+// Sin telefono configurado el chat se queda sin destino y el control queda
+// inerte —un submit fuera de un formulario no navega ni recarga— en lugar de
+// abrir una conversacion vacia.
+const action: {
+  label: string;
+  href?: string;
+  icon?: 'whatsapp';
+  variant?: 'whatsapp';
+} =
+  view?.action.kind === 'pay'
+    ? { label: view.action.label }
+    : view?.action.kind === 'refresh'
+      ? { label: 'Actualizar', href: selfUrl }
+      : {
+          label: 'Abrir WhatsApp',
+          icon: 'whatsapp',
+          variant: 'whatsapp',
+          href: whatsapp ?? undefined,
+        };
+
+const actionNote = view ? view.actionNote : copy.barNote;
+
 // Las dos condiciones se calculan aqui, en el mismo sitio que monta las hojas: si
 // las dedujera la barra de desktop por su cuenta, podria ofrecer un boton para una
 // hoja que esta pantalla no monto.
@@ -257,10 +427,17 @@ const hasLocation = Boolean(address || mapsUrl);
 const hasSchedule = Boolean(schedule && schedule.days.length > 0);
 ---
 
-<Layout title="Pedido recibido" store={store} description={copy.description} noindex>
+<Layout
+  title={status.title}
+  store={store}
+  description={view ? view.note : copy.description}
+  noindex
+>
   {/*
     Vuelve al menu y no a la pantalla de pago: el pedido ya esta hecho, y volver
-    atras invitaria a confirmarlo otra vez.
+    atras invitaria a confirmarlo otra vez. Reintentar un cobro de Mercado Pago no
+    se hace ahi, sino con el boton de esta pantalla, que cobra sobre el mismo
+    pedido.
 
     Una cabecera por pantalla: la de 64 con el control de vuelta en movil, y de md
     hacia arriba la barra de la tienda, donde el que vuelve al menu es el logo.
@@ -281,75 +458,117 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   <!-- La cadena flex (page > main) deja la barra de accion al fondo de la
        pantalla aunque el contenido no llegue a llenarla. -->
   <main class="confirmation-page d-flex flex-column flex-grow-1">
-    <div class="screen-body screen-body--confirmation">
-      {/*
-        El sello es el mismo en los tres: el pedido esta recibido, no cobrado. Con
-        transferencia falta el comprobante y con efectivo falta entregar el dinero.
-      */}
-      <OrderStatus state="pending" title="Pedido recibido" note={copy.note} />
-
-      {/*
-        Lo que queda por hacer, numerado. La misma tarjeta en los tres cierres:
-        cambia la copia, no la pieza.
-      */}
-      <Steps steps={copy.steps} />
-
-
-      {/*
-        El dato que hace falta para completar el pago, sin volver atras: la cuenta
-        de destino de la transferencia. Sin CLABE configurada no hay nada que copiar
-        y la tarjeta no se pinta.
-
-        En efectivo no se pinta ninguna tarjeta, tampoco al recoger: el dinero se
-        entrega en mano y no queda ningun dato que consultar aqui.
-      */}
-      {
-        !cash && store.bankTransfer?.clabe && (
-          <ClabeCard bank={store.bankTransfer.bank} clabe={store.bankTransfer.clabe} />
-        )
-      }
-
-      {/*
-        Ultimo subcontenedor, SOLO desktop: ahi es donde releva a la barra de
-        accion del fondo, que no se pinta. Lleva al mismo sitio que ella —el chat
-        de la tienda, con el mensaje de este flujo ya escrito: el comprobante en
-        transferencia, el pedido recien hecho en efectivo— y con el mismo aviso
-        debajo. Se escriben con los mismos valores a proposito: el ancho de la
-        pantalla cambia la forma del control, no lo que hace.
-      */}
-      <ConfirmationCta
-        label="Abrir WhatsApp"
-        icon="whatsapp"
-        variant="whatsapp"
-        href={whatsapp ?? undefined}
-        note={copy.barNote}
-      />
-    </div>
-
     {/*
-      Sin telefono de la tienda configurado el control queda inerte —un submit
-      fuera de un formulario no navega ni recarga— en lugar de abrir un chat vacio.
-      Con telefono, abre WhatsApp con el mensaje ya escrito.
-
-      En desktop esta barra no se pinta: el envoltorio la retira de md hacia
-      arriba, donde la accion es el enlace de arriba.
+      El formulario solo envuelve el contenido cuando la accion es cobrar: es un
+      submit, como el resto de los envios del proyecto, y su aviso de error tiene
+      que quedar dentro. En los demas estados no hay nada que enviar.
     */}
-    <div class="confirmation-page__action">
-      <ActionBar
-        label="Abrir WhatsApp"
-        icon="whatsapp"
-        variant="whatsapp"
-        href={whatsapp ?? undefined}
-        note={copy.barNote}
-      />
-    </div>
+    {
+      retry ? (
+        <form
+          class="d-flex flex-column flex-grow-1"
+          action="#"
+          method="post"
+          data-retry-form
+          data-order={order?.id}
+        >
+          <div class="screen-body screen-body--confirmation">
+            <OrderStatus {...status} />
+
+            <OrderReceipt items={items} total={total} method="mercado_pago" />
+
+            {/* Lo rellena el script si la pasarela o la API rechazan el cobro. */}
+            <FormError mark="data-checkout-error" />
+
+            {/*
+              Ultimo subcontenedor, SOLO desktop: ahi es donde releva a la barra de
+              accion del fondo, que no se pinta. En este estado es el mismo submit
+              que ella —abre un cobro nuevo sobre este pedido—, y por eso tiene que
+              quedar dentro del formulario.
+            */}
+            <ConfirmationCta {...action} note={actionNote} />
+          </div>
+
+          {/* En desktop esta barra no se pinta: el envoltorio la retira de md
+              hacia arriba. */}
+          <div class="confirmation-page__action">
+            <ActionBar {...action} note={actionNote} />
+          </div>
+        </form>
+      ) : (
+        <>
+          {/*
+            data-awaiting-payment: el script recarga la pantalla unas pocas veces
+            mientras el webhook llega, para que el estado se resuelva sin pedirle al
+            comprador que pulse nada.
+          */}
+          <div
+            class="screen-body screen-body--confirmation"
+            data-awaiting-payment={view?.action.kind === 'refresh' ? '' : undefined}
+          >
+            <OrderStatus {...status} />
+
+            {
+              view ? (
+                <OrderReceipt items={items} total={total} method="mercado_pago" />
+              ) : (
+                <>
+                  {/*
+                    Lo que queda por hacer, numerado. La misma tarjeta en los tres
+                    cierres sin pasarela: cambia la copia, no la pieza.
+                  */}
+                  <Steps steps={copy.steps} />
+
+                  {/*
+                    El dato que hace falta para completar el pago, sin volver atras:
+                    la cuenta de destino de la transferencia. Sin CLABE configurada no
+                    hay nada que copiar y la tarjeta no se pinta.
+
+                    En efectivo no se pinta ninguna tarjeta, tampoco al recoger: el
+                    dinero se entrega en mano y no queda ningun dato que consultar
+                    aqui.
+                  */}
+                  {!cash && store.bankTransfer?.clabe && (
+                    <ClabeCard bank={store.bankTransfer.bank} clabe={store.bankTransfer.clabe} />
+                  )}
+                </>
+              )
+            }
+
+            {/*
+              Ultimo subcontenedor, SOLO desktop: ahi es donde releva a la barra de
+              accion del fondo, que no se pinta. Lleva al mismo sitio que ella y con
+              el mismo aviso debajo. Se escriben con los mismos valores a proposito:
+              el ancho de la pantalla cambia la forma del control, no lo que hace.
+            */}
+            <ConfirmationCta {...action} note={actionNote} />
+          </div>
+
+          {/*
+            La misma accion, en la barra fija de movil.
+
+            WhatsApp es el canal por donde sigue la conversacion, y por eso es lo
+            que se ofrece en los estados en los que no hay nada que pagar en la
+            tienda; con un pago de Mercado Pago aun sin acreditar, en cambio, lo
+            unico util es releer esta pantalla, que es donde el servidor vuelve a
+            preguntar por el pedido.
+
+            En desktop esta barra no se pinta: el envoltorio la retira de md hacia
+            arriba.
+          */}
+          <div class="confirmation-page__action">
+            <ActionBar {...action} note={actionNote} />
+          </div>
+        </>
+      )
+    }
   </main>
 
   {/* Las dos hojas que abren el pin y el reloj de la barra de desktop. */}
   {hasSchedule && schedule && <ScheduleSheet schedule={schedule} />}
   {hasLocation && <LocationSheet message={message} address={address} mapsUrl={mapsUrl} />}
 
-  <Footer store={store} />
+  <Footer store={store} hasLocation={hasLocation} hasSchedule={hasSchedule} schedule={schedule} />
 </Layout>
 
 <script>
@@ -357,6 +576,21 @@ const hasSchedule = Boolean(schedule && schedule.days.length > 0);
   // script, que delega en document, y la pantalla que use el componente tiene que
   // importarlo.
   import '../../scripts/copy-button';
+  // Reintentar el cobro y esperar al webhook, los dos de Mercado Pago. Sin sus
+  // marcas en la pantalla no hacen nada.
+  import '../../scripts/confirmation';
   // Abre las hojas del horario y la ubicacion desde la barra de desktop.
   import '../../scripts/sheet';
 </script>
+
+{/*
+  La misma huella de dispositivo que /mamayaya/pago, y aqui SOLO cuando la pantalla
+  ofrece pagar: `pay` es el unico estado que abre un cobro nuevo
+  (POST /api/orders/{id}/payment). En los demas el acuse no cobra nada —manda a
+  WhatsApp, o relee esperando al webhook— y cargar un tercero para no usarlo
+  seria gastarle datos a alguien que ya pago.
+
+  Es ademas el intento que mas necesita la senal: aqui se llega porque el cobro
+  anterior no salio, asi que es justo el que hay que ayudar a aprobar.
+*/}
+{retry && <DeviceFingerprint />}
