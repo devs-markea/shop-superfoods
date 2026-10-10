@@ -1,10 +1,10 @@
 // Pantallas que confirman el pedido: transferencia y efectivo.
 //
 // "Confirmar pedido" es el punto en el que el pedido se crea de verdad, con el
-// carrito de la sesion y los datos que vienen del borrador. El pedido nace "Por
-// confirmar" y SIN folio: el cobro ocurre fuera de la tienda —una transferencia que
-// alguien tiene que revisar, o unos billetes en el local— y el folio se asigna
-// cuando la tienda lo da por bueno.
+// carrito de la sesion y los datos que vienen del borrador. El pedido nace sin
+// cobrar —el cobro ocurre fuera de la tienda: una transferencia que alguien tiene
+// que revisar, o unos billetes en el local— pero YA CON FOLIO: el backend lo asigna
+// al crearlo, en los tres metodos, y es el numero que rotula el acuse.
 //
 // Las dos pantallas comparten este script porque lo que cambia entre ellas es lo
 // que se lee antes de confirmar —una cuenta bancaria o como se entrega el dinero—,

@@ -25,6 +25,7 @@ import {
   parseOrderPointer,
 } from '../../lib/checkout-draft.ts';
 import {
+  orderFolio,
   type DeliveryType,
   type OrderLine,
   type PaymentMethod,
@@ -58,8 +59,9 @@ import { TEST_MODE } from 'astro:env/server';
 //                  con el resumen del pedido y la accion que toque. Ver
 //                  src/lib/confirmation.ts
 //
-// Mercado Pago tenia su propia pantalla, /mamayaya/confirmado, que hoy solo
-// redirige aqui: es la URL de vuelta que arma el backend.
+// Mercado Pago tenia su propia pantalla, /mamayaya/confirmado, que ya no existe.
+// El backend devuelve a esta directamente, y la ruta vieja redirige aqui desde
+// astro.config.mjs para los cobros creados antes del cambio.
 //
 // UNA PANTALLA, DOS FORMAS
 //
@@ -78,12 +80,13 @@ const token = resolveCartToken(Astro.cookies);
 
 // El pedido no se guarda en la cookie, solo se apunta: su estado cambia sin que
 // el comprador toque nada —el webhook de Mercado Pago lo mueve sin que nadie
-// pulse nada—, y el folio de una transferencia aparece cuando la tienda da el
-// pago por bueno.
+// pulse nada, y una transferencia pasa a cocina cuando la tienda da el pago por
+// bueno—. El folio, en cambio, no cambia: lo lleva el pedido desde que se crea.
 const pointer = parseOrderPointer(Astro.cookies.get(ORDER_COOKIE)?.value);
 
-// Mercado Pago devuelve al comprador a /mamayaya/confirmado?order={id}, que lo trae
-// aqui con el mismo `order`. Ese id vale como respaldo si la cookie se perdio
+// Mercado Pago devuelve al comprador aqui, a /mamayaya/recibido?order={id} (los
+// cobros anteriores al 2026-10-09 vuelven por /mamayaya/confirmado, que redirige
+// desde astro.config.mjs). Ese id vale como respaldo si la cookie se perdio
 // —leerlo no abre nada ajeno: la API acota los pedidos a la sesion y responde 404
 // si es de otra—, pero NADA MAS de la URL se usa: los parametros los pone el
 // cliente y no son de fiar. El estado del pago se lee releyendo el pedido, que es
@@ -284,20 +287,28 @@ if (view && !order && cart) {
   total = cart.total + tip;
 }
 
-// Folio del pedido: el `id`, que es la numeracion que ya lleva el backend (1, 2,
-// 3...). Es un rotulo, no una llave: sirve para que el comprador diga "mi pedido
-// 91" por telefono.
+// Folio del pedido: el `folio` de la API, el contador que el negocio ve en su
+// panel (1, 2, 3...). Es un rotulo, no una llave: sirve para que el comprador diga
+// "mi pedido 91" por telefono, y tiene que ser el MISMO numero que oye quien
+// atiende, que el del mensaje de WhatsApp y que el de la operacion en Mercado Pago
+// ("Pedido #91"). Lo lee orderFolio(), igual que el mensaje.
 //
-// No se usa `orderNumber` a proposito. Ademas de ser un ULID de 26 caracteres que
-// no se puede leer en voz alta ni cabe en los 40px del diseno, NO dice si el pago
-// esta validado: en Mercado Pago llega desde el primer momento y con el pedido sin
+// NO es el `id`. Aqui se rotulaba el `id` —la llave con la que se relee el
+// pedido—, y los dos coincidieron hasta que se borro el primer pedido en el panel:
+// desde entonces el acuse rotulaba un numero ("#28") y el negocio, el mensaje de
+// WhatsApp y Mercado Pago tenian otro para ese mismo pedido. El `id` sigue siendo
+// lo que viaja en `data-order` para cobrar de nuevo, que es acceso y no rotulo.
+//
+// Tampoco se usa `orderNumber`. Ademas de ser un ULID de 26 caracteres que no se
+// puede leer en voz alta ni cabe en los 40px del diseno, NO dice si el pago esta
+// validado: en Mercado Pago llega desde el primer momento y con el pedido sin
 // cobrar. Lo que dice la verdad es `status`, y de eso vive el acuse.
 //
 // Sin pedido se rotula el del mockup, para poder revisar el diseno en modo de
 // pruebas. Es lo unico escrito a mano que queda en el flujo, y desde que la
 // pantalla esta guardada solo lo ve el equipo.
 const MOCK_FOLIO = '91';
-const folio = order?.id ?? MOCK_FOLIO;
+const folio = order ? orderFolio(order) : MOCK_FOLIO;
 
 // "Actualizar" recarga esta misma pantalla, que relee el pedido en el servidor. Se
 // conserva el `order` de la URL para que siga funcionando si la cookie no esta.

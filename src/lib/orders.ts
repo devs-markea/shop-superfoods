@@ -6,7 +6,9 @@
 // Solo servidor: usa el token de la sesion. Las pantallas de cierre releen el
 // pedido en cada visita en lugar de guardarlo en la cookie, porque su estado
 // cambia sin que el comprador toque nada: una transferencia nace "Por confirmar"
-// y sin folio, y el folio aparece cuando la tienda da el pago por bueno.
+// y pasa a cocina cuando la tienda da el pago por bueno, y a un pedido de Mercado
+// Pago lo mueve el cobro. El folio no cambia: lo lleva desde que se crea, y se
+// rotula con orderFolio().
 // ---------------------------------------------------------------------------
 
 import { ApiError, unwrap } from './api.ts';

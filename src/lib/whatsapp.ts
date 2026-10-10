@@ -19,6 +19,7 @@
 
 import {
   PAYMENT_LABEL,
+  orderFolio,
   type DeliveryType,
   type OrderLine,
   type PaymentMethod,
@@ -314,7 +315,7 @@ export function orderMessageValues(order: StoreOrder, context: MessageContext = 
 
   return {
     // El pedido
-    folio: order.folio != null ? String(order.folio) : '000',
+    folio: orderFolio(order),
     estado: order.statusLabel,
     notas: order.notes ?? '',
     platillos: composeItems(order.items ?? [], context.items),
