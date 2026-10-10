@@ -26,7 +26,7 @@ import {
 } from './checkout.ts';
 
 /**
- * Los veintidos marcadores, agrupados por la pregunta que contestan.
+ * Los veintitres marcadores, agrupados por la pregunta que contestan.
  *
  * La lista es la que decide que es un marcador CONOCIDO, y de ahi salen las dos
  * primeras reglas de sustitucion: lo que no esta aqui se deja literal, y lo que
@@ -61,6 +61,8 @@ const MARKERS = [
   'propina',
   'total',
   'metodo',
+  // Donde consultarlo — tampoco sale del pedido: es de la tienda
+  'enlace',
 ] as const;
 
 type MarkerName = (typeof MARKERS)[number];
@@ -90,8 +92,17 @@ export interface ItemsOptions {
  * recibe y como se paga. Y los dos son el token del pedido tal cual —no
  * camelCase como el resto del contrato— para que la resolucion sea un acceso y
  * no una tabla de correspondencias que alguien tenga que mantener.
+ *
+ * `orderStatus` va AL LADO de los dos grupos y no dentro: es el mensaje con el
+ * que el comprador pregunta por su pedido, uno solo para los tres metodos de
+ * pago y los dos modos de entrega, asi que se lee directo, sin pickTemplate().
+ * No es respaldo de las de los grupos ni ellas de el: es la plantilla de OTRO
+ * boton. Ausente cuando el negocio no lo escribio, y entonces ese boton no se
+ * pinta.
  */
-export type MessageTemplates = Partial<Record<DeliveryType, Partial<Record<PaymentMethod, string>>>>;
+export type MessageTemplates = Partial<
+  Record<DeliveryType, Partial<Record<PaymentMethod, string>>>
+> & { orderStatus?: string };
 
 /**
  * Lo que el mensaje necesita ademas del pedido.
@@ -99,10 +110,13 @@ export type MessageTemplates = Partial<Record<DeliveryType, Partial<Record<Payme
  * `location` esta aqui porque `{sucursal}` y `{mapa}` son los dos unicos
  * marcadores que no describen el pedido sino el LOCAL: un pedido no sabe donde
  * esta su sucursal, y quien pasa a recogerlo tiene que leer a donde ir.
+ *
+ * `publicUrl` es el tercero que sale de la tienda: de ella se compone `{enlace}`.
  */
 export interface MessageContext {
   items?: ItemsOptions;
   location?: { address?: string; shortAddress?: string; mapsUrl?: string };
+  publicUrl?: string;
 }
 
 /**
@@ -275,7 +289,7 @@ export function formatMessagePrice(value: number): string {
 // --- El pedido, convertido en marcadores -------------------------------------
 
 /**
- * Los veintidos valores de un mensaje.
+ * Los veintitres valores de un mensaje.
  *
  * Todo el mapeo campo a campo vive aqui, en un solo sitio: las tres pantallas de
  * cierre pasan el mismo pedido y tienen que mandar el mismo mensaje, y la unica
@@ -347,7 +361,25 @@ export function orderMessageValues(order: StoreOrder, context: MessageContext = 
     propina: formatMessagePrice(order.tipTotal),
     total: `${formatMessagePrice(order.total)}${totalSuffix}`,
     metodo: order.paymentMethod ? PAYMENT_LABEL[order.paymentMethod] : '',
+
+    // Donde consultarlo
+    enlace: orderLink(context.publicUrl),
   };
+}
+
+/**
+ * El enlace del pedido en la tienda: la direccion publica mas `/recibido`, que es
+ * el acuse. Sin direccion publica sale vacio y la regla 2 se lleva su renglon.
+ *
+ * VA SIN ID DE PEDIDO, a sabiendas: el acuse pinta el ultimo pedido hecho desde
+ * ese navegador, asi que al comprador le abre el suyo y al negocio que recibe el
+ * mensaje lo devuelve al menu. Un enlace que abra ESE pedido desde cualquier
+ * sitio pide un token por pedido, que la API todavia no tiene.
+ */
+function orderLink(publicUrl: string | undefined): string {
+  const base = publicUrl?.trim().replace(/\/+$/, '');
+
+  return base ? `${base}/recibido` : '';
 }
 
 /**

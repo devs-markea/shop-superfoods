@@ -104,6 +104,9 @@ export interface StoreSettings {
      * Lo que llega de la API puede tener tres formas a la vez —los dos grupos,
      * las claves planas por metodo y los dos alias por pantalla—, y todas se
      * reducen aqui: ver resolveTemplates(). Las pantallas ven solo esta.
+     *
+     * Al lado de los dos grupos va `orderStatus`, el mensaje de estado del
+     * pedido: uno solo para los tres metodos, y se lee directo.
      */
     templates?: MessageTemplates;
     /**
@@ -273,10 +276,16 @@ function resolveBankTransfer(account: Partial<BankTransfer> | undefined): BankTr
   return { holder, bank, clabe };
 }
 
-/** Lo que puede traer `whatsapp.templates` hoy: los dos grupos y las claves en retirada. */
-type RemoteTemplates = MessageTemplates & Partial<Record<PaymentMethod, string>> & {
-  efectivo_pickup?: string;
-};
+/**
+ * Lo que puede traer `whatsapp.templates` hoy: los dos grupos, las claves en
+ * retirada y `orderStatus`, que viaja SIEMPRE —con su texto, o en `null` si el
+ * negocio no lo escribio—.
+ */
+type RemoteTemplates = Omit<MessageTemplates, 'orderStatus'> &
+  Partial<Record<PaymentMethod, string>> & {
+    efectivo_pickup?: string;
+    orderStatus?: string | null;
+  };
 
 const METHODS: PaymentMethod[] = ['bank_transfer', 'efectivo', 'mercado_pago'];
 
@@ -298,6 +307,10 @@ const METHODS: PaymentMethod[] = ['bank_transfer', 'efectivo', 'mercado_pago'];
  * mandaban al pedido de efectivo un texto que no era el suyo.
  *
  * La casilla que el negocio dejo vacia NO se rellena: su boton queda inerte.
+ *
+ * `orderStatus` pasa tal cual y sin respaldo: no es de ningun grupo ni tiene
+ * alias. El `null` de la API —y el texto de solo espacios— se quedan en ausente,
+ * que es lo que le dice a la pantalla que no pinte su boton.
  */
 function resolveTemplates(templates: RemoteTemplates | undefined): MessageTemplates {
   if (!templates) return {};
@@ -313,6 +326,7 @@ function resolveTemplates(templates: RemoteTemplates | undefined): MessageTempla
 
   const delivery = group('delivery');
   const pickup = group('pickup');
+  const orderStatus = templates.orderStatus?.trim();
 
   // Un grupo sin ninguna plantilla no viaja, igual que en la API: ausente es
   // mejor que vacio, y asi pickTemplate() cae a `delivery` por el mismo camino
@@ -320,6 +334,7 @@ function resolveTemplates(templates: RemoteTemplates | undefined): MessageTempla
   return {
     ...(Object.keys(delivery).length ? { delivery } : {}),
     ...(Object.keys(pickup).length ? { pickup } : {}),
+    ...(orderStatus ? { orderStatus } : {}),
   };
 }
 

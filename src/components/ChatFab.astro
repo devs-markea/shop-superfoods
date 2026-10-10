@@ -341,6 +341,9 @@ const href = whatsAppUrl(CHAT_PHONE, chatMessage({ storeName: store.name, dish, 
              queda libre.
        132 = la barra con nota bajo el boton (84 + 12 + 16, la misma cuenta que
              hace StoreClosedNotice.astro) y 20 de aire.
+       160 = la barra con su segunda accion (84 + 12 + 44) y 20 de aire. Es la
+             del acuse, que apila "Ver estado de pedido" bajo el de WhatsApp.
+       188 = la misma con nota: los 28 de la nota sobre los 160.
 
      El 27 de la derecha centra el circulo de 56 sobre el carrito de 70, que va a
      20: 20 + (70 - 56) / 2. Se queda en 27 tambien donde no hay carrito, para que
@@ -360,6 +363,14 @@ const href = whatsAppUrl(CHAT_PHONE, chatMessage({ storeName: store.name, dish, 
 
     .page:has(.action-bar__note) .chat-fab {
       bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .page:has(.action-bar__button--secondary) .chat-fab {
+      bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .page:has(.action-bar__button--secondary):has(.action-bar__note) .chat-fab {
+      bottom: calc(188px + env(safe-area-inset-bottom, 0px));
     }
 
     .chat-fab__callout {
