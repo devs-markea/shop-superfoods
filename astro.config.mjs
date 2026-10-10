@@ -79,6 +79,17 @@ export default defineConfig({
     '/recibido': { status: 302, destination: '/mamayaya/recibido' },
     // El acuse de Mercado Pago vive ya en /mamayaya/recibido: se va directo.
     '/confirmado': { status: 302, destination: '/mamayaya/recibido' },
+
+    // La ruta que tuvo el acuse de Mercado Pago, y la URL a la que volvia la
+    // pasarela. Desde el 2026-10-09 el backend devuelve directo a
+    // /mamayaya/recibido?order={id}, pero los cobros creados antes llevan esta
+    // guardada en Mercado Pago: sin la linea, quien pague uno de esos volveria al
+    // 404 de la ficha con el pedido ya cobrado. Se borra cuando no quede ninguno.
+    //
+    // El `order` de la vuelta lo conserva Vercel, que segun su documentacion pasa
+    // la query al destino; el servidor de dev no. Es solo el respaldo de cuando la
+    // cookie del pedido se perdio: con ella, el acuse no lo necesita.
+    '/mamayaya/confirmado': { status: 302, destination: '/mamayaya/recibido' },
   },
 
   // Origen de la API de la tienda (Laravel). Solo se consume desde el

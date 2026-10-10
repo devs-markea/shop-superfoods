@@ -1,8 +1,7 @@
 // ---------------------------------------------------------------------------
 // Que dice el acuse, segun lo que de verdad paso con el pago.
 //
-// /mamayaya/recibido es la pantalla de vuelta de Mercado Pago —la pasarela vuelve a
-// /mamayaya/confirmado, que redirige alli—, y ahi el pedido con Mercado Pago
+// /mamayaya/recibido es la pantalla de vuelta de Mercado Pago, y ahi el pedido
 // puede estar en media docena de situaciones distintas: pagado, esperando que el
 // webhook confirme, rechazado por falta de fondos, cancelado por el comprador,
 // creado sin que la pasarela llegara a abrirse... Cada una necesita otro titular,

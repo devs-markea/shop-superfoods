@@ -166,10 +166,12 @@ export interface StoreOrder {
    * EL NUMERO DE PEDIDO: el contador (1, 2, 3...) que el negocio ve en su panel,
    * y el que va en `{folio}`. Se asigna al crear el pedido, en los tres metodos.
    *
-   * Coincide hoy con `id` en los pedidos nuevos —los dos contadores arrancaron a
-   * la vez— pero son campos independientes: el folio puede reiniciarse o cambiar
-   * de formato y el id no. Llega null solo en pedidos anteriores al 2026-08-11,
-   * que nunca tuvieron uno.
+   * NO es el `id`, y no coinciden: en cuanto se borra un pedido en el panel los
+   * dos contadores se separan (el id no se reutiliza, el folio si sigue al ultimo),
+   * y el folio puede ademas reiniciarse o cambiar de formato. Llega null solo en
+   * pedidos anteriores al 2026-08-11, que nunca tuvieron uno.
+   *
+   * Para rotularlo, orderFolio(): que ninguna pantalla lo lea a pelo.
    */
   folio?: number | null;
   /** El mismo, ya rotulado por el backend: `#49` (o `#000` si no tiene). */
@@ -246,6 +248,23 @@ export interface StoreOrder {
 }
 
 /** Como se rotula cada metodo en las pantallas de cierre. */
+/**
+ * El numero de pedido tal como se rotula, sin el "#": `49`.
+ *
+ * UN SOLO SITIO PARA LEERLO. El acuse y el mensaje de WhatsApp tienen que decir el
+ * mismo numero, y es el que el negocio ve en su panel y el que lleva la operacion
+ * en Mercado Pago ("Pedido #49"). El acuse rotulaba el `id` —la llave de acceso—,
+ * que coincidio con el folio hasta que se borro el primer pedido en el panel: desde
+ * entonces el comprador leia un numero y el negocio tenia otro.
+ *
+ * Un pedido sin folio —solo los anteriores al 2026-08-11— devuelve `000`, el mismo
+ * valor reservado que manda el backend en `folioLabel` (`#000`): el contador
+ * arranca en 1, asi que ningun pedido real lo lleva.
+ */
+export function orderFolio(order: Pick<StoreOrder, 'folio'>): string {
+  return order.folio != null ? String(order.folio) : '000';
+}
+
 export const PAYMENT_LABEL: Record<PaymentMethod, string> = {
   bank_transfer: 'Transferencia',
   efectivo: 'Efectivo',
