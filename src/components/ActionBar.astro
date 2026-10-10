@@ -26,6 +26,17 @@ interface Props {
    * contar que falta.
    */
   disabled?: boolean;
+  /**
+   * Una segunda accion, debajo de la principal y encima del aviso. Es otro boton
+   * igual —mismas piezas, mismo ancho—, no uno de menos peso: lo unico que lo
+   * distingue es que va debajo. Sin ella la barra es la de siempre.
+   */
+  secondary?: {
+    label: string;
+    href?: string;
+    icon?: BrandName;
+    variant?: 'primary' | 'whatsapp';
+  };
 }
 
 const {
@@ -36,20 +47,26 @@ const {
   variant = 'primary',
   note,
   disabled = false,
+  secondary,
 } = Astro.props;
 
 // La copia vive en el marcado, no en el script.
 const hasTotal = total !== undefined && label.includes('{total}');
 const text = hasTotal ? label.replace('{total}', formatPrice(total)) : label;
 
-const buttonClass = [
-  'action-bar__button',
-  'btn',
-  'btn-primary',
-  variant === 'whatsapp' && 'action-bar__button--whatsapp',
-]
-  .filter(Boolean)
-  .join(' ');
+const classFor = (color: 'primary' | 'whatsapp', modifier?: string) =>
+  [
+    'action-bar__button',
+    'btn',
+    'btn-primary',
+    color === 'whatsapp' && 'action-bar__button--whatsapp',
+    modifier,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+const buttonClass = classFor(variant);
+const secondaryClass = classFor(secondary?.variant ?? 'primary', 'action-bar__button--secondary');
 ---
 
 <div class="action-bar">
@@ -81,6 +98,23 @@ const buttonClass = [
     )
   }
 
+  {
+    secondary &&
+      (secondary.href ? (
+        <a class={secondaryClass} href={secondary.href}>
+          {secondary.icon && <BrandIcon name={secondary.icon} />}
+          <span>{secondary.label}</span>
+        </a>
+      ) : (
+        // Sin destino queda inerte, y con `type="button"` lo esta tambien dentro
+        // de un formulario: el submit de la barra es el de arriba.
+        <button class={secondaryClass} type="button">
+          {secondary.icon && <BrandIcon name={secondary.icon} />}
+          <span>{secondary.label}</span>
+        </button>
+      ))
+  }
+
   {note && <p class="action-bar__note">{note}</p>}
 </div>
 
@@ -93,7 +127,11 @@ const buttonClass = [
      84 = 20 + 44 (boton) + 20
 
      Con aviso (/mamayaya/recibido) la barra crece lo que ocupe: min-height y no
-     height, asi el 84 sigue siendo el minimo de las demas pantallas.
+     height, asi el 84 sigue siendo el minimo de las demas pantallas. Lo mismo con
+     la segunda accion, que suma 56: sus 44 y los 12 que la separan.
+
+     El boton del chat se apoya encima y lleva estas cuentas escritas: ver
+     components/ChatFab.astro.
      --------------------------------------------------------------------------- */
   .action-bar {
     position: sticky;
@@ -120,6 +158,12 @@ const buttonClass = [
     align-items: center;
     justify-content: center;
     gap: 8px;
+  }
+
+  /* Modifier: la segunda accion. Solo la separa de la de arriba: los 12 que
+     separan tambien el boton de su aviso. El color lo sigue poniendo su variante. */
+  .action-bar__button--secondary {
+    margin-top: 12px;
   }
 
   /* Selección incompleta: el boton se ve apagado pero SIGUE siendo pulsable a
