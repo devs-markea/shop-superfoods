@@ -26,18 +26,32 @@ interface Props {
   variant?: 'primary' | 'whatsapp';
   /** Aviso corto bajo el boton, centrado. */
   note?: string;
+  /**
+   * Una segunda accion, debajo de la principal y encima del aviso: la misma que
+   * la barra apila bajo su boton en movil.
+   */
+  secondary?: {
+    label: string;
+    href?: string;
+    icon?: BrandName;
+    variant?: 'primary' | 'whatsapp';
+  };
 }
 
-const { label, href, icon, variant = 'primary', note } = Astro.props;
+const { label, href, icon, variant = 'primary', note, secondary } = Astro.props;
 
-const buttonClass = [
-  'confirmation-page__cta-button',
-  'btn',
-  'btn-primary',
-  variant === 'whatsapp' && 'confirmation-page__cta-button--whatsapp',
-]
-  .filter(Boolean)
-  .join(' ');
+const classFor = (color: 'primary' | 'whatsapp') =>
+  [
+    'confirmation-page__cta-button',
+    'btn',
+    'btn-primary',
+    color === 'whatsapp' && 'confirmation-page__cta-button--whatsapp',
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+const buttonClass = classFor(variant);
+const secondaryClass = classFor(secondary?.variant ?? 'primary');
 ---
 
 <div class="confirmation-page__cta">
@@ -57,6 +71,25 @@ const buttonClass = [
         <span>{label}</span>
       </button>
     )
+  }
+
+  {
+    // Los 12 que la separan de la de arriba son el gap del subcontenedor, el
+    // mismo que separa el boton de su aviso.
+    secondary &&
+      (secondary.href ? (
+        <a class={secondaryClass} href={secondary.href}>
+          {secondary.icon && <BrandIcon name={secondary.icon} />}
+          <span>{secondary.label}</span>
+        </a>
+      ) : (
+        // Sin destino queda inerte, y con `type="button"` lo esta tambien dentro
+        // del formulario del reintento: el submit es el de arriba.
+        <button class={secondaryClass} type="button">
+          {secondary.icon && <BrandIcon name={secondary.icon} />}
+          <span>{secondary.label}</span>
+        </button>
+      ))
   }
 
   {note && <p class="confirmation-page__cta-note">{note}</p>}

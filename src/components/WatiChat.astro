@@ -175,7 +175,9 @@ const options = {
        104 = el carrito flotante (20 + 70) y 14 de aire. La barra de accion mide
              84, asi que tambien queda libre.
        132 = la barra con nota bajo el boton (84 + 12 + 16, la misma cuenta que
-             hace StoreClosedNotice.astro) y 20 de aire. */
+             hace StoreClosedNotice.astro) y 20 de aire.
+       160 = la barra con su segunda accion (84 + 12 + 44) y 20 de aire.
+       188 = la misma con nota: los 28 de la nota sobre los 160. */
   @media (max-width: 767.98px) {
     .page {
       --wati-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
@@ -183,6 +185,14 @@ const options = {
 
     .page:has(.action-bar__note) {
       --wati-bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .page:has(.action-bar__button--secondary) {
+      --wati-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .page:has(.action-bar__button--secondary):has(.action-bar__note) {
+      --wati-bottom: calc(188px + env(safe-area-inset-bottom, 0px));
     }
   }
 
