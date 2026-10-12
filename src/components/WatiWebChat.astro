@@ -1,6 +1,6 @@
 ---
 // ---------------------------------------------------------------------------
-// El chat de la tienda: el WebChat de Wati, un chat DENTRO de la pagina.
+// El WebChat de Wati: un chat DENTRO de la pagina. Hoy apagado (ver abajo).
 //
 // No es el widget viejo de Wati (components/WatiChat.astro, apagado), que solo
 // abria WhatsApp. Este pinta su propio boton y, al tocarlo, un panel de
@@ -15,12 +15,22 @@
 // Lo monta Layout.astro, asi que esta en todas las pantallas: las dudas llegan
 // tanto mirando el menu como a mitad del pago. Se apaga con ENABLED.
 //
-// RELEVA al boton propio, components/ChatFab.astro, que abria WhatsApp directo y
-// hoy esta apagado: los dos a la vez serian dos botones de chat en la misma
-// esquina. Encender uno es apagar el otro.
+// HOY ESTA APAGADO: el chat de la tienda es el boton propio,
+// components/ChatFab.astro, que abre WhatsApp directo. Se guarda montado y
+// listo. Los dos a la vez serian dos botones de chat en la misma esquina:
+// encender este es apagar aquel.
+//
+// Lo que se vio con el encendido, por si vuelve:
+//
+//   - Los mensajes llegan al Team Inbox de Wati, en el canal WebChat.
+//   - Si al abrirlo no hay nadie en linea en Wati, muestra el mensaje de fuera de
+//     horario del panel ("We are away..."), pero el mensaje llega igual.
+//   - Sin el formulario de datos del panel, el contacto sale con un nombre
+//     inventado —"Luna Robinson", luna.robinson.f49c@webchat.wati.io—: lo saca
+//     el script de un identificador aleatorio que guarda en el navegador.
 //
 // DONDE SE PONE. El widget deja moverlo con variables CSS sobre su elemento,
-// <wati-webchat>, que el script cuelga del <body>. Va donde iba ChatFab: a 32 de
+// <wati-webchat>, que el script cuelga del <body>. Va donde va ChatFab: a 32 de
 // los bordes en desktop, el gutter de la pagina, y en movil por encima de lo que
 // ya flota abajo:
 //
@@ -37,7 +47,7 @@
 
 // El interruptor del chat. Ocultarlo es poner `false` y no borrar nada. Apagado
 // no se pinta nada: ni el script de Wati ni ninguna peticion a su servidor.
-const ENABLED = true;
+const ENABLED = false;
 
 // La URL del snippet. `t` es la cuenta de Wati del negocio, y lo unico que el
 // widget necesita: con el pide su configuracion. `s` y `d` solo le dicen a Wati,

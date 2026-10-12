@@ -10,9 +10,9 @@
 // cargar un script de terceros en cada pantalla, y que el boton se vea y se
 // coloque como el resto de piezas de la tienda.
 //
-// HOY ESTA APAGADO: lo releva el WebChat de Wati, components/WatiWebChat.astro,
-// que abre un chat dentro de la pagina en lugar de WhatsApp. Los dos a la vez
-// serian dos botones de chat en la misma esquina: encender este es apagar aquel.
+// El WebChat de Wati, components/WatiWebChat.astro —un chat dentro de la pagina
+// en lugar de WhatsApp—, esta montado y apagado. Los dos a la vez serian dos
+// botones de chat en la misma esquina: encender aquel es apagar este.
 //
 // Abre wa.me con whatsAppUrl(), el mismo enlace que los botones de las
 // pantallas de cierre. El numero y los tres mensajes —ficha, pedido y portada—
@@ -56,7 +56,7 @@ const { store, dish, order = false } = Astro.props;
 // —enlace, burbuja, arrastre y colocacion— sigue revisado y listo, asi que
 // mostrarlo otra vez es devolver esta linea a `true`. Apagado no se pinta nada, y
 // el arrastre, sin boton, no hace nada.
-const ENABLED = false;
+const ENABLED = true;
 
 const href = ENABLED
   ? whatsAppUrl(CHAT_PHONE, chatMessage({ storeName: store.name, dish, order }))
