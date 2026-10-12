@@ -2,8 +2,12 @@
 // El chat de la tienda: a que numero se abre y con que mensaje.
 //
 // Lo usan el boton propio (components/ChatFab.astro) y el widget de Wati
-// (components/WatiChat.astro), hoy apagado. Los dos abren lo mismo: una
+// (components/WatiChat.astro), hoy apagados los dos. Los dos abren lo mismo: una
 // conversacion de WhatsApp con el negocio, con el mensaje ya escrito.
+//
+// El chat que hoy esta encendido, el WebChat de Wati
+// (components/WatiWebChat.astro), no usa nada de aqui: es un chat dentro de la
+// pagina, y lo que dice se configura en el panel de Wati.
 // ---------------------------------------------------------------------------
 
 /**
