@@ -28,6 +28,7 @@ import type { StoreSettings } from '../lib/store-config.ts';
 import { getTheme, themeStyle } from '../lib/theme.ts';
 import ChatFab from '../components/ChatFab.astro';
 import WatiChat from '../components/WatiChat.astro';
+import WatiWebChat from '../components/WatiWebChat.astro';
 
 interface Props {
   /**
@@ -187,7 +188,8 @@ const theme = getTheme(STORE_THEME);
   <body class="page">
     <slot />
     <ChatFab store={store} dish={dish} order={noindex} />
-    {/* Apagado: lo releva ChatFab. Ver su ENABLED. */}
+    {/* Apagados: los releva ChatFab. Ver sus ENABLED. */}
+    <WatiWebChat />
     <WatiChat store={store} accent={theme.accent} dish={dish} order={noindex} />
   </body>
 </html>

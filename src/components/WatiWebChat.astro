@@ -1,0 +1,148 @@
+---
+// ---------------------------------------------------------------------------
+// El WebChat de Wati: un chat DENTRO de la pagina. Hoy apagado (ver abajo).
+//
+// No es el widget viejo de Wati (components/WatiChat.astro, apagado), que solo
+// abria WhatsApp. Este pinta su propio boton y, al tocarlo, un panel de
+// conversacion —en movil, a pantalla completa— donde el cliente escribe sin
+// salir de la tienda. Los mensajes llegan a la bandeja de Wati del negocio.
+//
+// Es el snippet que da el panel de Wati (Channel Status > WebChat > Config), tal
+// cual. Lo que el widget dice y como se ve —el nombre, el color, el saludo, el
+// mensaje de fuera de horario— se configura ALLI, no aqui: el script lo pide a
+// Wati al cargar. Aqui solo se decide donde va el boton.
+//
+// Lo monta Layout.astro, asi que esta en todas las pantallas: las dudas llegan
+// tanto mirando el menu como a mitad del pago. Se apaga con ENABLED.
+//
+// HOY ESTA APAGADO: el chat de la tienda es el boton propio,
+// components/ChatFab.astro, que abre WhatsApp directo. Se guarda montado y
+// listo. Los dos a la vez serian dos botones de chat en la misma esquina:
+// encender este es apagar aquel.
+//
+// Lo que se vio con el encendido, por si vuelve:
+//
+//   - Los mensajes llegan al Team Inbox de Wati, en el canal WebChat.
+//   - Si al abrirlo no hay nadie en linea en Wati, muestra el mensaje de fuera de
+//     horario del panel ("We are away..."), pero el mensaje llega igual.
+//   - Sin el formulario de datos del panel, el contacto sale con un nombre
+//     inventado —"Luna Robinson", luna.robinson.f49c@webchat.wati.io—: lo saca
+//     el script de un identificador aleatorio que guarda en el navegador.
+//
+// DONDE SE PONE. El widget deja moverlo con variables CSS sobre su elemento,
+// <wati-webchat>, que el script cuelga del <body>. Va donde va ChatFab: a 32 de
+// los bordes en desktop, el gutter de la pagina, y en movil por encima de lo que
+// ya flota abajo:
+//
+//   el carrito flotante   en el menu, solo en movil (components/CartFab.astro)
+//   la barra de accion    en el resto, solo en movil (components/ActionBar.astro)
+//   el aviso de cerrado   en el menu y el pedido (components/StoreClosedNotice.astro)
+//
+// Los dos primeros miden siempre lo mismo y van en el CSS de abajo. El aviso no:
+// su alto depende del texto y del ancho, asi que lo mide el script.
+//
+// Las hojas del horario y la ubicacion no cuentan: son <dialog> modales, y la
+// capa superior del navegador queda por encima de cualquier z-index.
+// ---------------------------------------------------------------------------
+
+// El interruptor del chat. Ocultarlo es poner `false` y no borrar nada. Apagado
+// no se pinta nada: ni el script de Wati ni ninguna peticion a su servidor.
+const ENABLED = false;
+
+// La URL del snippet. `t` es la cuenta de Wati del negocio, y lo unico que el
+// widget necesita: con el pide su configuracion. `s` y `d` solo le dicen a Wati,
+// para sus estadisticas, desde donde se instalo.
+//
+// El script encuentra su propia etiqueta buscando el primer <script src> con `t`
+// en la URL, asi que la etiqueta tiene que llevar esta URL tal cual.
+const WEBCHAT_URL =
+  'https://widget.wati.io/webchat.js?t=10140552&s=manual&d=8bcad961-b790-4617-8009-061614f67f6a';
+---
+
+{
+  ENABLED && (
+    <Fragment>
+      {/* Async: son ~130 KB de terceros, y la pagina no espera por ellos. */}
+      <script is:inline async src={WEBCHAT_URL}></script>
+
+      <script is:inline>
+        // El aviso de tienda cerrada: el boton va 14 por encima de su borde de
+        // arriba. Se vuelve a medir si la tarjeta cambia de alto —el texto partido
+        // en otra linea— o si cambia la ventana, que la mueve. Lo escrito en el
+        // <body> gana a las reglas del CSS de abajo, y ahi no hay carrito que
+        // salvar: el aviso lo tapa.
+        const notice = document.querySelector('.store-closed__card');
+
+        if (notice) {
+          const lift = () => {
+            const above = window.innerHeight - notice.getBoundingClientRect().top;
+            document.body.style.setProperty('--webchat-bottom', `${Math.ceil(above) + 14}px`);
+          };
+
+          lift();
+          new ResizeObserver(lift).observe(notice);
+          window.addEventListener('resize', lift);
+        }
+      </script>
+    </Fragment>
+  )
+}
+
+<style is:global>
+  /* ---------------------------------------------------------------------------
+     Block: wati-webchat
+     ---------------------------------------------------------------------------
+     El boton del widget es un circulo de 40, y el panel de escritorio se abre 60
+     por encima de donde este el boton y alineado con su borde derecho: moviendo
+     el boton se mueve el panel con el.
+
+     --webchat-bottom es la altura del boton. Sin valor, el gutter de desktop; en
+     movil la ponen las reglas de abajo, y el aviso de cerrado la escribe desde el
+     script.
+
+     Por debajo, el z-index del resto de piezas flotantes (1020), y no los 2 mil
+     millones con los que viene: se quedaria encima de cualquier cosa que se
+     abriera sobre la pagina. El panel conserva el suyo, que es lo que se abre.
+     --------------------------------------------------------------------------- */
+  wati-webchat {
+    --wati-webchat-fab-right: 32px;
+    --wati-webchat-fab-bottom: var(--webchat-bottom, 32px);
+    --wati-webchat-z-fab: 1020;
+  }
+
+  /* --- Movil ---------------------------------------------------------------
+     Las mismas alturas que tenia ChatFab:
+
+       104 = el carrito (20 + 70) y 14 de aire. La barra mide 84, asi que tambien
+             queda libre.
+       132 = la barra con nota bajo el boton (84 + 12 + 16, la misma cuenta que
+             hace StoreClosedNotice.astro) y 20 de aire.
+       160 = la barra con su segunda accion (84 + 12 + 44) y 20 de aire. Es la
+             del acuse, que apila "Ver estado de pedido" bajo el de WhatsApp.
+       188 = la misma con nota: los 28 de la nota sobre los 160.
+
+     El 35 de la derecha centra el circulo de 40 sobre el carrito de 70, que va a
+     20: 20 + (70 - 40) / 2. Se queda en 35 tambien donde no hay carrito, para que
+     el boton no cambie de sitio de una pantalla a otra. */
+  @media (max-width: 767.98px) {
+    .page {
+      --webchat-bottom: calc(104px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .page:has(.action-bar__note) {
+      --webchat-bottom: calc(132px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .page:has(.action-bar__button--secondary) {
+      --webchat-bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+    }
+
+    .page:has(.action-bar__button--secondary):has(.action-bar__note) {
+      --webchat-bottom: calc(188px + env(safe-area-inset-bottom, 0px));
+    }
+
+    wati-webchat {
+      --wati-webchat-fab-right: 35px;
+    }
+  }
+</style>

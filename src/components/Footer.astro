@@ -22,8 +22,8 @@ interface Props {
 const { store, hasLocation, hasSchedule, schedule } = Astro.props;
 
 // Pie de pagina, en movil y en desktop: un solo marcado que el CSS reparte (ver los
-// estilos de este archivo). Tres franjas: la marca con las columnas de enlaces y
-// de redes, la divisoria, y el aviso de derechos.
+// estilos de este archivo). Tres franjas: la marca con las columnas de enlaces, de
+// redes y de promociones, la divisoria, y el aviso de derechos.
 //
 // El nombre no se escribe a mano en ningun sitio de aqui: lo pone la tienda. Sin
 // el, el aviso de derechos sigue en pie, que para eso basta el ano.
@@ -89,6 +89,19 @@ const shift = schedule?.isOpen ? (shiftLabel(schedule) ?? 'Abierto.') : 'Cerrado
 // al que llega el comprobante del pedido: son dos datos y el negocio los
 // configura en dos sitios del panel.
 const socials = store.socialLinks ?? [];
+
+// Las promociones: la ultima columna, a la derecha de "Síguenos" en desktop y
+// debajo de las otras dos en movil. Pide el WhatsApp del cliente y lo registra con
+// `POST /api/store/phones` (contrato: `api/post-store-phones.md`), a traves de
+// src/pages/api/store/phones.ts. El envio y sus avisos los lleva el script del
+// final de este archivo.
+//
+// El campo admite el numero como se escriba —con espacios, guiones, parentesis o
+// la lada con su `+`—, porque quien lo normaliza es la API: con 10 digitos sin
+// lada lo da por mexicano. Por eso no lleva `pattern`, y lo que se comprueba antes
+// de enviar es solo lo que la API rechazaria igual.
+//
+// No depende de ningun dato de la tienda, asi que sale siempre.
 ---
 
 <footer class="footer">
@@ -161,6 +174,48 @@ const socials = store.socialLinks ?? [];
             </div>
           )
         }
+
+        {/* El titulo es la pregunta, y no le sirve de nombre al campo: el numero
+            lo nombra su propia etiqueta, que no se ve.
+
+            `novalidate` porque los avisos los escribe el script, con los mismos
+            textos que la API: el globo del navegador diria otra cosa, en otro
+            sitio y con otro tono. El tope de 30 es el de la API. */}
+        <form class="footer__promo" data-promo-form novalidate>
+          <div class="footer__promo-body">
+            <h2 class="footer__promo-heading">¿Quieres conocer todas nuestras promociones?</h2>
+
+            <div class="footer__promo-field">
+              <label class="visually-hidden" for="footer-promo-phone">Tu número de WhatsApp</label>
+              <input
+                class="footer__promo-input"
+                id="footer-promo-phone"
+                name="phone"
+                type="tel"
+                inputmode="tel"
+                autocomplete="tel"
+                placeholder="Tu número de WhatsApp"
+                maxlength="30"
+                aria-describedby="footer-promo-status"
+                required
+              />
+            </div>
+          </div>
+
+          <button class="footer__promo-button btn-plain" type="submit">Registrarme</button>
+
+          {/* El hueco existe desde el principio, vacio y oculto, por lo mismo que
+              el de <FormError>: un aviso que llega a una region recien insertada
+              no siempre se anuncia. */}
+          <p
+            class="footer__promo-status"
+            id="footer-promo-status"
+            role="status"
+            hidden
+            data-promo-status
+          >
+          </p>
+        </form>
       </div>
     </div>
 
@@ -189,9 +244,9 @@ const socials = store.socialLinks ?? [];
      ---------------------------------------------------------------------------
      Pie de pagina. Spec (desktop): padding 48/160/32, gap 32, fondo blanco.
 
-     En movil no hay spec: es el mismo pie, apilado. El logo arriba, las dos
-     columnas debajo —una al lado de la otra, que son cortas: un enlace y una fila
-     de iconos—, la divisoria y el aviso. Las medidas son las de la tienda en movil,
+     En movil no hay spec: es el mismo pie, apilado. El logo arriba, las columnas
+     debajo —"Conócenos", "Síguenos" y las promociones, una bajo otra—, la divisoria
+     y el aviso. Las medidas son las de la tienda en movil,
      20 de gutter y 24 entre piezas, y lo de la spec se aplica de md en adelante (ver
      el final de este bloque).
 
@@ -228,8 +283,9 @@ const socials = store.socialLinks ?? [];
     max-width: 1140px;
     margin-inline: auto;
   }
-  /* Element: top — en movil, la marca y debajo las columnas de "Conócenos" y
-     "Síguenos"; en desktop, la marca a la izquierda y las columnas a la derecha
+  /* Element: top — en movil, la marca y debajo las columnas de "Conócenos",
+     "Síguenos" y las promociones; en desktop, la marca a la izquierda y las
+     columnas a la derecha
      (ver el final de este bloque).
 
      32 entre el logo y las columnas, los mismos que separan las dos columnas entre
@@ -263,11 +319,14 @@ const socials = store.socialLinks ?? [];
     width: auto;
     height: 72px;
   }
-  /* Element: columns — "Conócenos" y "Síguenos". En movil, una debajo de la otra,
-     a 32. En desktop, una al lado de la otra (ver el final de este bloque). */
+  /* Element: columns — "Conócenos", "Síguenos" y las promociones. En movil, una
+     debajo de la otra, a 32, y a todo el ancho: el campo de las promociones no
+     tiene otra medida que la del pie. En desktop, una al lado de la otra (ver el
+     final de este bloque). */
   .footer__columns {
     display: flex;
     flex-direction: column;
+    align-self: stretch;
     gap: 32px;
   }
   /* Element: group — una columna: un titulo y debajo su lista */
@@ -302,13 +361,17 @@ const socials = store.socialLinks ?? [];
 
      20 de interlineado en movil, el del cuerpo: el aviso lleva el nombre de la
      tienda, y en un telefono estrecho puede partirse en dos lineas que con el 1 de
-     desktop se tocarian. */
+     desktop se tocarian.
+
+     Centrado en movil y en desktop: cierra el pie a todo su ancho, por debajo de
+     la divisoria, en lugar de colgar de la columna de la marca. */
   .footer__copyright {
     margin: 0;
     font-size: 13px;
     font-weight: 400;
     line-height: 20px;
     color: var(--sf-placeholder);
+    text-align: center;
   }
   /* Element: name — el nombre de la tienda dentro del aviso: en negrita y en el
      acento, que es el color del tema (ver src/lib/theme.ts), no un rosa escrito
@@ -356,6 +419,114 @@ const socials = store.socialLinks ?? [];
     color: var(--sf-accent);
   }
 
+  /* ---------------------------------------------------------------------------
+     Element: promo — la columna de las promociones. Spec (desktop): 291 de ancho,
+     y dos piezas a 16: el cuerpo —la pregunta y el campo— y el boton.
+
+     El #E6427A de la spec es el acento, como en las demas specs de la tienda: se
+     escribe con el token del tema (ver src/lib/theme.ts).
+     --------------------------------------------------------------------------- */
+  .footer__promo {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin: 0;
+  }
+  /* La pregunta y el campo, a 12, el mismo hueco que hay entre el titulo y la
+     lista en las otras columnas. La spec da 112 de cuerpo: 32 de pregunta (dos
+     renglones de 16), 12 y los 67 del campo son 111, el pixel que Figma redondea. */
+  .footer__promo-body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  /* No es .footer__heading: la spec la quiere a 16 y en 500, sin el tracking de
+     los rotulos en versales. */
+  .footer__promo-heading {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 500;
+    line-height: 1;
+    letter-spacing: 0;
+    text-transform: uppercase;
+    color: var(--sf-accent);
+  }
+  /* El campo y, a 6 por debajo, la raya de 1 en el acento: 60 + 6 + 1 = los 67 de
+     la spec. La raya es decorativa y va como ::after, no como elemento. */
+  .footer__promo-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .footer__promo-field::after {
+    content: '';
+    height: 1px;
+    background-color: var(--sf-accent);
+  }
+  /* Spec: 60 de alto, radio 4, fondo #F8F9FB (--sf-body-bg) y sin borde. La letra
+     y el relleno no vienen en la spec: los de los campos del pedido, 14/20 y 16 a
+     los lados. */
+  .footer__promo-input {
+    width: 100%;
+    height: 60px;
+    padding: 0 16px;
+    border: 0;
+    border-radius: 4px;
+    background-color: var(--sf-body-bg);
+    font-size: 14px;
+    line-height: 20px;
+    color: var(--sf-ink);
+  }
+  .footer__promo-input::placeholder {
+    color: var(--sf-placeholder);
+    opacity: 1;
+  }
+  /* Spec: 29 de alto, relleno 6/16, radio 100 y el acento de fondo, con el rotulo
+     en Inter 600 14 blanco. Con el 1 de interlineado de la spec, 14 + 6 + 6 dan 26,
+     no 29: Figma mide el renglon con la altura natural de Inter. Se fija el alto y
+     se centra el rotulo, que es la caja que dibuja la spec.
+
+     Del ancho de la columna no se estira: se queda en su rotulo, 115. El hover es
+     el de .btn-primary. Los estilos del componente le ganan al reseteo de
+     .btn-plain porque van detras de base.css. */
+  .footer__promo-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    align-self: flex-start;
+    height: 29px;
+    padding: 0 16px;
+    border-radius: 100px;
+    background-color: var(--sf-accent);
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--sf-white);
+    transition: background-color 160ms ease;
+  }
+  .footer__promo-button:hover {
+    background-color: var(--sf-accent-hover);
+  }
+  /* Mientras el registro va de camino (ver el script del final). */
+  .footer__promo-button[aria-disabled='true'] {
+    opacity: 0.6;
+    cursor: progress;
+  }
+  /* Element: promo-status — el aviso de debajo del boton: el error del numero o
+     la confirmacion. La letra es la de <FormError> (Inter 500 12/16), y el color
+     de error tambien: el indigo es el aviso de campo que falta en toda la tienda.
+     La confirmacion va en el verde de "algo salio bien". */
+  .footer__promo-status {
+    margin: 0;
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 16px;
+    color: var(--sf-indigo);
+  }
+  .footer__promo-status[data-tone='success'] {
+    color: var(--sf-success);
+  }
+
   /* --- Movil ---------------------------------------------------------------- */
   @media (max-width: 767.98px) {
     /* La barra de accion, al fondo de la PRIMERA pantalla, como antes del pie. La
@@ -380,6 +551,15 @@ const socials = store.socialLinks ?? [];
        pieza. Es la misma raya que la barra lleva arriba. */
     .page:has(.action-bar) .footer {
       border-top: 1px solid var(--sf-border);
+    }
+
+    /* "Conócenos" y "Síguenos" van a 32, el hueco de .footer__columns; las
+       promociones se apartan de ellas a 48, porque son otra cosa: aquellas dos
+       son enlaces, esta un formulario. Los 16 que faltan van como margen, y solo
+       detras de una columna: sin ninguna de las dos, el formulario queda a los 32
+       del logo como cualquier columna. */
+    .footer__group + .footer__promo {
+      margin-top: 16px;
     }
   }
 
@@ -406,14 +586,140 @@ const socials = store.socialLinks ?? [];
       height: 96px;
     }
     /* Una al lado de la otra, a 48: los mismos que el pie suma para su aire de
-       arriba, y por lo mismo escritos como suma. */
+       arriba, y por lo mismo escritos como suma.
+
+       Las tres columnas y la marca no caben en todo desktop: en 768 faltan unos 45.
+       Por eso el bloque puede encogerse, y dentro de el solo cede la columna de las
+       promociones, que en 768 se queda en 247. Las otras dos no encogen: con lo
+       que les dejaria el reparto, el turno del reloj se partiria en dos renglones. */
     .footer__columns {
-      flex: 0 0 auto;
+      flex: 0 1 auto;
       flex-direction: row;
+      align-self: flex-start;
+      min-width: 0;
       gap: calc(32px + 16px);
+    }
+    .footer__group {
+      flex-shrink: 0;
+    }
+    .footer__promo {
+      flex: 0 1 291px;
+      min-width: 0;
     }
     .footer__copyright {
       line-height: 1;
     }
   }
+
+  /* De lg en adelante las columnas se separan a 80, y no a 48. Por debajo no hay
+     sitio: en 768 los 80 dejarian el campo de las promociones en 183, y la
+     pregunta en tres renglones. Desde 992 caben con el campo a sus 291 enteros. */
+  @media (min-width: 992px) {
+    .footer__columns {
+      gap: calc(32px + 32px + 16px);
+    }
+  }
 </style>
+
+<script>
+  // ---------------------------------------------------------------------------
+  // El registro del telefono de las promociones: `POST /api/store/phones`, por el
+  // proxy de este front (ver src/pages/api/store/phones.ts). Contrato:
+  // `api/post-store-phones.md`.
+  //
+  // La respuesta buena es la misma si el numero es nuevo que si ya estaba, y a
+  // proposito (ver el contrato): la confirmacion tampoco los distingue.
+  // ---------------------------------------------------------------------------
+  import { throttleMessage } from '../lib/throttle.ts';
+
+  // Los dos primeros son los textos del 422 de la API. Se escriben aqui para
+  // decirlos sin gastar una peticion: el limite es de cinco registros por minuto y
+  // un campo vacio no merece ninguno.
+  const EMPTY = 'Escribe tu teléfono.';
+  const INVALID = 'Escribe un teléfono válido, con 10 dígitos.';
+  const DONE = '¡Listo! Registramos tu número.';
+  const FAILED = 'No pudimos registrar tu número. Inténtalo de nuevo en un momento.';
+
+  /**
+   * El aviso de un rechazo que no es un 429.
+   *
+   * El del 422 se ensena tal cual: el contrato dice que esta escrito para el
+   * comprador, y es lo que hace la tienda con los `errors` del checkout (ver
+   * readError en src/lib/checkout.ts). Cualquier otro fallo —la clave, la API
+   * caida, el proxy sin contacto— no es del comprador, y se dice lo mismo en todos.
+   */
+  async function rejection(response: Response): Promise<string> {
+    if (response.status !== 422) return FAILED;
+
+    const body = (await response.json().catch(() => null)) as {
+      errors?: Record<string, string[]>;
+    } | null;
+
+    return body?.errors?.phone?.[0] ?? INVALID;
+  }
+
+  for (const form of document.querySelectorAll<HTMLFormElement>('[data-promo-form]')) {
+    const input = form.querySelector<HTMLInputElement>('input[name="phone"]');
+    const button = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+    const status = form.querySelector<HTMLElement>('[data-promo-status]');
+
+    if (!input || !button || !status) continue;
+
+    const say = (text: string, tone: 'error' | 'success') => {
+      status.textContent = text;
+      status.dataset.tone = tone;
+      status.hidden = false;
+
+      if (tone === 'error') input.setAttribute('aria-invalid', 'true');
+      else input.removeAttribute('aria-invalid');
+    };
+
+    // Al volver a escribir, el aviso deja de hablar de lo que hay en el campo.
+    input.addEventListener('input', () => {
+      status.hidden = true;
+      input.removeAttribute('aria-invalid');
+    });
+
+    // `aria-disabled` y no `disabled` mientras va de camino: un boton deshabilitado
+    // con el foco encima lo suelta, y quien lo pulso con el teclado se quedaria
+    // sin saber donde esta. La marca basta para no mandar dos veces.
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      if (button.getAttribute('aria-disabled') === 'true') return;
+
+      const phone = input.value.trim();
+      // Los mismos limites que la API —de 10 a 15 digitos— y la misma cuenta que
+      // phoneDigits en src/lib/checkout-draft.ts, sin importar aquel modulo.
+      const digits = phone.replace(/\D/g, '').length;
+
+      if (!phone || digits < 10 || digits > 15) {
+        say(phone ? INVALID : EMPTY, 'error');
+        input.focus();
+        return;
+      }
+
+      button.setAttribute('aria-disabled', 'true');
+
+      try {
+        const response = await fetch('/api/store/phones', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+          body: JSON.stringify({ phone }),
+        });
+
+        if (response.ok) {
+          input.value = '';
+          say(DONE, 'success');
+        } else {
+          say(throttleMessage(response) ?? (await rejection(response)), 'error');
+        }
+      } catch {
+        // fetch solo rechaza por red: no llego ni al proxy.
+        say(FAILED, 'error');
+      } finally {
+        button.removeAttribute('aria-disabled');
+      }
+    });
+  }
+</script>

@@ -4,6 +4,10 @@
 // Lo usan el boton propio (components/ChatFab.astro) y el widget de Wati
 // (components/WatiChat.astro), hoy apagado. Los dos abren lo mismo: una
 // conversacion de WhatsApp con el negocio, con el mensaje ya escrito.
+//
+// El WebChat de Wati (components/WatiWebChat.astro), tambien apagado, no usa
+// nada de aqui: es un chat dentro de la pagina, y lo que dice se configura en el
+// panel de Wati.
 // ---------------------------------------------------------------------------
 
 /**
