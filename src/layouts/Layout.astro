@@ -187,9 +187,9 @@ const theme = getTheme(STORE_THEME);
   </head>
   <body class="page">
     <slot />
-    <WatiWebChat />
-    {/* Apagados: los releva WatiWebChat. Ver sus ENABLED. */}
     <ChatFab store={store} dish={dish} order={noindex} />
+    {/* Apagados: los releva ChatFab. Ver sus ENABLED. */}
+    <WatiWebChat />
     <WatiChat store={store} accent={theme.accent} dish={dish} order={noindex} />
   </body>
 </html>
