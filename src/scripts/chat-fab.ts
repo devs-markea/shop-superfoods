@@ -17,8 +17,8 @@
 // saldria de la pantalla.
 //
 // Se mueve con un `translate` sobre .chat-fab y no tocando `right`/`bottom`. Asi el
-// sitio de partida lo sigue decidiendo el CSS —y el script del componente, que lo
-// sube encima del aviso de tienda cerrada—, y el arrastre es solo un
+// sitio de partida lo sigue decidiendo el CSS —y el script del componente, que en
+// movil lo sube encima del aviso de tienda cerrada—, y el arrastre es solo un
 // desplazamiento sobre el.
 // ---------------------------------------------------------------------------
 

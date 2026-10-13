@@ -30,9 +30,9 @@
 //     el script de un identificador aleatorio que guarda en el navegador.
 //
 // DONDE SE PONE. El widget deja moverlo con variables CSS sobre su elemento,
-// <wati-webchat>, que el script cuelga del <body>. Va donde va ChatFab: a 32 de
-// los bordes en desktop, el gutter de la pagina, y en movil por encima de lo que
-// ya flota abajo:
+// <wati-webchat>, que el script cuelga del <body>. Va donde va ChatFab: en desktop
+// a 40 de abajo y 40 de la derecha, haya aviso de cerrado o no, y en movil por
+// encima de lo que ya flota abajo:
 //
 //   el carrito flotante   en el menu, solo en movil (components/CartFab.astro)
 //   la barra de accion    en el resto, solo en movil (components/ActionBar.astro)
@@ -66,15 +66,23 @@ const WEBCHAT_URL =
       <script is:inline async src={WEBCHAT_URL}></script>
 
       <script is:inline>
-        // El aviso de tienda cerrada: el boton va 14 por encima de su borde de
-        // arriba. Se vuelve a medir si la tarjeta cambia de alto —el texto partido
-        // en otra linea— o si cambia la ventana, que la mueve. Lo escrito en el
-        // <body> gana a las reglas del CSS de abajo, y ahi no hay carrito que
-        // salvar: el aviso lo tapa.
+        // El aviso de tienda cerrada, solo en movil: el boton va 14 por encima de
+        // su borde de arriba. Se vuelve a medir si la tarjeta cambia de alto —el
+        // texto partido en otra linea— o si cambia la ventana, que la mueve. Lo
+        // escrito en el <body> gana a las reglas del CSS de abajo, y ahi no hay
+        // carrito que salvar: el aviso lo tapa. En desktop se borra, y manda el
+        // CSS: 40 y 40.
         const notice = document.querySelector('.store-closed__card');
 
         if (notice) {
+          const mobile = window.matchMedia('(max-width: 767.98px)');
+
           const lift = () => {
+            if (!mobile.matches) {
+              document.body.style.removeProperty('--webchat-bottom');
+              return;
+            }
+
             const above = window.innerHeight - notice.getBoundingClientRect().top;
             document.body.style.setProperty('--webchat-bottom', `${Math.ceil(above) + 14}px`);
           };
@@ -96,7 +104,7 @@ const WEBCHAT_URL =
      por encima de donde este el boton y alineado con su borde derecho: moviendo
      el boton se mueve el panel con el.
 
-     --webchat-bottom es la altura del boton. Sin valor, el gutter de desktop; en
+     --webchat-bottom es la altura del boton. Sin valor, los 40 de desktop; en
      movil la ponen las reglas de abajo, y el aviso de cerrado la escribe desde el
      script.
 
@@ -105,8 +113,8 @@ const WEBCHAT_URL =
      abriera sobre la pagina. El panel conserva el suyo, que es lo que se abre.
      --------------------------------------------------------------------------- */
   wati-webchat {
-    --wati-webchat-fab-right: 32px;
-    --wati-webchat-fab-bottom: var(--webchat-bottom, 32px);
+    --wati-webchat-fab-right: 40px;
+    --wati-webchat-fab-bottom: var(--webchat-bottom, 40px);
     --wati-webchat-z-fab: 1020;
   }
 
