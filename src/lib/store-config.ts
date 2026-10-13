@@ -80,6 +80,12 @@ export interface BankTransfer {
 /** Como se decide el envio gratis. Tres decisiones excluyentes. */
 export type FreeShippingMode = 'none' | 'always' | 'threshold';
 
+/**
+ * Que se lee junto al reloj del pie con la tienda abierta: el turno en curso
+ * (`shift`) o un texto fijo (`custom`). `label` solo trae texto con `custom`.
+ */
+export type FooterSchedule = { mode: 'shift'; label: '' } | { mode: 'custom'; label: string };
+
 export interface StoreSettings {
   name?: string;
   publicUrl?: string;
@@ -186,6 +192,45 @@ export interface StoreSettings {
     featured?: { title?: string; description?: string };
   };
   /**
+   * Los textos del pie (components/Footer.astro), una clave por columna. Se
+   * capturan en el panel, en Configuracion de la tienda › Contenido.
+   *
+   * Cadena vacia cuando el negocio no escribio el suyo, y entonces el pie pinta el
+   * que ya traia: es la regla de `home.featured`, y por lo mismo aqui no hay
+   * respaldo —los textos de la tienda viven con el pie, no en store-fallback.ts—.
+   *
+   * NINGUN TEXTO DECIDE SI ALGO SE PINTA. "Conócenos" la sigue decidiendo que haya
+   * ubicacion u horario, "Síguenos" que haya `socialLinks`, y las promociones salen
+   * siempre. Son texto llano, no HTML — salvo `copyright`.
+   *
+   * `copyright` es el aviso de derechos, y es HTML: el negocio lo escribe con
+   * negrita y cursiva, y el backend lo reescribe desde cero con solo `<strong>`,
+   * `<em>` y `<br>`, sin atributos y con el texto ya escapado. Se inyecta tal cual
+   * —como `location.message`—, sin escaparlo otra vez: lo doblaria (`&amp;amp;`).
+   * El ano y el nombre son los que escribio el negocio: no hay marcadores.
+   *
+   * `about.schedule` es el renglon del reloj con la tienda ABIERTA, y no es un
+   * texto sino una decision: `shift` pinta el turno en curso —que cambia con la
+   * hora y lo calcula la tienda— y `custom` un texto fijo, `label`. Cerrada, se
+   * lee `closedLabel` en los dos modos.
+   *
+   * `follow.labels` es como se ROTULA cada red, indexado por `network`. No dice
+   * que redes hay, ni en que orden, ni a donde llevan: eso es `socialLinks`. Solo
+   * estan las que traen texto.
+   */
+  footer?: {
+    about?: {
+      title?: string;
+      locationLabel?: string;
+      schedule?: FooterSchedule;
+      closedLabel?: string;
+    };
+    follow?: { title?: string; labels?: Partial<Record<SocialNetwork, string>> };
+    promo?: { title?: string; placeholder?: string; buttonLabel?: string };
+    /** HTML: la unica clave del pie que no es texto llano. */
+    copyright?: string;
+  };
+  /**
    * Las categorias con algun platillo publicado, en el orden del panel (el arrastre del
    * administrador). Es la lista de la portada: tabs, columna lateral y secciones salen de
    * aqui, y los platillos se les cuelgan por `category.id` (ver getMenuSections en
@@ -221,8 +266,12 @@ function pick(value: string | null | undefined, fallback: string | undefined): s
  * `location.address` viajo asi solo del 2026-10-06 al 2026-10-07, mientras hizo de
  * mensaje del modal. Desde que el mensaje tiene su clave, vuelve a viajar solo con
  * valor, como `shortAddress` y `mapsUrl`.
+ *
+ * `footer` viaja SIEMPRE y con todas sus claves desde el 2026-10-13, cada texto con
+ * su valor o en `null`. Aqui va todo opcional igualmente: una API anterior a esa
+ * fecha no lo manda, y la copia guardada puede ser de entonces.
  */
-type RemoteStore = Omit<StoreSettings, 'location' | 'home'> & {
+type RemoteStore = Omit<StoreSettings, 'location' | 'home' | 'footer'> & {
   location?: Omit<NonNullable<StoreSettings['location']>, 'message'> & {
     message?: string | null;
   };
@@ -230,6 +279,24 @@ type RemoteStore = Omit<StoreSettings, 'location' | 'home'> & {
     panel?: { presentation?: string | null };
     featured?: { title?: string | null; description?: string | null };
   };
+  footer?: {
+    about?: {
+      title?: string | null;
+      locationLabel?: string | null;
+      schedule?: { mode?: string | null; label?: string | null } | null;
+      closedLabel?: string | null;
+    } | null;
+    follow?: {
+      title?: string | null;
+      labels?: Partial<Record<SocialNetwork, string | null>> | null;
+    } | null;
+    promo?: {
+      title?: string | null;
+      placeholder?: string | null;
+      buttonLabel?: string | null;
+    } | null;
+    copyright?: string | null;
+  } | null;
 };
 
 /**
@@ -400,6 +467,50 @@ function normalizeSocialLinks(links: SocialLink[] | undefined): SocialLink[] {
 }
 
 /**
+ * Los textos del pie, con cada `null` convertido en cadena vacia.
+ *
+ * Sin respaldo, como `home.featured`: vacio significa "usa el tuyo", y el texto de
+ * la tienda vive en el pie. Tampoco se cae el bloque entero si falta una pieza
+ * —una API anterior al 2026-10-13, o una copia guardada de entonces—: cada texto
+ * se resuelve por su cuenta y lo que no llega queda vacio.
+ *
+ * EL HORARIO se reduce a una decision que el pie pueda leer sin dudar. Solo es
+ * `custom` si el modo lo dice Y hay texto que pintar: el contrato no deja guardar
+ * `custom` sin texto, pero un `custom` vacio que se colara pintaria un reloj sin
+ * rotulo. En cualquier otro caso es `shift`, que es lo que la tienda hacia antes
+ * de que existiera el modo, y el texto guardado para `custom` no se usa.
+ */
+function resolveFooter(footer: RemoteStore['footer']): NonNullable<StoreSettings['footer']> {
+  const about = footer?.about;
+  const customLabel = about?.schedule?.mode === 'custom' ? pick(about.schedule.label, undefined) : '';
+
+  const labels: Partial<Record<SocialNetwork, string>> = {};
+
+  for (const network of SOCIAL_NETWORKS) {
+    const label = pick(footer?.follow?.labels?.[network], undefined);
+
+    if (label) labels[network] = label;
+  }
+
+  return {
+    about: {
+      title: pick(about?.title, undefined),
+      locationLabel: pick(about?.locationLabel, undefined),
+      schedule: customLabel ? { mode: 'custom', label: customLabel } : { mode: 'shift', label: '' },
+      closedLabel: pick(about?.closedLabel, undefined),
+    },
+    follow: { title: pick(footer?.follow?.title, undefined), labels },
+    promo: {
+      title: pick(footer?.promo?.title, undefined),
+      placeholder: pick(footer?.promo?.placeholder, undefined),
+      buttonLabel: pick(footer?.promo?.buttonLabel, undefined),
+    },
+    // Vacio, el pie arma el de siempre, con el ano y el nombre de la tienda.
+    copyright: pick(footer?.copyright, undefined),
+  };
+}
+
+/**
  * Cuanto vale lo leido de `/api/store`: un dia, igual que el catalogo.
  *
  * El backend declara su respuesta valida cinco minutos, pero esto son datos que el negocio
@@ -548,6 +659,8 @@ export async function getStoreConfig(): Promise<StoreSettings> {
         description: pick(remote.home?.featured?.description, undefined),
       },
     },
+
+    footer: resolveFooter(remote.footer),
 
     categories: normalizeCategories(remote.categories),
   };
