@@ -32,9 +32,27 @@ const { store, hasLocation, hasSchedule, schedule } = Astro.props;
 // comida mexicana tradicional…"—, y se quito: la marca queda sola en su columna.
 const name = store.name;
 
-// El aviso de derechos se arma en el marcado y no en una cadena: el nombre va
-// destacado —negrita y el color del tema—, y para eso necesita su propio elemento.
+// El aviso de derechos lo escribe el negocio en el panel, con negrita y cursiva, y
+// llega como HTML en `footer.copyright`: solo `<strong>`, `<em>` y `<br>`, sin
+// atributos, reescrito desde cero por el backend y con el texto ya escapado. Se
+// inyecta tal cual, como el mensaje de la hoja de ubicacion (LocationSheet.astro):
+// escaparlo otra vez lo doblaria. El ano y el nombre son los que escribio: no hay
+// marcadores, y el ano no cambia solo.
+//
+// Vacio, se arma el de siempre, en el marcado y no en una cadena: el nombre va
+// destacado, y para eso necesita su propio elemento.
+const copyright = store.footer?.copyright;
 const year = storeYear();
+
+// LOS TEXTOS DE LAS TRES COLUMNAS los escribe el negocio en el panel —Configuracion
+// de la tienda › Contenido— y llegan en `store.footer` (contrato: `api/get-store.md`,
+// seccion `footer`). Cada uno llega con su texto o VACIO, y vacio quiere decir "usa
+// el tuyo": por eso los de siempre siguen escritos aqui, cada uno junto a su `||`.
+// Son tambien lo que se pinta con una API que aun no publique el bloque, o caida.
+//
+// Ninguno decide si algo se pinta: eso lo siguen decidiendo las hojas, las redes y
+// nada, por ese orden de columnas. Son texto llano y se pintan como texto.
+const texts = store.footer;
 
 // "Conócenos": donde esta la tienda y cuando abre. Son el pin y el reloj de la
 // barra de arriba, con las mismas dos hojas: el pie no las monta, las abre (la
@@ -49,15 +67,38 @@ const year = storeYear();
 // Releva a "Descubre", que era un solo enlace —"Menú completo"— a la portada: la
 // misma a la que ya lleva el logo.
 const hasAbout = hasLocation || hasSchedule;
+const aboutTitle = texts?.about?.title || 'Conócenos';
+const locationLabel = texts?.about?.locationLabel || 'Ubicación';
 
-// El rotulo del reloj: el turno en curso, "12:00 - 23:30 h.", el mismo de la barra
-// de desktop (ver shiftLabel en src/lib/schedule.ts). Fuera de turno, o sin turno
-// que leer, "Cerrado." a secas: la barra anade cuando vuelve a abrir, y aqui eso
-// ya lo cuenta la hoja que abre el reloj.
+// El rotulo del reloj. Con la tienda ABIERTA no es un texto que el panel pueda
+// escribir, sino una decision suya (`about.schedule`):
 //
-// Abierta pero sin tramo que leer —la forma vieja de la API, que solo manda el
-// estado— queda "Abierto.": es lo unico que se sabe.
-const shift = schedule?.isOpen ? (shiftLabel(schedule) ?? 'Abierto.') : 'Cerrado.';
+//   shift   el turno en curso, "12:00 - 23:30 h.", el mismo de la barra de
+//           desktop (ver shiftLabel en src/lib/schedule.ts). Cambia con la hora y
+//           lo calcula la tienda. Es el modo de siempre, y el de una API sin bloque
+//   custom  un texto fijo, el que el negocio escribio: "Horario"
+//
+// Pasar de uno a otro se hace en el panel y no aqui: esta linea ya pinta los dos.
+//
+// Abierta en `shift` pero sin tramo que leer —la forma vieja de la API, que solo
+// manda el estado— queda "Abierto.": es lo unico que se sabe.
+//
+// CERRADA, o sin saber si abre, el modo no cuenta: se lee `closedLabel`, y vacio,
+// "Cerrado." a secas. La barra anade cuando vuelve a abrir, y aqui eso ya lo
+// cuenta la hoja que abre el reloj.
+const openLabel =
+  texts?.about?.schedule?.mode === 'custom' ? texts.about.schedule.label : null;
+
+const shift = schedule?.isOpen
+  ? (openLabel ?? shiftLabel(schedule) ?? 'Abierto.')
+  : texts?.about?.closedLabel || 'Cerrado.';
+
+// El turno solo no dice que abre el horario, y "Cerrado." tampoco: el nombre
+// accesible del reloj lo antepone, y conserva el rotulo visible dentro para que
+// quien maneja la pantalla por voz lo nombre como lo ve. Un texto fijo que ya lo
+// diga —"Horario", el ejemplo del contrato— se queda como esta: "Horario: Horario"
+// no le explica nada a nadie.
+const clockName = /horario/i.test(shift) ? undefined : `Horario: ${shift}`;
 
 // Las redes. Ya no son tres rotulos escritos aqui: `GET /api/store` publica
 // `socialLinks`, y con el perfil viene su enlace, asi que lo que antes era texto
@@ -81,6 +122,11 @@ const shift = schedule?.isOpen ? (shiftLabel(schedule) ?? 'Abierto.') : 'Cerrado
 //   tabla de nombres: capitalizar el token daria "Tiktok" y "X" donde la marca
 //   escribe "TikTok" y "X (Twitter)".
 //
+//   El texto que se LEE puede ser otro: el negocio rotula cada red en el pie
+//   —"Nuestro Instagram"— y ese texto llega aparte, en `follow.labels`, indexado
+//   por red. Solo rotula: no anade redes, ni las ordena, ni dice a donde llevan.
+//   Sin el, se lee el `label` de siempre.
+//
 // Sin redes configuradas no hay lista que pintar ni titulo que la anuncie:
 // la columna de "Síguenos" se cae entera y el pie se queda en dos. Es la regla de
 // siempre: sin dato se degrada, no se finge un enlace a "#".
@@ -88,7 +134,17 @@ const shift = schedule?.isOpen ? (shiftLabel(schedule) ?? 'Abierto.') : 'Cerrado
 // El WhatsApp de esta fila NO sale de `store.whatsapp.phone`, que es el numero
 // al que llega el comprobante del pedido: son dos datos y el negocio los
 // configura en dos sitios del panel.
-const socials = store.socialLinks ?? [];
+const followTitle = texts?.follow?.title || 'Síguenos';
+
+// `named` dice si el texto ya nombra la red. Con un rotulo libre puede que no
+// —"Síguenos aquí" en tres redes distintas—, y como el glifo va `aria-hidden`,
+// los tres enlaces sonarian igual: entonces el nombre de la red se anade donde no
+// se ve.
+const socials = (store.socialLinks ?? []).map((link) => {
+  const text = texts?.follow?.labels?.[link.network] || link.label;
+
+  return { ...link, text, named: text.toLowerCase().includes(link.label.toLowerCase()) };
+});
 
 // Las promociones: la ultima columna, a la derecha de "Síguenos" en desktop y
 // debajo de las otras dos en movil. Pide el WhatsApp del cliente y lo registra con
@@ -102,6 +158,13 @@ const socials = store.socialLinks ?? [];
 // de enviar es solo lo que la API rechazaria igual.
 //
 // No depende de ningun dato de la tienda, asi que sale siempre.
+//
+// El ejemplo del campo es tambien su nombre: la etiqueta que no se ve dice lo
+// mismo que el `placeholder`, y quien navega con lector de pantalla oye lo que
+// los demas leen.
+const promoTitle = texts?.promo?.title || '¿Quieres conocer todas nuestras promociones?';
+const promoPlaceholder = texts?.promo?.placeholder || 'Tu número de WhatsApp';
+const promoButton = texts?.promo?.buttonLabel || 'Registrarme';
 ---
 
 <footer class="footer">
@@ -117,7 +180,7 @@ const socials = store.socialLinks ?? [];
         {
           hasAbout && (
             <div class="footer__group">
-              <h2 class="footer__heading">Conócenos</h2>
+              <h2 class="footer__heading">{aboutTitle}</h2>
 
               <ul class="footer__list list-unstyled">
                 {hasLocation && (
@@ -129,20 +192,17 @@ const socials = store.socialLinks ?? [];
                       data-sheet="sheet-location"
                     >
                       <Icon name="map-pin" />
-                      <span>Ubicación</span>
+                      <span>{locationLabel}</span>
                     </button>
                   </li>
                 )}
 
-                {/* El turno solo no dice que abre el horario: el nombre accesible
-                    lo antepone, y conserva el rotulo visible dentro para que quien
-                    maneja la pantalla por voz lo nombre como lo ve. */}
                 {hasSchedule && (
                   <li>
                     <button
                       class="footer__item btn-plain"
                       type="button"
-                      aria-label={`Horario: ${shift}`}
+                      aria-label={clockName}
                       aria-haspopup="dialog"
                       data-sheet="sheet-schedule"
                     >
@@ -159,14 +219,17 @@ const socials = store.socialLinks ?? [];
         {
           socials.length > 0 && (
             <div class="footer__group">
-              <h2 class="footer__heading">Síguenos</h2>
+              <h2 class="footer__heading">{followTitle}</h2>
 
               <ul class="footer__list list-unstyled">
                 {socials.map((social) => (
                   <li>
                     <a class="footer__item" href={social.url} target="_blank" rel="noopener">
                       <BrandIcon name={social.network} />
-                      <span>{social.label}</span>
+                      <span>
+                        {social.text}
+                        {!social.named && <span class="visually-hidden">, {social.label}</span>}
+                      </span>
                     </a>
                   </li>
                 ))}
@@ -183,10 +246,10 @@ const socials = store.socialLinks ?? [];
             sitio y con otro tono. El tope de 30 es el de la API. */}
         <form class="footer__promo" data-promo-form novalidate>
           <div class="footer__promo-body">
-            <h2 class="footer__promo-heading">¿Quieres conocer todas nuestras promociones?</h2>
+            <h2 class="footer__promo-heading">{promoTitle}</h2>
 
             <div class="footer__promo-field">
-              <label class="visually-hidden" for="footer-promo-phone">Tu número de WhatsApp</label>
+              <label class="visually-hidden" for="footer-promo-phone">{promoPlaceholder}</label>
               <input
                 class="footer__promo-input"
                 id="footer-promo-phone"
@@ -194,7 +257,7 @@ const socials = store.socialLinks ?? [];
                 type="tel"
                 inputmode="tel"
                 autocomplete="tel"
-                placeholder="Tu número de WhatsApp"
+                placeholder={promoPlaceholder}
                 maxlength="30"
                 aria-describedby="footer-promo-status"
                 required
@@ -202,7 +265,7 @@ const socials = store.socialLinks ?? [];
             </div>
           </div>
 
-          <button class="footer__promo-button btn-plain" type="submit">Registrarme</button>
+          <button class="footer__promo-button btn-plain" type="submit">{promoButton}</button>
 
           {/* El hueco existe desde el principio, vacio y oculto, por lo mismo que
               el de <FormError>: un aviso que llega a una region recien insertada
@@ -221,20 +284,26 @@ const socials = store.socialLinks ?? [];
 
     <hr class="footer__divider" />
 
-    <p class="footer__copyright">
-      {
-        name ? (
-          // El espacio va escrito: entre una expresion y una etiqueta, el que hay
-          // en el marcado no llega al HTML, y saldria "2026Mamá Yaya".
-          <Fragment>
-            {`© ${year} `}
-            <strong class="footer__name">{name}</strong>. Todos los derechos reservados.
-          </Fragment>
-        ) : (
-          `© ${year}. Todos los derechos reservados.`
-        )
-      }
-    </p>
+    {
+      copyright ? (
+        <p class="footer__copyright footer__copyright--rich" set:html={copyright} />
+      ) : (
+        <p class="footer__copyright">
+          {
+            name ? (
+              // El espacio va escrito: entre una expresion y una etiqueta, el que hay
+              // en el marcado no llega al HTML, y saldria "2026Mamá Yaya".
+              <Fragment>
+                {`© ${year} `}
+                <strong>{name}</strong>. Todos los derechos reservados.
+              </Fragment>
+            ) : (
+              `© ${year}. Todos los derechos reservados.`
+            )
+          }
+        </p>
+      )
+    }
   </div>
 </footer>
 
@@ -319,10 +388,10 @@ const socials = store.socialLinks ?? [];
     width: auto;
     height: 72px;
   }
-  /* Element: columns — "Conócenos", "Síguenos" y las promociones. En movil, una
-     debajo de la otra, a 32, y a todo el ancho: el campo de las promociones no
-     tiene otra medida que la del pie. En desktop, una al lado de la otra (ver el
-     final de este bloque). */
+  /* Element: columns — "Conócenos", "Síguenos" y las promociones. En movil,
+     "Conócenos" y "Síguenos" en la misma fila, y las promociones debajo, a todo el
+     ancho: el campo no tiene otra medida que la del pie. En desktop, las tres una
+     al lado de la otra (ver el final de este bloque). */
   .footer__columns {
     display: flex;
     flex-direction: column;
@@ -373,12 +442,21 @@ const socials = store.socialLinks ?? [];
     color: var(--sf-placeholder);
     text-align: center;
   }
-  /* Element: name — el nombre de la tienda dentro del aviso: en negrita y en el
-     acento, que es el color del tema (ver src/lib/theme.ts), no un rosa escrito
-     aqui. Con otro tema cambia con el. */
-  .footer__name {
+  /* La negrita del aviso es el destacado de la marca: en el acento, que es el color
+     del tema (ver src/lib/theme.ts), no un rosa escrito aqui. Con otro tema cambia
+     con el. Asi quien escriba "© 2026 **Mamá Yaya**…" en el panel obtiene el aviso
+     de siempre.
+
+     Se estila por su posicion y no con una clase porque el HTML del negocio no trae
+     ninguna: el backend no deja pasar atributos. Un solo selector cubre los dos
+     avisos, el del panel y el de respaldo. Llega al HTML inyectado porque estos
+     estilos son `is:global`; con el ambito de Astro no lo alcanzaria. */
+  .footer__copyright strong {
     font-weight: 700;
     color: var(--sf-accent);
+  }
+  .footer__copyright em {
+    font-style: italic;
   }
   /* Element: list — la lista de cada columna, una entrada por renglon: la
      ubicacion y el horario en "Conócenos", las redes en "Síguenos". Es la misma
@@ -417,6 +495,12 @@ const socials = store.socialLinks ?? [];
   }
   .footer__item:hover {
     color: var(--sf-accent);
+  }
+  /* El glifo no cede sitio al rotulo. Los de <Icon> ya lo traen; los de las redes
+     no, y con un rotulo largo —los escribe el negocio— el texto se parte en dos
+     renglones y el glifo se encogia con el. */
+  .footer__item > svg {
+    flex: 0 0 auto;
   }
 
   /* ---------------------------------------------------------------------------
@@ -488,7 +572,11 @@ const socials = store.socialLinks ?? [];
 
      Del ancho de la columna no se estira: se queda en su rotulo, 115. El hover es
      el de .btn-primary. Los estilos del componente le ganan al reseteo de
-     .btn-plain porque van detras de base.css. */
+     .btn-plain porque van detras de base.css.
+
+     El rotulo no se parte: el alto es fijo, y un segundo renglon se saldria de la
+     pildora. Con los 24 caracteres que deja el panel mide unos 200, lo que piden
+     las promociones como minimo. */
   .footer__promo-button {
     display: inline-flex;
     align-items: center;
@@ -501,6 +589,7 @@ const socials = store.socialLinks ?? [];
     font-size: 14px;
     font-weight: 600;
     line-height: 1;
+    white-space: nowrap;
     color: var(--sf-white);
     transition: background-color 160ms ease;
   }
@@ -553,11 +642,44 @@ const socials = store.socialLinks ?? [];
       border-top: 1px solid var(--sf-border);
     }
 
-    /* "Conócenos" y "Síguenos" van a 32, el hueco de .footer__columns; las
-       promociones se apartan de ellas a 48, porque son otra cosa: aquellas dos
-       son enlaces, esta un formulario. Los 16 que faltan van como margen, y solo
-       detras de una columna: sin ninguna de las dos, el formulario queda a los 32
-       del logo como cualquier columna. */
+    /* "Conócenos" y "Síguenos" en la misma fila, cada una en su mitad, y las
+       promociones en la fila de abajo, a todo el ancho. Lo pidio el negocio.
+       Mitades iguales y no el ancho de cada lista: asi "Síguenos" empieza siempre
+       en el mismo sitio, sea cual sea el turno del reloj. Con una sola de las dos,
+       se queda sola en la fila, alineada a la izquierda.
+
+       24 entre las dos y no los 32 de las filas: desde 360 la mitad mide 148 o
+       mas, y el turno del reloj —"12:00 - 23:30 h." con su icono, 137— cabe en un
+       renglon. Por debajo, en 320, la mitad se quedaria en 128: el `max-content`
+       no deja que una columna mida menos que su lista, y lo que falta lo cede
+       "Síguenos", que con sus redes cabe de sobra en lo que queda.
+
+       Flex con salto de linea y no rejilla: en una rejilla las promociones, que
+       ocupan las dos columnas, empujarian el minimo de ambas con su pregunta en un
+       solo renglon, y la pagina se saldria de la pantalla. */
+    .footer__columns {
+      flex-direction: row;
+      flex-wrap: wrap;
+      column-gap: 24px;
+    }
+    /* `fit-content` y no `max-content` desde que los textos los escribe el negocio:
+       mide lo mismo mientras la lista quepa en el pie, y cuando no cabe —un titulo
+       de 30 caracteres mide 323, mas que el pie de un telefono de 360— se queda en
+       el ancho del pie y el texto se parte, en lugar de sacar la pagina de la
+       pantalla. */
+    .footer__group {
+      flex: 1 0 0;
+      min-width: fit-content;
+    }
+    .footer__promo {
+      flex-basis: 100%;
+    }
+
+    /* Las promociones se apartan de la fila de arriba a 48, y no a los 32 del
+       hueco de .footer__columns, porque son otra cosa: aquellas dos son enlaces,
+       esta un formulario. Los 16 que faltan van como margen, y solo detras de una
+       columna: sin ninguna de las dos, el formulario queda a los 32 del logo como
+       cualquier columna. */
     .footer__group + .footer__promo {
       margin-top: 16px;
     }
@@ -586,34 +708,56 @@ const socials = store.socialLinks ?? [];
       height: 96px;
     }
     /* Una al lado de la otra, a 48: los mismos que el pie suma para su aire de
-       arriba, y por lo mismo escritos como suma.
+       arriba, y por lo mismo escritos como suma. El bloque ocupa lo que deja la
+       marca y las columnas se pegan a su borde derecho.
 
-       Las tres columnas y la marca no caben en todo desktop: en 768 faltan unos 45.
-       Por eso el bloque puede encogerse, y dentro de el solo cede la columna de las
-       promociones, que en 768 se queda en 247. Las otras dos no encogen: con lo
-       que les dejaria el reparto, el turno del reloj se partiria en dos renglones. */
+       LOS TEXTOS LOS ESCRIBE EL NEGOCIO (ver `texts` en el frontmatter), y el panel
+       deja 30 caracteres por titulo y por renglon: a ese largo una columna mediria
+       mas de 320, y con dos asi el pie se salia de la pantalla y las promociones se
+       quedaban sin ancho. Tres reglas lo impiden, y con los textos de siempre no
+       cambian nada:
+
+         las columnas de enlaces miden lo que su lista, con un tope de 200: de ahi en
+         adelante el texto se parte en renglones. El turno del reloj —137 con su
+         icono— y "Abierto las 24 horas" —168— caben enteros.
+
+         las promociones piden 200 y crecen hasta los 291 de la spec con lo que
+         sobre. En 768 sobran 47 y se quedan en 247; desde 992, en sus 291.
+
+         si ni asi caben las tres, las promociones bajan al renglon siguiente en
+         lugar de aplastarse. Solo pasa por debajo de 992 y con las dos columnas
+         de enlaces en su tope. */
     .footer__columns {
-      flex: 0 1 auto;
+      flex: 1 1 0;
       flex-direction: row;
+      flex-wrap: wrap;
+      justify-content: flex-end;
       align-self: flex-start;
       min-width: 0;
       gap: calc(32px + 16px);
     }
     .footer__group {
-      flex-shrink: 0;
+      flex: 0 0 auto;
+      max-width: 200px;
     }
     .footer__promo {
-      flex: 0 1 291px;
-      min-width: 0;
+      flex: 1 1 200px;
+      max-width: 291px;
     }
     .footer__copyright {
       line-height: 1;
+    }
+    /* El aviso del negocio puede traer `<br>`, o partirse solo con sus 200
+       caracteres: el 1 de arriba es de un aviso de un renglon, y juntaria los dos. */
+    .footer__copyright--rich {
+      line-height: 20px;
     }
   }
 
   /* De lg en adelante las columnas se separan a 80, y no a 48. Por debajo no hay
      sitio: en 768 los 80 dejarian el campo de las promociones en 183, y la
-     pregunta en tres renglones. Desde 992 caben con el campo a sus 291 enteros. */
+     pregunta en tres renglones. Desde 992 caben con el campo a sus 291 enteros, y
+     con las dos columnas de enlaces en su tope de 200 todavia caben las tres. */
   @media (min-width: 992px) {
     .footer__columns {
       gap: calc(32px + 32px + 16px);

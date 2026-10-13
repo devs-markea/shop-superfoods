@@ -48,15 +48,18 @@ interface ChatContext {
  * El mensaje con el que se abre el chat: lo que el cliente se encuentra ya
  * escrito en WhatsApp, y que completa con su duda. Cuatro decisiones:
  *
- * - Dice DE QUE va la duda con palabras: el platillo en su ficha, el pedido en
- *   sus siete pantallas y el menu en la portada. "en línea" dice ademas por
- *   donde llega el chat.
+ * - Dice DE QUE va con palabras: la duda sobre el platillo en su ficha y sobre
+ *   el pedido en sus siete pantallas. En la portada todavia no hay ni lo uno ni
+ *   lo otro, y lo que pide es ayuda para hacer el pedido. "en línea" dice ademas
+ *   por donde llega el chat.
  * - El enlace va solo en la ficha, que es donde dice algo: quien contesta abre
  *   el platillo de un toque. En el resto seria la direccion de la tienda, que no
  *   le dice nada a nadie. Va en su propio renglon y con otro debajo, para que la
  *   pregunta no se teclee pegada a el. Aqui va el hueco: ver CHAT_LINK_SLOT.
- * - Sin enlace acaba en un espacio, sin signo: WhatsApp deja el cursor al
- *   final, y lo siguiente que se teclea es la pregunta.
+ * - Sin enlace acaba en un espacio: WhatsApp deja el cursor al final, y lo
+ *   siguiente que se teclea es la pregunta. La del pedido va ademas sin signo,
+ *   porque la frase la termina el cliente; la de la portada es una frase entera,
+ *   con su punto, y el espacio va detras.
  * - Lleva acentos aunque la tienda escriba sin ellos, por lo mismo que
  *   src/lib/whatsapp.ts: se lee en la conversacion, junto a los textos del ERP.
  *
@@ -71,5 +74,5 @@ export function chatMessage({ storeName, dish, order = false }: ChatContext): st
   // el negocio.
   if (dish) return `${greeting} Tengo una duda sobre ${dish}\n${CHAT_LINK_SLOT}\n`;
   if (order) return `${greeting} Tengo una duda sobre mi pedido en línea `;
-  return '¡Hola! Tengo una duda sobre el menú en línea ';
+  return '¡Hola! Necesito ayuda para hacer un pedido en línea. ';
 }
